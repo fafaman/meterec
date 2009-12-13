@@ -1,0 +1,18 @@
+#!/bin/sh
+
+CONF_FILE=$1.conf
+SESS_FILE=.$1.sess
+
+rm -f $CONF_FILE;
+rm -f $SESS_FILE;
+
+touch $CONF_FILE;
+touch $SESS_FILE;
+
+echo Creating $CONF_FILE mapping all jack system ports
+
+for CAPTURE in `jack_lsp system:capture`
+do
+INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
+echo =\|$INDEX $CAPTURE `jack_lsp system:playback $INDEX | head -1` >> $CONF_FILE
+done
