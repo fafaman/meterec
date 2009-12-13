@@ -423,7 +423,7 @@ int writer_thread(void *d)
     free(take_file);
 
     /* Start writing the RT ringbuffer to disk */
-		recording = ONGOING ;
+    recording = ONGOING ;
     opos = 0;
     while (recording==ONGOING) {
     
@@ -1475,7 +1475,9 @@ int main(int argc, char *argv[])
 
     while(recording!=ONGOING) 
       fsleep( 0.1f );
-  }
+  } else {
+	  recording=DONE;
+	}
 
 	fprintf(stderr,"Starting reader thread\n");
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
