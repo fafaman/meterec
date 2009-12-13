@@ -1,0 +1,21 @@
+#!/bin/bash
+
+./autotool/autotool.sh &&\
+gtar -zcvf ../meterec-rel-0.5.tgz \
+meterec.c \
+TODO \
+AUTHORS \
+COPYING \
+INSTALL \
+NEWS \
+Makefile.in \
+depcomp \
+missing \
+install-sh \
+config.h.in \
+configure \
+autom4te.cache/* \
+aclocal.m4 \
+Makefile.am \
+configure.in
+
