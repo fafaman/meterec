@@ -842,7 +842,7 @@ static void cleanup(int sig)
   
 
   fprintf(stderr, "Waiting end of reading.");
-  while(reading!=DONE) {
+  while(reading && reading!=DONE) {
     fprintf(stderr, ".");
     fsleep( 0.25f );
   }
@@ -1462,22 +1462,28 @@ int main(int argc, char *argv[])
   //display_session();
   
   // start the thread emptying disk buffer to file
-  if (recording==START && n_tracks) {
+  if (recording==START) {
 
-    fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
-    save_session(session_file);
+    if (n_tracks) {
+			fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
+    	save_session(session_file);
 
-    fprintf(stderr,"Saving setup of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, setup_file );
-    save_setup(setup_file);
-    
-    fprintf(stderr,"Starting writer thread\n");
-    pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
+    	fprintf(stderr,"Saving setup of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, setup_file );
+    	save_setup(setup_file);
 
-    while(recording!=ONGOING) 
-      fsleep( 0.1f );
-  } else {
-	  recording=DONE;
-	}
+    	fprintf(stderr,"Starting writer thread\n");
+    	pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
+
+    	while(recording!=ONGOING) 
+      	fsleep( 0.1f );
+			
+		} else {
+		  fprintf(stderr,"ERROR: Cannot do a new take without port selected for recording (R/D/O) in first column of %s\n",setup_file);
+			recording=NO;
+			reading=NO;
+			cleanup(0); 
+		}
+  } 
 
 	fprintf(stderr,"Starting reader thread\n");
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
