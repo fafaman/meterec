@@ -1,0 +1,40 @@
+
+C_PREREQ(2.59)
+
+AC_INIT([meterec], [0.5], [fabrice.lebas@gmail.com])
+
+AM_CONFIG_HEADER(config.h)
+
+AM_INIT_AUTOMAKE([1.9 foreign])
+
+AC_PROG_CC
+
+AC_CHECK_FUNCS( atexit usleep )
+
+AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(You need libpthread installed)])
+AC_CHECK_LIB([m], [sqrt], , [AC_MSG_ERROR(Can't find libm)])
+AC_CHECK_LIB([mx], [powf])
+AC_CHECK_LIB([curses], [initscr],, [AC_MSG_ERROR(Can't find libcurses)])
+
+
+PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
+
+PKG_CHECK_MODULES(SNDFILE, [sndfile >= 1.0.0])
+AC_CHECK_DECL(
+ SF_FORMAT_W64,
+ [AC_DEFINE(HAVE_W64, [], [Do we have the WAV64 format])],
+ [AC_MSG_WARN()
+  AC_MSG_WARN([Your version of libsndfile does not support the WAV64])
+  AC_MSG_WARN([format. This means that you will be unable to record])
+  AC_MSG_WARN([files > 2GB])
+  AC_MSG_WARN()],
+ [#include <sndfile.h>]
+)
+
+
+PACKAGE_CFLAGS="-g -Wall $SNDFILE_CFLAGS $JACK_CFLAGS "
+PACKAGE_LIBS="-g $SNDFILE_LIBS $JACK_LIBS "
+
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
