@@ -1,0 +1,568 @@
+
+                                    METEREC
+
+Bugs?
+=====
+
+Please use sourceforge to report bugs. 
+
+N meterec-init-conf script is not copied during "make install"
+
+
+Why is it so basic?
+===================
+
+meterec works as a basic multi track tape recoder. The aim of this software is
+to minimise the interactions of the users with the computer and allow them to
+focus on their instrumental performance. For this reason meterec features are
+minimal. One of the main "limitation" is that meterec can only restart from time
+0:00:00.00: if you srew one take, start it over again! rather than learning how
+to use a specific software to correct what you screw, meterec forces to learn
+and master your instrument. Good news is previous takes are kept in take history
+and if in the end, the first one was the best you could play, you can choose it 
+in your final mix.
+
+A typical session:
+==================
+
+
+hardware setup
+--------------
+
+A 16 track mixer has all it's inserts plugged to a 16in+16out channels sound card. 
+
+
+Example for the first track of the mixer:
++--- 1 ---+
+|         |
+| MIC/LINE|
+| |IN <--------- Instrument/Mic
+|         |
+| INSERT  |
+| |SEND -------> Sound card IN 1  (jack system:capture_1)
+| |RETURN <----- Sound card OUT 1 (jack system:playback_1)
+|         |
+|         |
+
+jack setup
+----------
+
+jackd is running on the above card. all inputs are redirected to corresponding output so we
+get to hear Instrument/Mic when the insert cable is plugged in the mixer.
+
+system:capture_1 ---> system:playback_1
+system:capture_2 ---> system:playback_2
+system:capture_3 ---> system:playback_3
+...
+
+You can use the following to set this up:
+
+%jack_connect system:capture_1 system:playback_1
+
+Jack system internal delay should be kept small by 
+Maximising sample rate
+Minimising periods/buffer
+Minimising frames/period
+
+To avoid Xruns (more frequent with shorter delays), Real-Time priority may be setup for
+jackd..
+
+
+software setup
+--------------
+
+% mkdir la_session_de_demo
+% cd la_session_de_demo
+
+Now create a basic session configuration file we will call 'demo':
+% meterec-init-conf demo
+
+This will create 2 files:
+.demo.sess - not to be edited (empty at first)
+demo.conf - status/configuration file for this session
+
+Initial content of demo.conf:
+=|1 system:capture_1 system:playback_1
+=|2 system:capture_2 system:playback_2
+=|3 system:capture_3 system:playback_3
+=|4 system:capture_4 system:playback_4
+=|5 system:capture_5 system:playback_5
+=|6 system:capture_6 system:playback_6
+=|7 system:capture_7 system:playback_7
+=|8 system:capture_8 system:playback_8
+=|9 system:capture_9 system:playback_9
+=|10 system:capture_10 system:playback_10
+=|11 system:capture_11 system:playback_11
+=|12 system:capture_12 system:playback_12
+=|13 system:capture_13 system:playback_13
+=|14 system:capture_14 system:playback_14
+=|15 system:capture_15 system:playback_15
+=|16 system:capture_16 system:playback_16
+
+This file can be edited when meterec is NOT RUNNING. If you keep your editor open,
+make sure it/you refresh editor content after each meterec run.
+
+What this file says is:
+meterec track 1 input is system:capture_1, output is system:playback_1
+meterec track 2 input is system:capture_2, output is system:playback_2
+
+You can edit this file to add more inputs and/or outputs for each meterec track
+i.e
+=|1 system:capture_1 system:playback_1 jack_metro:120_bpm
+=|2 system:capture_1 system:playback_1 tunit:in_0
+
+
+The band
+--------
+
+Paul plays guitar on track 1
+Yoanna sings on track 2
+Hakim plays bass on track 4
+Iris plays drums on tracks 6+7(overhead) 8(kick) 9(snare) 10+11(toms)
+Igor plays electric piano on tracks 14+15 
+
+Balance
+-------
+
+%meterec
+
+Will show all tracks vu-meter. you may adjust meter behavior with -f -r -w options
+
+Make sure no instrument reaches the 0dB by adjusting gain on the mixer console or in
+the sound card mixer.
+
+Stop meterec with <Control>+c 
+
+Session base
+------------
+
+Hakim plays bass on track 4
+Iris plays drums on tracks 6+7(overhead) 8(kick) 9(snare) 10+11(toms)
+
+Iris+Hakim will make a nice bass+drum base first
+
+Lets update demo.conf to the following
+=|1 system:capture_1 system:playback_1
+=|2 system:capture_2 system:playback_2
+=|3 system:capture_3 system:playback_3
+R|4 system:capture_4 system:playback_4
+=|5 system:capture_5 system:playback_5
+R|6 system:capture_6 system:playback_6
+R|7 system:capture_7 system:playback_7
+R|8 system:capture_8 system:playback_8
+R|9 system:capture_9 system:playback_9
+R|10 system:capture_10 system:playback_10
+R|11 system:capture_11 system:playback_11
+=|12 system:capture_12 system:playback_12
+=|13 system:capture_13 system:playback_13
+=|14 system:capture_14 system:playback_14
+=|15 system:capture_15 system:playback_15
+=|16 system:capture_16 system:playback_16
+
+We are ready for first take... Let's go
+
+%meterec -t
+
+...Time for pleasure and concentration...
+
+Once Iris+Hakim are done, Stop meterec with <Control>+c.
+
+demo.conf now looks like this: 
+=-|1 system:capture_1 system:playback_1
+=-|2 system:capture_2 system:playback_2
+=-|3 system:capture_3 system:playback_3
+RX|4 system:capture_4 system:playback_4
+=-|5 system:capture_5 system:playback_5
+RX|6 system:capture_6 system:playback_6
+RX|7 system:capture_7 system:playback_7
+RX|8 system:capture_8 system:playback_8
+RX|9 system:capture_9 system:playback_9
+RX|10 system:capture_10 system:playback_10
+RX|11 system:capture_11 system:playback_11
+=-|12 system:capture_12 system:playback_12
+=-|13 system:capture_13 system:playback_13
+=-|14 system:capture_14 system:playback_14
+=-|15 system:capture_15 system:playback_15
+=-|16 system:capture_16 system:playback_16
+01
+
+You can listen to what was done right away
+
+%meterec
+
+You can repeat take to make sure Iris+Hakim where recoreded at their best 
+
+%meterec -t
+%meterec -t
+%meterec -t
+%meterec -t
+
+demo.conf now looks like this: 
+=-----|1 system:capture_1 system:playback_1
+=-----|2 system:capture_2 system:playback_2
+=-----|3 system:capture_3 system:playback_3
+RXXXXX|4 system:capture_4 system:playback_4
+=-----|5 system:capture_5 system:playback_5
+RXXXXX|6 system:capture_6 system:playback_6
+RXXXXX|7 system:capture_7 system:playback_7
+RXXXXX|8 system:capture_8 system:playback_8
+RXXXXX|9 system:capture_9 system:playback_9
+RXXXXX|10 system:capture_10 system:playback_10
+RXXXXX|11 system:capture_11 system:playback_11
+=-----|12 system:capture_12 system:playback_12
+=-----|13 system:capture_13 system:playback_13
+=-----|14 system:capture_14 system:playback_14
+=-----|15 system:capture_15 system:playback_15
+=-----|16 system:capture_16 system:playback_16
+012345
+
+When you start meterec, you get to hear the latest take of each track, now you may
+find out that take 4 what the best for Iris+Hakim. 
+
+Let's edit demo.conf so it looks like this:
+=-----|1 system:capture_1 system:playback_1
+=-----|2 system:capture_2 system:playback_2
+=-----|3 system:capture_3 system:playback_3
+RXXXLX|4 system:capture_4 system:playback_4
+=-----|5 system:capture_5 system:playback_5
+RXXXLX|6 system:capture_6 system:playback_6
+RXXXLX|7 system:capture_7 system:playback_7
+RXXXLX|8 system:capture_8 system:playback_8
+RXXXLX|9 system:capture_9 system:playback_9
+RXXXLX|10 system:capture_10 system:playback_10
+RXXXLX|11 system:capture_11 system:playback_11
+=-----|12 system:capture_12 system:playback_12
+=-----|13 system:capture_13 system:playback_13
+=-----|14 system:capture_14 system:playback_14
+=-----|15 system:capture_15 system:playback_15
+=-----|16 system:capture_16 system:playback_16
+012345
+
+Now every time you get to start meterec you will hear Iris+Hakim performance as it
+was when they played the for the 4th time. We have "Locked" tracks 4,6,7,8,9,10,11 on
+take 4.
+
+Session melodie
+---------------
+
+Paul plays guitar on track 1
+Igor plays electric piano on tracks 14+15 
+
+Paul+Igor will now play over take 4 of Iris+Hakim and recod their parts.
+
+Let's edit demo.conf so it looks like this:
+R-----|1 system:capture_1 system:playback_1
+=-----|2 system:capture_2 system:playback_2
+=-----|3 system:capture_3 system:playback_3
+=XXXLX|4 system:capture_4 system:playback_4
+=-----|5 system:capture_5 system:playback_5
+=XXXLX|6 system:capture_6 system:playback_6
+=XXXLX|7 system:capture_7 system:playback_7
+=XXXLX|8 system:capture_8 system:playback_8
+=XXXLX|9 system:capture_9 system:playback_9
+=XXXLX|10 system:capture_10 system:playback_10
+=XXXLX|11 system:capture_11 system:playback_11
+=-----|12 system:capture_12 system:playback_12
+=-----|13 system:capture_13 system:playback_13
+R-----|14 system:capture_14 system:playback_14
+R-----|15 system:capture_15 system:playback_15
+=-----|16 system:capture_16 system:playback_16
+012345
+
+You may let them warm-up by starting 
+
+%meterec
+
+This gives a good chance to adjust input gain again (trying to get the best dynamic)
+
+^c and once Paul+Igor are ready...
+
+%meterec -t
+
+... Enjoy the groove and feel of your mates ...
+
+Stop meterec with ^c
+
+As you have guessed, demo.conf now looks like this
+R-----X|1 system:capture_1 system:playback_1
+=------|2 system:capture_2 system:playback_2
+=------|3 system:capture_3 system:playback_3
+=XXXLX-|4 system:capture_4 system:playback_4
+=------|5 system:capture_5 system:playback_5
+=XXXLX-|6 system:capture_6 system:playback_6
+=XXXLX-|7 system:capture_7 system:playback_7
+=XXXLX-|8 system:capture_8 system:playback_8
+=XXXLX-|9 system:capture_9 system:playback_9
+=XXXLX-|10 system:capture_10 system:playback_10
+=XXXLX-|11 system:capture_11 system:playback_11
+=------|12 system:capture_12 system:playback_12
+=------|13 system:capture_13 system:playback_13
+R-----X|14 system:capture_14 system:playback_14
+R-----X|15 system:capture_15 system:playback_15
+=------|16 system:capture_16 system:playback_16
+0123456
+
+Well, it appears that Paul is still suffuring from hangover while Igor's performance
+was sharp and still...
+
+Let's edit demo.conf to give an other chance to Paul:
+R-----X|1 system:capture_1 system:playback_1
+=------|2 system:capture_2 system:playback_2
+=------|3 system:capture_3 system:playback_3
+=XXXLX-|4 system:capture_4 system:playback_4
+=------|5 system:capture_5 system:playback_5
+=XXXLX-|6 system:capture_6 system:playback_6
+=XXXLX-|7 system:capture_7 system:playback_7
+=XXXLX-|8 system:capture_8 system:playback_8
+=XXXLX-|9 system:capture_9 system:playback_9
+=XXXLX-|10 system:capture_10 system:playback_10
+=XXXLX-|11 system:capture_11 system:playback_11
+=------|12 system:capture_12 system:playback_12
+=------|13 system:capture_13 system:playback_13
+=-----X|14 system:capture_14 system:playback_14
+=-----X|15 system:capture_15 system:playback_15
+=------|16 system:capture_16 system:playback_16
+0123456
+
+Give a glass of water to you friend and run meterec
+
+%meterec -t
+%meterec -t
+%meterec -t
+
+If needed, make sure he gets some fresh air and
+
+%meterec -t
+
+Great, everybody is happy (fed-up?) with Paul's guitar riffs
+
+demo.conf now looks like this:
+R-----XXXXX|1 system:capture_1 system:playback_1
+=----------|2 system:capture_2 system:playback_2
+=----------|3 system:capture_3 system:playback_3
+=XXXLX-----|4 system:capture_4 system:playback_4
+=----------|5 system:capture_5 system:playback_5
+=XXXLX-----|6 system:capture_6 system:playback_6
+=XXXLX-----|7 system:capture_7 system:playback_7
+=XXXLX-----|8 system:capture_8 system:playback_8
+=XXXLX-----|9 system:capture_9 system:playback_9
+=XXXLX-----|10 system:capture_10 system:playback_10
+=XXXLX-----|11 system:capture_11 system:playback_11
+=----------|12 system:capture_12 system:playback_12
+=----------|13 system:capture_13 system:playback_13
+=-----X----|14 system:capture_14 system:playback_14
+=-----X----|15 system:capture_15 system:playback_15
+=----------|16 system:capture_16 system:playback_16
+01234567890
+          1
+
+Igor Just had and Idea and would like to add a few notes to his previous take. He can
+use the Overdub feature of meterec to create a new track that contains previous
+content plus new content...
+
+Let's edit demo.conf so it looks like this:
+=-----XXXXX|1 system:capture_1 system:playback_1
+=----------|2 system:capture_2 system:playback_2
+=----------|3 system:capture_3 system:playback_3
+=XXXLX-----|4 system:capture_4 system:playback_4
+=----------|5 system:capture_5 system:playback_5
+=XXXLX-----|6 system:capture_6 system:playback_6
+=XXXLX-----|7 system:capture_7 system:playback_7
+=XXXLX-----|8 system:capture_8 system:playback_8
+=XXXLX-----|9 system:capture_9 system:playback_9
+=XXXLX-----|10 system:capture_10 system:playback_10
+=XXXLX-----|11 system:capture_11 system:playback_11
+=----------|12 system:capture_12 system:playback_12
+=----------|13 system:capture_13 system:playback_13
+O-----X----|14 system:capture_14 system:playback_14
+O-----X----|15 system:capture_15 system:playback_15
+=----------|16 system:capture_16 system:playback_16
+01234567890
+          1
+
+Ready, steady, go!
+
+%meterec -t
+
+... hummm does not sound that good ...
+
+^c
+
+demo.conf looks like this
+=-----XXXXX-|1 system:capture_1 system:playback_1
+=-----------|2 system:capture_2 system:playback_2
+=-----------|3 system:capture_3 system:playback_3
+=XXXLX------|4 system:capture_4 system:playback_4
+=-----------|5 system:capture_5 system:playback_5
+=XXXLX------|6 system:capture_6 system:playback_6
+=XXXLX------|7 system:capture_7 system:playback_7
+=XXXLX------|8 system:capture_8 system:playback_8
+=XXXLX------|9 system:capture_9 system:playback_9
+=XXXLX------|10 system:capture_10 system:playback_10
+=XXXLX------|11 system:capture_11 system:playback_11
+=-----------|12 system:capture_12 system:playback_12
+=-----------|13 system:capture_13 system:playback_13
+O-----X----X|14 system:capture_14 system:playback_14
+O-----X----X|15 system:capture_15 system:playback_15
+=-----------|16 system:capture_16 system:playback_16
+012345678901
+          1
+
+Now tracks 14+15 contains both take 6 and take 11 performance. If we are not happy
+with content added during take 11 and want to do it again, we have to Lock track 14+15
+on take 6 to create take 12. Take 12 will then contain notes played during take 6 and
+take 12.
+
+Let's edit demo.conf
+=-----XXXXX-|1 system:capture_1 system:playback_1
+=-----------|2 system:capture_2 system:playback_2
+=-----------|3 system:capture_3 system:playback_3
+=XXXLX------|4 system:capture_4 system:playback_4
+=-----------|5 system:capture_5 system:playback_5
+=XXXLX------|6 system:capture_6 system:playback_6
+=XXXLX------|7 system:capture_7 system:playback_7
+=XXXLX------|8 system:capture_8 system:playback_8
+=XXXLX------|9 system:capture_9 system:playback_9
+=XXXLX------|10 system:capture_10 system:playback_10
+=XXXLX------|11 system:capture_11 system:playback_11
+=-----------|12 system:capture_12 system:playback_12
+=-----------|13 system:capture_13 system:playback_13
+O-----L----X|14 system:capture_14 system:playback_14
+O-----L----X|15 system:capture_15 system:playback_15
+=-----------|16 system:capture_16 system:playback_16
+012345678901
+          1
+
+Ready for recording...
+
+%meterec -t 
+
+... This sounds far better ...
+
+^c
+
+Now if we want to listen to the result a little update in demo.conf is needed...
+=-----XXXXX--|1 system:capture_1 system:playback_1
+=------------|2 system:capture_2 system:playback_2
+=------------|3 system:capture_3 system:playback_3
+=XXXLX-------|4 system:capture_4 system:playback_4
+=------------|5 system:capture_5 system:playback_5
+=XXXLX-------|6 system:capture_6 system:playback_6
+=XXXLX-------|7 system:capture_7 system:playback_7
+=XXXLX-------|8 system:capture_8 system:playback_8
+=XXXLX-------|9 system:capture_9 system:playback_9
+=XXXLX-------|10 system:capture_10 system:playback_10
+=XXXLX-------|11 system:capture_11 system:playback_11
+=------------|12 system:capture_12 system:playback_12
+=------------|13 system:capture_13 system:playback_13
+O-----L----XL|14 system:capture_14 system:playback_14
+O-----L----XL|15 system:capture_15 system:playback_15
+=------------|16 system:capture_16 system:playback_16
+0123456789012
+          1
+
+You can lock a track several times. Take played back will be the most reent of the
+locked takes.
+
+Lead singer
+-----------
+
+Yoanna sings on track 2
+
+Lets edit demo.conf so it looks like this:
+=-----XXXXX--|1 system:capture_1 system:playback_1
+R------------|2 system:capture_2 system:playback_2
+=------------|3 system:capture_3 system:playback_3
+=XXXLX-------|4 system:capture_4 system:playback_4
+=------------|5 system:capture_5 system:playback_5
+=XXXLX-------|6 system:capture_6 system:playback_6
+=XXXLX-------|7 system:capture_7 system:playback_7
+=XXXLX-------|8 system:capture_8 system:playback_8
+=XXXLX-------|9 system:capture_9 system:playback_9
+=XXXLX-------|10 system:capture_10 system:playback_10
+=XXXLX-------|11 system:capture_11 system:playback_11
+=------------|12 system:capture_12 system:playback_12
+=------------|13 system:capture_13 system:playback_13
+=-----L----XL|14 system:capture_14 system:playback_14
+=-----L----XL|15 system:capture_15 system:playback_15
+=------------|16 system:capture_16 system:playback_16
+0123456789012
+          1
+
+%meterec -t
+
+Now Yoanna would like to listen to her previous take and sing over it without ending
+with both takes mixed together. In meterec this is called Dubbing.
+
+Lets edit demo.conf so it looks like this:
+=-----XXXXX---|1 system:capture_1 system:playback_1
+D------------X|2 system:capture_2 system:playback_2
+=-------------|3 system:capture_3 system:playback_3
+=XXXLX--------|4 system:capture_4 system:playback_4
+=-------------|5 system:capture_5 system:playback_5
+=XXXLX--------|6 system:capture_6 system:playback_6
+=XXXLX--------|7 system:capture_7 system:playback_7
+=XXXLX--------|8 system:capture_8 system:playback_8
+=XXXLX--------|9 system:capture_9 system:playback_9
+=XXXLX--------|10 system:capture_10 system:playback_10
+=XXXLX--------|11 system:capture_11 system:playback_11
+=-------------|12 system:capture_12 system:playback_12
+=-------------|13 system:capture_13 system:playback_13
+=-----L----XL-|14 system:capture_14 system:playback_14
+=-----L----XL-|15 system:capture_15 system:playback_15
+=-------------|16 system:capture_16 system:playback_16
+01234567890123
+          1
+
+%meterec -t
+
+Now demo.conf looks like this
+=-----XXXXX----|1 system:capture_1 system:playback_1
+D------------XX|2 system:capture_2 system:playback_2
+=--------------|3 system:capture_3 system:playback_3
+=XXXLX---------|4 system:capture_4 system:playback_4
+=--------------|5 system:capture_5 system:playback_5
+=XXXLX---------|6 system:capture_6 system:playback_6
+=XXXLX---------|7 system:capture_7 system:playback_7
+=XXXLX---------|8 system:capture_8 system:playback_8
+=XXXLX---------|9 system:capture_9 system:playback_9
+=XXXLX---------|10 system:capture_10 system:playback_10
+=XXXLX---------|11 system:capture_11 system:playback_11
+=--------------|12 system:capture_12 system:playback_12
+=--------------|13 system:capture_13 system:playback_13
+=-----L----XL--|14 system:capture_14 system:playback_14
+=-----L----XL--|15 system:capture_15 system:playback_15
+=--------------|16 system:capture_16 system:playback_16
+012345678901234
+          1
+
+Yonna's take 14 only contains what she sang during take 14, althoug she coule listen
+to her previous recording during that take.
+
+
+Why does it goes wrong?
+=======================
+
+For this approach to work, you have to make sure you always play over the same base.
+Here we never have mixed up different takes for tracks 4,6,7,8,9,10,11 as these where
+played from scratch. If you like metronomes, You can do a first take containing the
+bip of a metronome, and then always use this as a base when you add the extra
+instruments.
+
+An other problem is delays... If you record track 1 (during take 1), 
+then you record track 2 (during take 2) trying to follow instrument on track 1
+then you record track 3 (during take 3) trying to follow instrument on track 2
+then you record track 4 (during take 4) trying to follow instrument on track 3
+...
+Well you may end up wondering why track 10 is completely out of sync with track 1.
+Internal delays in jack+meterec cannot be avoided completely. look for help on how 
+to minimise delays in jackd. Make sure you do not have a cascading aproach in you
+recording session, but rather stick to one of the first takes as a reference for
+playing other instruments.
+
+
+
+
+
+
+
