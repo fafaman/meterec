@@ -12,6 +12,7 @@ mv meterec-dev meterec-$RELEASE
 gtar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/meterec.c \
 meterec-$RELEASE/meterec-init-conf \
+meterec-$RELEASE/README \
 meterec-$RELEASE/NEWS \
 meterec-$RELEASE/TODO \
 meterec-$RELEASE/INSTALL \
