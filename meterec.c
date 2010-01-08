@@ -1363,6 +1363,46 @@ void display_meter( int width )
 
 
 /******************************************************************************
+** EDITION
+*/
+
+void edit_mode(void) {
+
+  int key;
+
+  clear();
+	
+  refresh();
+
+	while(1) {
+
+    clear();
+		
+    display_status();
+
+    display_buffer(79 - 2);
+
+  	printw("Edit mode.\n");
+
+    refresh();
+		
+		key = getch();
+
+		if ( key == 9 ) {
+    	cbreak();
+			return; 
+		}
+			
+		
+		fsleep( 1.0f/24 );
+
+	}
+
+
+}
+
+
+/******************************************************************************
 ** CORE
 */
 
@@ -1382,12 +1422,14 @@ static int usage( const char * progname )
 
 int main(int argc, char *argv[])
 {
-	int console_width = 79;
+	int console_width = 79; //GetTermSize(&rows, &cols); 
 	jack_status_t status;
 	int running = 1;
 	float ref_lev;
 	int rate = 8;
 	int opt;
+	int key = 0;
+	int edit_mode = 0;
   pthread_t wr_dt, rd_dt ;
   
 	init();
@@ -1505,11 +1547,14 @@ int main(int argc, char *argv[])
 
   start_color();
   
-  // choose our colo pairs
+  // choose our color pairs
 	init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
 	init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
 	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 
+  noecho();  
+  keypad(stdscr, TRUE);
+  timeout(0);  
 
 	while (running) {
   
@@ -1520,10 +1565,45 @@ int main(int argc, char *argv[])
     display_status();
 
     display_buffer(console_width - 2);
+		
+		if (edit_mode) {
+		
+		
+		} else {
 
-    display_meter(console_width - 2);
+      display_meter(console_width - 2);
+
+    }
+
+	  key = wgetch(stdscr);
+
+		if ( key == 9 ) {
+		
+		  edit_mode = !edit_mode ;
+			
+		}
+		
+		if ( key == 'q') {
+		
+			cleanup(0); 
+		
+		}
+
+		if ( key == KEY_UP ) {
+		
+		}
+		if ( key == KEY_DOWN ) {
+		
+		}
+		if ( key == KEY_LEFT ) {
+		
+		}
+		if ( key == KEY_RIGHT ) {
+		
+		}
 
     refresh();
+	  
        
 		fsleep( 1.0f/rate );
     
