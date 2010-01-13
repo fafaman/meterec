@@ -62,6 +62,7 @@
 #define REC 1
 #define DUB 2
 #define OVR 4
+#define MAX_REC OVR*2
 
 /* colors */
 #define DEFAULT 0
@@ -1168,34 +1169,85 @@ void save_setup(char *file)
 ** DISPLAYs
 */
 
-void display_session(void) 
+void display_session(int y_pos, int x_pos) 
 {
   unsigned int take, port;
 
+  /* y - port */
+  /* x - take */
+
+
+  printw("  Port %2d ", y_pos+1);
+  if (ports[y_pos].record==REC)
+     printw("[REC]");
+  else if (ports[y_pos].record==OVR)
+     printw("[OVR]");
+  else if (ports[y_pos].record==DUB)
+     printw("[DUB]");
+  else 
+     printw("[   ]");
+     
+  if ( ports[y_pos].playback_take && ( ports[y_pos].record == OVR || ports[y_pos].record == DUB )) 
+    printw(" PLAYING Take %2d", ports[y_pos].playback_take);
+
+   printw("\n");
+  
+  
+  printw("  Take %2d ",x_pos);
+  printw("%s", (ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
+  printw("%s", takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
+  printw("%s\n", takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
+
   for (port=0; port<n_ports; port++) {
   
-    if (ports[port].playback_take == 0)
-      printf("L");
+    if (ports[port].record) 
+      color_set(YELLOW, NULL);
     else 
-      printf("=");
+      color_set(DEFAULT, NULL);
+    
+    if (y_pos == port) 
+       attron(A_REVERSE);
+    else 
+       attroff(A_REVERSE);
+  
+    printw("%02d ",port+1,ports[port].playback_take);
+
+    if ( ports[port].record == REC )
+      printw("R");
+    else if ( ports[port].record == DUB )
+      printw("D");
+    else if ( ports[port].record == OVR )
+      printw("O");
+    else 
+      printw("=");
       
     for (take=1; take<n_takes+1; take++) {
-      if ( takes[take].port_has_track[port] ) {
-      
-        if ( ports[port].playback_take == take ) 
-          printf("L");
-        else
-          printf("X");
-      }
-      else {
-        printf("-");
-      }
+    
+      if ((y_pos == port) || (x_pos == take))
+         attron(A_REVERSE);
+      else 
+         attroff(A_REVERSE);
+
+      if ((y_pos == port) && (x_pos == take))
+         attroff(A_REVERSE);
+
+      if ( takes[take].port_has_lock[port] )
+        printw("L");
+      else if ( ports[port].playback_take == take ) 
+        printw("P");
+      else if ( takes[take].port_has_track[port] ) 
+        printw("X");
+      else 
+        printw("-");
+              
     }
-    printf("|%02d - %d\n",port+1,ports[port].playback_take);
+
+    printw("\n");
   }
   
-  session_tail(stdout);
-    
+  attroff(A_REVERSE);
+  color_set(DEFAULT, NULL);
+      
 }
 
 void display_status(void) {
@@ -1366,41 +1418,6 @@ void display_meter( int width )
 ** EDITION
 */
 
-void edit_mode(void) {
-
-  int key;
-
-  clear();
-	
-  refresh();
-
-	while(1) {
-
-    clear();
-		
-    display_status();
-
-    display_buffer(79 - 2);
-
-  	printw("Edit mode.\n");
-
-    refresh();
-		
-		key = getch();
-
-		if ( key == 9 ) {
-    	cbreak();
-			return; 
-		}
-			
-		
-		fsleep( 1.0f/24 );
-
-	}
-
-
-}
-
 
 /******************************************************************************
 ** CORE
@@ -1430,6 +1447,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int key = 0;
 	int edit_mode = 0;
+  int x_pos =0, y_pos = 0;
   pthread_t wr_dt, rd_dt ;
   
 	init();
@@ -1500,8 +1518,6 @@ int main(int argc, char *argv[])
   load_setup(setup_file);
 
   load_session(session_file);
-
-  //display_session();
   
   // start the thread emptying disk buffer to file
   if (recording==START) {
@@ -1568,6 +1584,44 @@ int main(int argc, char *argv[])
 		
 		if (edit_mode) {
 		
+		  if ( key == KEY_UP ) {
+		    y_pos--;
+		  }
+		  if ( key == KEY_DOWN ) {
+		    y_pos++;
+		  }
+		  if ( key == KEY_LEFT ) {
+		    x_pos--;
+		  }
+		  if ( key == KEY_RIGHT ) {
+		    x_pos++;
+		  }
+
+
+      if ( key == 'l' ) {
+  		  takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
+      }
+      if ( key == 'r' ) {
+  		  if ( ports[y_pos].record == REC )
+          ports[y_pos].record = NO;
+        else
+          ports[y_pos].record = REC;
+      }
+      if ( key == 'd' ) {
+  		  if ( ports[y_pos].record == DUB )
+          ports[y_pos].record = NO;
+        else
+          ports[y_pos].record = DUB;
+      }
+      if ( key == 'o' ) {
+   		  if ( ports[y_pos].record == OVR )
+          ports[y_pos].record = NO;
+        else
+          ports[y_pos].record = OVR;
+      }
+
+
+      display_session(y_pos, x_pos);
 		
 		} else {
 
@@ -1586,19 +1640,6 @@ int main(int argc, char *argv[])
 		if ( key == 'q') {
 		
 			cleanup(0); 
-		
-		}
-
-		if ( key == KEY_UP ) {
-		
-		}
-		if ( key == KEY_DOWN ) {
-		
-		}
-		if ( key == KEY_LEFT ) {
-		
-		}
-		if ( key == KEY_RIGHT ) {
 		
 		}
 
