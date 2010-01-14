@@ -1,22 +1,22 @@
 /*
 
-	meterec.c 
-	Console based multi track digital peak meter and recorder for JACK
-	Copyright (C) 2009 Fabrice Lebas
+  meterec.c 
+  Console based multi track digital peak meter and recorder for JACK
+  Copyright (C) 2009 Fabrice Lebas
   
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-	
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-	
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+  This program is free software; you can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation; either version 2
+  of the License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
@@ -153,8 +153,8 @@ struct take_s
   char *take_file;
   SNDFILE *take_fd;
   SF_INFO info;
-	
-	float *buf ;
+  
+  float *buf ;
  
 };
 
@@ -201,31 +201,31 @@ unsigned int n_tracks = 0; /* number of tracks to be recorded during current tak
 */
 
 /*
-	db: the signal stength in db
-	width: the size of the meter
+  db: the signal stength in db
+  width: the size of the meter
 */
 static int iec_scale(float db, int size) {
-	float def = 0.0f; /* Meter deflection %age */
-	
-	if (db < -70.0f) {
-		def = 0.0f;
-	} else if (db < -60.0f) {
-		def = (db + 70.0f) * 0.25f;
-	} else if (db < -50.0f) {
-		def = (db + 60.0f) * 0.5f + 2.5f;
-	} else if (db < -40.0f) {
-		def = (db + 50.0f) * 0.75f + 7.5f;
-	} else if (db < -30.0f) {
-		def = (db + 40.0f) * 1.5f + 15.0f;
-	} else if (db < -20.0f) {
-		def = (db + 30.0f) * 2.0f + 30.0f;
-	} else if (db < 0.0f) {
-		def = (db + 20.0f) * 2.5f + 50.0f;
-	} else {
-		def = 100.0f;
-	}
-	
-	return (int)( (def / 100.0f) * ((float) size) );
+  float def = 0.0f; /* Meter deflection %age */
+  
+  if (db < -70.0f) {
+    def = 0.0f;
+  } else if (db < -60.0f) {
+    def = (db + 70.0f) * 0.25f;
+  } else if (db < -50.0f) {
+    def = (db + 60.0f) * 0.5f + 2.5f;
+  } else if (db < -40.0f) {
+    def = (db + 50.0f) * 0.75f + 7.5f;
+  } else if (db < -30.0f) {
+    def = (db + 40.0f) * 1.5f + 15.0f;
+  } else if (db < -20.0f) {
+    def = (db + 30.0f) * 2.0f + 30.0f;
+  } else if (db < 0.0f) {
+    def = (db + 20.0f) * 2.5f + 50.0f;
+  } else {
+    def = 100.0f;
+  }
+  
+  return (int)( (def / 100.0f) * ((float) size) );
 }
 
 
@@ -234,7 +234,7 @@ static int fsleep( float secs )
 {
 
 #ifdef HAVE_USLEEP
-	return usleep( secs * 1000000ul );
+  return usleep( secs * 1000000ul );
 #else 
   return 0;
 #endif
@@ -244,15 +244,15 @@ static int fsleep( float secs )
 /* Read and reset the recent peak sample */
 void read_peak(void)
 {
-	unsigned int port;
+  unsigned int port;
         
   for (port = 0; port < n_ports; port++) {
 
-	  ports[port].db_in = 20.0f * log10f( ports[port].peak_in * bias ) ;
-	  ports[port].peak_in = 0.0f;
+    ports[port].db_in = 20.0f * log10f( ports[port].peak_in * bias ) ;
+    ports[port].peak_in = 0.0f;
     
-	  ports[port].db_out = 20.0f * log10f( ports[port].peak_out * bias ) ;
-	  ports[port].peak_out = 0.0f;
+    ports[port].db_out = 20.0f * log10f( ports[port].peak_out * bias ) ;
+    ports[port].peak_out = 0.0f;
     
   }
   
@@ -393,7 +393,7 @@ int writer_thread(void *d)
     float buf[BUF_SIZE * MAX_PORTS];
     char *take_file ;
 
-		recording = STARTING ;
+    recording = STARTING ;
     
     fprintf(stderr, "Writer thread: Started.\n");
 
@@ -404,7 +404,7 @@ int writer_thread(void *d)
     
 
     if (!sf_format_check(&info)) {
-	    fprintf(stderr, PACKAGE ": Output file format error\n");
+      fprintf(stderr, PACKAGE ": Output file format error\n");
       recording = DONE;
       return 0;
     }
@@ -428,26 +428,26 @@ int writer_thread(void *d)
     opos = 0;
     while (recording==ONGOING) {
     
-	    for (i  = write_disk_buffer_thread_pos; 
+      for (i  = write_disk_buffer_thread_pos; 
            i != write_disk_buffer_process_pos && opos < BUF_SIZE;
-	         i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
- 	      
+           i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
+        
         track = 0;
         for (port = 0; port < n_ports; port++) {
           if (ports[port].record) {
             buf[opos * n_tracks + track] = ports[port].write_disk_buffer[i]; 
             track++;
           }
-	      }
+        }
         
-	    }
+      }
       
-	    sf_writef_float(out, buf, opos);
+      sf_writef_float(out, buf, opos);
 
-	    write_disk_buffer_thread_pos = i;
-	    opos = 0;
+      write_disk_buffer_thread_pos = i;
+      opos = 0;
       
-	    usleep(thread_delay);
+      usleep(thread_delay);
       
     }
     
@@ -467,7 +467,7 @@ int reader_thread(void *d)
     
     reading = STARTING ;
     
-		fprintf(stderr, "Reader thread: started.\n");
+    fprintf(stderr, "Reader thread: started.\n");
 
     /* open all files needed for this session */
     for (port=0; port<n_ports; port++) {
@@ -511,7 +511,7 @@ int reader_thread(void *d)
           perror("Reader thread: Cannot open file for reading");
           exit(1);
         }
-				
+        
         fprintf(stderr,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
         
         //TODO check the number of channels vs number of tracks
@@ -520,7 +520,7 @@ int reader_thread(void *d)
         fprintf(stderr,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
         takes[take].buf = calloc(BUF_SIZE*takes[take].ntrack, sizeof(float));
 
-		  } 
+      } 
       else {
         fprintf(stderr,"Reader thread: File and buffer already setup.\n");
       }
@@ -530,14 +530,14 @@ int reader_thread(void *d)
     /* Start reading disk to fill the RT ringbuffer */
     opos = 0;
     while (reading==ONGOING || reading==STARTING) {
-	
+  
     /* load the local buffer */
     for(take=1; take<n_takes+1; take++) {
       
       /* check if track is used */
       if (takes[take].take_fd == NULL)
         continue;
-				
+        
       /* get the number of tracks in this take */
       ntrack = takes[take].ntrack;
     
@@ -554,18 +554,18 @@ int reader_thread(void *d)
     }
     
     /* walk in the local buffer and copy it to each port buffers (demux)*/
-	  for (i  = read_disk_buffer_thread_pos; 
+    for (i  = read_disk_buffer_thread_pos; 
          i != read_disk_buffer_process_pos && opos < BUF_SIZE;
-	       i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
+         i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
          
       for(take=1; take<n_takes+1; take++) {
 
-				
-				/* check if take is used */
+        
+        /* check if take is used */
         if (takes[take].take_fd == NULL)
           continue;
-					
-				ntrack = takes[take].ntrack;
+          
+        ntrack = takes[take].ntrack;
 
         /* for each track belonging to this take */
         for (track=0; track<ntrack; track++) {
@@ -578,21 +578,21 @@ int reader_thread(void *d)
             /* Only fill buffer if in playback, dub or overdub */
             if (ports[port].record != REC || !recording)
             ports[port].read_disk_buffer[i] = takes[take].buf[opos * ntrack + track] ;
-						
+            
         }
         
       }
       
     }
       
-	  read_disk_buffer_thread_pos = i;
-		
-		if ( reading==STARTING && read_disk_buffer_thread_pos>(DISK_SIZE*4/5) )
-		  reading=ONGOING;
+    read_disk_buffer_thread_pos = i;
+    
+    if ( reading==STARTING && read_disk_buffer_thread_pos>(DISK_SIZE*4/5) )
+      reading=ONGOING;
     
     if (opos == BUF_SIZE) 
       opos = 0;
-			
+      
     usleep(thread_delay);
       
     }
@@ -617,20 +617,20 @@ int reader_thread(void *d)
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg)
 {
-	jack_default_audio_sample_t *in;
-	jack_default_audio_sample_t *out;
-	unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
+  jack_default_audio_sample_t *in;
+  jack_default_audio_sample_t *out;
+  unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
   float s;
     
-	/* get the audio samples, and find the peak sample */
+  /* get the audio samples, and find the peak sample */
   for (port = 0; port < n_ports; port++) {
 
-	  // just in case the port isn't registered yet 
-	  if (ports[port].input == NULL) 
+    // just in case the port isn't registered yet 
+    if (ports[port].input == NULL) 
       continue;
 
-	  // just in case the port isn't registered yet
-	  if (ports[port].output == NULL) 
+    // just in case the port isn't registered yet
+    if (ports[port].output == NULL) 
       continue;
 
     out = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].output, nframes);
@@ -657,18 +657,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         }
 
         // compute peak
-		    s = fabs(in[i] * 1.0f) ;
-		    if (s > ports[port].peak_in) {
-			    ports[port].peak_in = s;
-		    }
+        s = fabs(in[i] * 1.0f) ;
+        if (s > ports[port].peak_in) {
+          ports[port].peak_in = s;
+        }
         
-		    s = fabs(out[i] * 1.0f) ;
-		    if (s > ports[port].peak_out) {
-			    ports[port].peak_out = s;
-		    }
+        s = fabs(out[i] * 1.0f) ;
+        if (s > ports[port].peak_out) {
+          ports[port].peak_out = s;
+        }
         
-	    }
-			
+      }
+      
     }
     else {
       
@@ -701,18 +701,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
  
   if ((recording==ONGOING || recording==NO) && reading==ONGOING) {
 
-		// positon write pointer to end of ringbuffer
-		write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+    // positon write pointer to end of ringbuffer
+    write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
 
-		// positon read pointer to end of ringbuffer
-		read_disk_buffer_process_pos = (read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+    // positon read pointer to end of ringbuffer
+    read_disk_buffer_process_pos = (read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
 
-		total_nframes +=  nframes ;
+    total_nframes +=  nframes ;
     
   }
  
    
-	return 0;
+  return 0;
 }
 /******************************************************************************
 ** PORTS
@@ -722,14 +722,14 @@ void create_input_port(unsigned int port) {
   
   char port_name[10] ;
   
-	sprintf(port_name,"in_%d",port+1);
+  sprintf(port_name,"in_%d",port+1);
 
   fprintf(stderr,"Creating input port '%s'.\n", port_name );
 
   if (!(ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
-		fprintf(stderr, "Cannot register input port '%s'.\n",port_name);
-		exit(1);
-	}
+    fprintf(stderr, "Cannot register input port '%s'.\n",port_name);
+    exit(1);
+  }
   
 }
 
@@ -737,56 +737,56 @@ void create_output_port(unsigned int port) {
   
   char port_name[10] ;
 
-	sprintf(port_name,"out_%d",port+1);
+  sprintf(port_name,"out_%d",port+1);
 
   fprintf(stderr,"Creating output port '%s'.\n", port_name );
 
   if (!(ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-		fprintf(stderr, "Cannot register output port '%s'.\n",port_name);
-		exit(1);
-	}
+    fprintf(stderr, "Cannot register output port '%s'.\n",port_name);
+    exit(1);
+  }
   
 }
 
 /* Connect the chosen port to ours */
 static void connect_any_port(jack_client_t *client, char *port_name, unsigned int port)
 {
-	jack_port_t *jack_port;
+  jack_port_t *jack_port;
   int jack_flags;
 
   /* connect input port*/
   
-	// Get the port we are connecting to
-	jack_port = jack_port_by_name(client, port_name);
+  // Get the port we are connecting to
+  jack_port = jack_port_by_name(client, port_name);
   
   // Check if port exists
-	if (jack_port == NULL) {
-		fprintf(stderr, "Can't find port '%s'\n", port_name);
-		exit(1);
-	}
+  if (jack_port == NULL) {
+    fprintf(stderr, "Can't find port '%s'\n", port_name);
+    exit(1);
+  }
 
   /* check port flags */
   jack_flags = jack_port_flags(jack_port);
   
   if ( jack_flags & JackPortIsInput ) {
   
-	  // Connect the port to our output port
-	  fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
-	  if (jack_connect(client, jack_port_name(ports[port].output), jack_port_name(jack_port))) {
-		  fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
-		  exit(1);
-	  }
+    // Connect the port to our output port
+    fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
+    if (jack_connect(client, jack_port_name(ports[port].output), jack_port_name(jack_port))) {
+      fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
+      exit(1);
+    }
 
   }
   
   if ( jack_flags & JackPortIsOutput ) {
   
-	  // Connect the port to our input port
-	  fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
-	  if (jack_connect(client, jack_port_name(jack_port), jack_port_name(ports[port].input))) {
-		  fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
-		  exit(1);
-	  }
+    // Connect the port to our input port
+    fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
+    if (jack_connect(client, jack_port_name(jack_port), jack_port_name(ports[port].input))) {
+      fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
+      exit(1);
+    }
 
   }
   
@@ -795,8 +795,8 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
 /* Close down JACK when exiting */
 static void cleanup(int sig)
 {
-	const char **all_ports;
-	unsigned int i, port;
+  const char **all_ports;
+  unsigned int i, port;
 
   if (recording)
     recording = STOP ;
@@ -816,30 +816,30 @@ static void cleanup(int sig)
 
   for (port = 0; port < n_ports; port++) {
   
-	  if (ports[port].input != NULL ) {
+    if (ports[port].input != NULL ) {
 
-		  all_ports = jack_port_get_all_connections(client, ports[port].input);
+      all_ports = jack_port_get_all_connections(client, ports[port].input);
 
-		  for (i=0; all_ports && all_ports[i]; i++) {
-      	fprintf(stderr,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(ports[port].input), all_ports[i] );
-			  jack_disconnect(client, all_ports[i], jack_port_name(ports[port].input));
-		  }
-	  }
+      for (i=0; all_ports && all_ports[i]; i++) {
+        fprintf(stderr,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(ports[port].input), all_ports[i] );
+        jack_disconnect(client, all_ports[i], jack_port_name(ports[port].input));
+      }
+    }
     
-	  if (ports[port].output != NULL ) {
+    if (ports[port].output != NULL ) {
 
-		  all_ports = jack_port_get_all_connections(client, ports[port].output);
+      all_ports = jack_port_get_all_connections(client, ports[port].output);
 
-		  for (i=0; all_ports && all_ports[i]; i++) {
-      	fprintf(stderr,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(ports[port].output), all_ports[i] );
-			  jack_disconnect(client, all_ports[i], jack_port_name(ports[port].output));
-		  }
-	  }
+      for (i=0; all_ports && all_ports[i]; i++) {
+        fprintf(stderr,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(ports[port].output), all_ports[i] );
+        jack_disconnect(client, all_ports[i], jack_port_name(ports[port].output));
+      }
+    }
         
   }
 
-	/* Leave the jack graph */
-	jack_client_close(client);
+  /* Leave the jack graph */
+  jack_client_close(client);
   
 
   fprintf(stderr, "Waiting end of reading.");
@@ -924,25 +924,25 @@ void load_setup(char *file)
     
     if (*buf == 'L' || *buf == 'l') {
       fprintf(stderr,"Playback LOCK on Port %d take %d\n", port+1,take);
-			takes[take].port_has_lock[port] = 1 ;
+      takes[take].port_has_lock[port] = 1 ;
     }
     
     
     /* new port / new take */
     
     if (*buf == '|') {
-		
+    
       // allocate memory for this port
-	    ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-	    ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-			
+      ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+      ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+      
       // create input ports
       create_input_port ( port );
       create_output_port ( port );
-			
+      
       // connect to other ports
       parse_port_con(fd_conf, port);
-			
+      
       port++;
     }
     
@@ -971,7 +971,7 @@ void load_setup(char *file)
 
   fclose(fd_conf);
   
-	n_ports = port ;
+  n_ports = port ;
   
 }
 
@@ -1006,33 +1006,33 @@ void load_session(char * file)
 
     /* new port / new take */
     if (*buf == '|') {
-		  
-			
-			/* look for a lock along the takes for this port */
-		  i = take+1;
-		  while (i--)
-			  if (takes[i].port_has_lock[port])
-				  break;
-			
-			i++;
-			
-			/* look for latest take at or before that lock */
-			while (i--) {
-		    if (takes[i].port_has_track[port]) {
-				  ports[port].playback_take = i;
-				  break;
-				}
-				ports[port].playback_take = 0;
-		  }
-		
+      
+      
+      /* look for a lock along the takes for this port */
+      i = take+1;
+      while (i--)
+        if (takes[i].port_has_lock[port])
+          break;
+      
+      i++;
+      
+      /* look for latest take at or before that lock */
+      while (i--) {
+        if (takes[i].port_has_track[port]) {
+          ports[port].playback_take = i;
+          break;
+        }
+        ports[port].playback_take = 0;
+      }
+    
       port++;
       n_takes = take - 1;
     }
-		
+    
     if (*buf == '=') 
       take=1;
     else 
-			take++;	
+      take++; 
     
             
   }
@@ -1043,7 +1043,7 @@ void load_session(char * file)
     fprintf(stderr,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,n_ports);
     exit(1);
   }
-	
+  
 }
 
 
@@ -1313,7 +1313,7 @@ void display_buffer(int width) {
   printw("%sRD\n", pedale);
 
   if (recording==ONGOING) {
-		if (n_tracks) {
+    if (n_tracks) {
 
       wrlevel = (write_disk_buffer_process_pos - write_disk_buffer_thread_pos) & (DISK_SIZE-1);
       wrsize = (width * wrlevel) / DISK_SIZE;
@@ -1321,42 +1321,42 @@ void display_buffer(int width) {
       if (wrsize > peak_wrsize) 
         peak_wrsize = wrsize;
   
-    	printw("WR%s", pedale);
+      printw("WR%s", pedale);
 
-    	for (i=0; i<peak_wrsize; i++) {
-      	if (i < wrsize-1)
-        	printw("+");
-      	else if (i == peak_wrsize-1)
-        	printw(":");
-      	else 
-        	printw(" ");
-    	}
+      for (i=0; i<peak_wrsize; i++) {
+        if (i < wrsize-1)
+          printw("+");
+        else if (i == peak_wrsize-1)
+          printw(":");
+        else 
+          printw(" ");
+      }
       printw("\n");
 
-  	}
-		else 
-    	printw("WR- IDLE !!! No ports selected for recording in %s !!! \n", setup_file);
+    }
+    else 
+      printw("WR- IDLE !!! No ports selected for recording in %s !!! \n", setup_file);
   }
-		
-	if      (pedale=="/")
-  	pedale = "-";
-	else if (pedale=="-")
-  	pedale = "\\";
-	else if (pedale=="\\")
-  	pedale = "|";
-	else if (pedale=="|")
-  	pedale = "/";
+    
+  if      (pedale=="/")
+    pedale = "-";
+  else if (pedale=="-")
+    pedale = "\\";
+  else if (pedale=="\\")
+    pedale = "|";
+  else if (pedale=="|")
+    pedale = "/";
    
 
 }
 
 void display_meter( int width )
 {
-	int size_out, size_in, i;
+  int size_out, size_in, i;
   unsigned int port ;
   
   printw("%s\n", scale);
-	printw("%s\n", line);
+  printw("%s\n", line);
   
   for ( port=0 ; port < n_ports ; port++) {
     
@@ -1376,12 +1376,12 @@ void display_meter( int width )
     if (size_in > ports[port].max_in)
       ports[port].max_in = size_in;
       
-	  if (size_in > ports[port].dkpeak_in) {
-		  ports[port].dkpeak_in = size_in;
-		  ports[port].dktime_in = 0;
-	  } else if (ports[port].dktime_in++ > decay_len) {
-		  ports[port].dkpeak_in = size_in;
-	  }
+    if (size_in > ports[port].dkpeak_in) {
+      ports[port].dkpeak_in = size_in;
+      ports[port].dktime_in = 0;
+    } else if (ports[port].dktime_in++ > decay_len) {
+      ports[port].dkpeak_in = size_in;
+    }
 
     for (i=0; i<ports[port].max_in || i<size_out; i++) {
 
@@ -1403,12 +1403,12 @@ void display_meter( int width )
       
     }
     
-	  printw("\n");
+    printw("\n");
 
   }
   
   color_set(DEFAULT, NULL);
-	printw("%s\n", line);
+  printw("%s\n", line);
   printw("%s\n", scale);
 
 }
@@ -1426,91 +1426,91 @@ void display_meter( int width )
 /* Display how to use this program */
 static int usage( const char * progname )
 {
-	fprintf(stderr, "meterec version %s\n\n", VERSION);
-	fprintf(stderr, "Usage %s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
-	fprintf(stderr, "where  -f      is how often to update the meter per second [8]\n");
-	fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter\n");
-	fprintf(stderr, "       -w      is how wide to make the meter [79]\n");
-	fprintf(stderr, "       -s      is session name [%s]\n",session);
-	fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
-	fprintf(stderr, "       -t      record a new take\n");
-	exit(1);
+  fprintf(stderr, "meterec version %s\n\n", VERSION);
+  fprintf(stderr, "Usage %s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
+  fprintf(stderr, "where  -f      is how often to update the meter per second [8]\n");
+  fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter\n");
+  fprintf(stderr, "       -w      is how wide to make the meter [79]\n");
+  fprintf(stderr, "       -s      is session name [%s]\n",session);
+  fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
+  fprintf(stderr, "       -t      record a new take\n");
+  exit(1);
 }
 
 int main(int argc, char *argv[])
 {
-	int console_width = 79; //GetTermSize(&rows, &cols); 
-	jack_status_t status;
-	int running = 1;
-	float ref_lev;
-	int rate = 8;
-	int opt;
-	int key = 0;
-	int edit_mode = 0;
+  int console_width = 79; //GetTermSize(&rows, &cols); 
+  jack_status_t status;
+  int running = 1;
+  float ref_lev;
+  int rate = 8;
+  int opt;
+  int key = 0;
+  int edit_mode = 0;
   int x_pos =0, y_pos = 0;
   pthread_t wr_dt, rd_dt ;
   
-	init();
+  init();
   
-	while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
-		switch (opt) {
-			case 'r':
-				ref_lev = atof(optarg);
-				fprintf(stderr,"Reference level: %.1fdB\n", ref_lev);
-				bias = powf(10.0f, ref_lev * -0.05f);
-				break;
-			case 'f':
-				rate = atoi(optarg);
-				fprintf(stderr,"Updates per second: %d\n", rate);
-				break;
-			case 'w':
-				console_width = atoi(optarg);
-				fprintf(stderr,"Console Width: %d\n", console_width);
-				break;
+  while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
+    switch (opt) {
+      case 'r':
+        ref_lev = atof(optarg);
+        fprintf(stderr,"Reference level: %.1fdB\n", ref_lev);
+        bias = powf(10.0f, ref_lev * -0.05f);
+        break;
+      case 'f':
+        rate = atoi(optarg);
+        fprintf(stderr,"Updates per second: %d\n", rate);
+        break;
+      case 'w':
+        console_width = atoi(optarg);
+        fprintf(stderr,"Console Width: %d\n", console_width);
+        break;
       case 's':
-      	session = optarg ;
-				fprintf(stderr,"Session name: %s\n", session);
+        session = optarg ;
+        fprintf(stderr,"Session name: %s\n", session);
         break;
       case 'j':
-      	jackname = optarg ;
-				fprintf(stderr,"Jack client name: %s\n", jackname);
+        jackname = optarg ;
+        fprintf(stderr,"Jack client name: %s\n", jackname);
         break;
       case 't':
         recording = START;
-				fprintf(stderr,"Recording new take.\n");
+        fprintf(stderr,"Recording new take.\n");
         break;
-			case 'h':
-			case 'v':
-			default:
-				/* Show usage/version information */
-				usage( argv[0] );
-				break;
-		}
-	}
+      case 'h':
+      case 'v':
+      default:
+        /* Show usage/version information */
+        usage( argv[0] );
+        break;
+    }
+  }
 
   // init vars that rely on a changable option
   post_option_init();
 
-	// Calculate the decay length (should be 1600ms)
-	decay_len = (int)(1.6f / (1.0f/rate));
-	
-	// Init the scale
+  // Calculate the decay length (should be 1600ms)
+  decay_len = (int)(1.6f / (1.0f/rate));
+  
+  // Init the scale
   init_display_scale(console_width - 2);
 
-	// Register with Jack
-	if ((client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
-		fprintf(stderr, "Failed to start '%s' jack client: %d\n", jackname, status);
-		exit(1);
-	}
-	fprintf(stderr,"Registered as '%s'.\n", jack_get_client_name( client ) );
+  // Register with Jack
+  if ((client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
+    fprintf(stderr, "Failed to start '%s' jack client: %d\n", jackname, status);
+    exit(1);
+  }
+  fprintf(stderr,"Registered as '%s'.\n", jack_get_client_name( client ) );
 
-	// Register the signal process callback
-	jack_set_process_callback(client, process_jack_data, 0);
+  // Register the signal process callback
+  jack_set_process_callback(client, process_jack_data, 0);
 
-	if (jack_activate(client)) {
-		fprintf(stderr, "Cannot activate client.\n");
-		exit(1);
-	}
+  if (jack_activate(client)) {
+    fprintf(stderr, "Cannot activate client.\n");
+    exit(1);
+  }
 
   /* How long should we wait to read 10 times faster than data goes away */
   thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
@@ -1523,34 +1523,34 @@ int main(int argc, char *argv[])
   if (recording==START) {
 
     if (n_tracks) {
-			fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
-    	save_session(session_file);
+      fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
+      save_session(session_file);
 
-    	fprintf(stderr,"Saving setup of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, setup_file );
-    	save_setup(setup_file);
+      fprintf(stderr,"Saving setup of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, setup_file );
+      save_setup(setup_file);
 
-    	fprintf(stderr,"Starting writer thread\n");
-    	pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
+      fprintf(stderr,"Starting writer thread\n");
+      pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
 
-    	while(recording!=ONGOING) 
-      	fsleep( 0.1f );
-			
-		} else {
-		  fprintf(stderr,"ERROR: Cannot do a new take without port selected for recording (R/D/O) in first column of %s\n",setup_file);
-			recording=NO;
-			reading=NO;
-			cleanup(0); 
-		}
+      while(recording!=ONGOING) 
+        fsleep( 0.1f );
+      
+    } else {
+      fprintf(stderr,"ERROR: Cannot do a new take without port selected for recording (R/D/O) in first column of %s\n",setup_file);
+      recording=NO;
+      reading=NO;
+      cleanup(0); 
+    }
   } 
 
-	fprintf(stderr,"Starting reader thread\n");
+  fprintf(stderr,"Starting reader thread\n");
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
     
   while(reading!=ONGOING) 
     fsleep( 0.1f );
 
-	// Register the cleanup function to be called when C-c 
-	signal(SIGINT, cleanup);
+  // Register the cleanup function to be called when C-c 
+  signal(SIGINT, cleanup);
 
   fprintf(stderr, "Starting ncurses interface...\n");
 
@@ -1558,21 +1558,21 @@ int main(int argc, char *argv[])
   
   if ( mainwin == NULL ) {
     fprintf(stderr, "Error initialising ncurses.\n");
-	  exit(1);
+    exit(1);
   }
 
   start_color();
   
   // choose our color pairs
-	init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
-	init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
-	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
+  init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
+  init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
+  init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 
   noecho();  
   keypad(stdscr, TRUE);
   timeout(0);  
 
-	while (running) {
+  while (running) {
   
     read_peak();
   
@@ -1581,40 +1581,40 @@ int main(int argc, char *argv[])
     display_status();
 
     display_buffer(console_width - 2);
-		
-		if (edit_mode) {
-		
-		  if ( key == KEY_UP ) {
-		    y_pos--;
-		  }
-		  if ( key == KEY_DOWN ) {
-		    y_pos++;
-		  }
-		  if ( key == KEY_LEFT ) {
-		    x_pos--;
-		  }
-		  if ( key == KEY_RIGHT ) {
-		    x_pos++;
-		  }
+    
+    if (edit_mode) {
+    
+      if ( key == KEY_UP ) {
+        y_pos--;
+      }
+      if ( key == KEY_DOWN ) {
+        y_pos++;
+      }
+      if ( key == KEY_LEFT ) {
+        x_pos--;
+      }
+      if ( key == KEY_RIGHT ) {
+        x_pos++;
+      }
 
 
       if ( key == 'l' ) {
-  		  takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
+        takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
       }
       if ( key == 'r' ) {
-  		  if ( ports[y_pos].record == REC )
+        if ( ports[y_pos].record == REC )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = REC;
       }
       if ( key == 'd' ) {
-  		  if ( ports[y_pos].record == DUB )
+        if ( ports[y_pos].record == DUB )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = DUB;
       }
       if ( key == 'o' ) {
-   		  if ( ports[y_pos].record == OVR )
+        if ( ports[y_pos].record == OVR )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = OVR;
@@ -1622,34 +1622,34 @@ int main(int argc, char *argv[])
 
 
       display_session(y_pos, x_pos);
-		
-		} else {
+    
+    } else {
 
       display_meter(console_width - 2);
 
     }
 
-	  key = wgetch(stdscr);
+    key = wgetch(stdscr);
 
-		if ( key == 9 ) {
-		
-		  edit_mode = !edit_mode ;
-			
-		}
-		
-		if ( key == 'q') {
-		
-			cleanup(0); 
-		
-		}
+    if ( key == 9 ) {
+    
+      edit_mode = !edit_mode ;
+      
+    }
+    
+    if ( key == 'q') {
+    
+      cleanup(0); 
+    
+    }
 
     refresh();
-	  
-       
-		fsleep( 1.0f/rate );
     
-	}
+       
+    fsleep( 1.0f/rate );
+    
+  }
   
-	return 0;
+  return 0;
 }
 
