@@ -101,7 +101,6 @@ static unsigned int read_disk_buffer_overflow = 0;
 unsigned int recording = NO;
 unsigned int reading = START;
 
-
 /*
 note : 
 - take 0 is before the session start, there will never be data in take 0
@@ -199,6 +198,13 @@ unsigned int n_tracks = 0; /* number of tracks to be recorded during current tak
 /******************************************************************************
 ** UTILs
 */
+
+float read_disk_buffer_level(void) {
+  float rdlevel;
+
+  rdlevel = (read_disk_buffer_process_pos - read_disk_buffer_thread_pos) & (DISK_SIZE-1);
+  return  (float)(rdlevel / DISK_SIZE);
+}
 
 /*
   db: the signal stength in db
@@ -587,7 +593,7 @@ int reader_thread(void *d)
       
     read_disk_buffer_thread_pos = i;
     
-    if ( reading==STARTING && read_disk_buffer_thread_pos>(DISK_SIZE*4/5) )
+    if ( reading==STARTING && (1-read_disk_buffer_level() > (4.0f/5)) )
       reading=ONGOING;
     
     if (opos == BUF_SIZE) 
@@ -605,6 +611,9 @@ int reader_thread(void *d)
     fprintf(stderr,"Reader thread: done.\n");
 
     reading = DONE;
+
+    /* empty buffer ( reposition thread position in order to refill where process will first read) */
+    read_disk_buffer_thread_pos = read_disk_buffer_process_pos + 1;
 
     return 0;
 }
@@ -656,12 +665,13 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
           write_pos = (write_pos + 1) & (DISK_SIZE - 1);
         }
 
-        // compute peak
+        // compute peak of input port
         s = fabs(in[i] * 1.0f) ;
         if (s > ports[port].peak_in) {
           ports[port].peak_in = s;
         }
         
+        // compute peak of output data
         s = fabs(out[i] * 1.0f) ;
         if (s > ports[port].peak_out) {
           ports[port].peak_out = s;
@@ -673,8 +683,17 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     else {
       
       // fill output with silence while disk threads are not ready
-      for (i = 0; i < nframes; i++) 
+      for (i = 0; i < nframes; i++) {
+      
         out[i] = 0.0f ;
+        
+        // compute peak of input port
+        s = fabs(in[i] * 1.0f) ;
+        if (s > ports[port].peak_in) {
+          ports[port].peak_in = s;
+        }
+        
+      }
         
     }
     
@@ -709,6 +728,10 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
 
     total_nframes +=  nframes ;
     
+  } else {
+  
+    total_nframes = 0 ;
+  
   }
  
    
@@ -798,10 +821,10 @@ static void cleanup(int sig)
   const char **all_ports;
   unsigned int i, port;
 
-  if (recording)
+  if (recording && recording!=DONE)
     recording = STOP ;
   
-  if (reading)
+  if (reading && reading!=DONE)
     reading = STOP ;
   
 
@@ -1284,6 +1307,21 @@ void display_status(void) {
     color_set(DEFAULT, NULL);
     
   }
+  
+  printw(" playing=");
+  
+  if (reading==NO) 
+    printw("NO");
+  if (reading==START) 
+    printw("START");
+  if (reading==STARTING) 
+    printw("STARTING");
+  if (reading==ONGOING) 
+    printw("ONGOING");
+  if (reading==STOP) 
+    printw("STOP");
+  if (reading==DONE) 
+    printw("DONE");
 
   printw("\n");
   
@@ -1291,12 +1329,11 @@ void display_status(void) {
 
 void display_buffer(int width) {
 
-  int wrlevel, wrsize, rdlevel, rdsize, i;
+  int wrlevel, wrsize, rdsize, i;
   static int peak_wrsize=0, peak_rdsize=0;
   static char *pedale = "|";
   
-  rdlevel = (read_disk_buffer_process_pos - read_disk_buffer_thread_pos) & (DISK_SIZE-1);
-  rdsize = (width * rdlevel) / DISK_SIZE;
+  rdsize = width * read_disk_buffer_level();
   
   if (rdsize > peak_rdsize) 
     peak_rdsize = rdsize;
@@ -1336,17 +1373,20 @@ void display_buffer(int width) {
     }
     else 
       printw("WR- IDLE !!! No ports selected for recording in %s !!! \n", setup_file);
+  } else {
+    printw("WR-\n");
   }
     
-  if      (pedale=="/")
-    pedale = "-";
-  else if (pedale=="-")
-    pedale = "\\";
-  else if (pedale=="\\")
-    pedale = "|";
-  else if (pedale=="|")
-    pedale = "/";
-   
+  if (reading==ONGOING) {
+    if      (pedale=="/")
+      pedale = "-";
+    else if (pedale=="-")
+      pedale = "\\";
+    else if (pedale=="\\")
+      pedale = "|";
+    else if (pedale=="|")
+      pedale = "/";
+ }
 
 }
 
@@ -1359,7 +1399,7 @@ void display_meter( int width )
   printw("%s\n", line);
   
   for ( port=0 ; port < n_ports ; port++) {
-    
+        
     if ( ports[port].record ) 
       if (recording == ONGOING)
         color_set(RED, NULL);
@@ -1448,6 +1488,7 @@ int main(int argc, char *argv[])
   int key = 0;
   int edit_mode = 0;
   int x_pos =0, y_pos = 0;
+  int port;
   pthread_t wr_dt, rd_dt ;
   
   init();
@@ -1640,6 +1681,44 @@ int main(int argc, char *argv[])
     if ( key == 'q') {
     
       cleanup(0); 
+    
+    }
+    
+    if (key == 'm') 
+      for ( port=0 ; port < n_ports ; port++) 
+        ports[port].max_in = 0;
+
+
+    if ( key == ' ') {
+    
+      if (reading==ONGOING) {
+
+        reading = STOP ;
+        
+/*
+        fprintf(stderr, "Waiting end of reading.");
+        while(reading && reading!=DONE) {
+          fprintf(stderr, ".");
+          fsleep( 0.25f );
+        }
+        fprintf(stderr, " Done.\n");
+*/
+      } else if (reading==DONE) {
+
+        reading = START ;
+        
+        fprintf(stderr,"Starting reader thread\n");
+        pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
+
+/*
+        fprintf(stderr, "Waiting read ongoing.");
+        while(reading!=ONGOING) {
+          fprintf(stderr, ".");
+          fsleep( 0.25f );
+        }
+        fprintf(stderr, " Done.\n");
+*/
+      }
     
     }
 
