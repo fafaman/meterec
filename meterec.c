@@ -1487,7 +1487,8 @@ int main(int argc, char *argv[])
   int opt;
   int key = 0;
   int edit_mode = 0;
-  int x_pos =0, y_pos = 0;
+  int edit_change =0;
+  int x_pos = 0, y_pos = 0;
   int port;
   pthread_t wr_dt, rd_dt ;
   
@@ -1612,6 +1613,8 @@ int main(int argc, char *argv[])
   noecho();  
   keypad(stdscr, TRUE);
   timeout(0);  
+  
+  x_pos = n_takes;
 
   while (running) {
   
@@ -1623,108 +1626,139 @@ int main(int argc, char *argv[])
 
     display_buffer(console_width - 2);
     
+    key = wgetch(stdscr);
+
     if (edit_mode) {
-    
+      
+      edit_change = 0;
+      
       if ( key == KEY_UP ) {
-        y_pos--;
+        if ( y_pos > 0 )
+          y_pos--;
       }
       if ( key == KEY_DOWN ) {
-        y_pos++;
+        if ( y_pos < n_ports - 1 )
+          y_pos++;
       }
       if ( key == KEY_LEFT ) {
-        x_pos--;
+        if ( x_pos > 1 )
+          x_pos--;
       }
       if ( key == KEY_RIGHT ) {
-        x_pos++;
+        if ( x_pos < n_takes )
+          x_pos++;
       }
 
 
-      if ( key == 'l' ) {
+      if ( key == 'l' ) 
         takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
-      }
+
+      if ( key == 'L' ) 
+        for ( port=0 ; port < n_ports ; port++) 
+          takes[x_pos].port_has_lock[port] = !takes[x_pos].port_has_lock[port] ;
+
+      if ( key == 'A' ) 
+        for ( port=0 ; port < n_ports ; port++) 
+          takes[x_pos].port_has_lock[port] = 1 ;
+
+      if ( key == 'a' ) 
+        for ( port=0 ; port < n_ports ; port++) 
+          takes[x_pos].port_has_lock[port] = 0 ;
+      
+      
       if ( key == 'r' ) {
         if ( ports[y_pos].record == REC )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = REC;
+
+        if (recording==ONGOING) 
+          recording = STOP ;
       }
       if ( key == 'd' ) {
         if ( ports[y_pos].record == DUB )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = DUB;
+
+        if (recording==ONGOING) 
+          recording = STOP ;
       }
       if ( key == 'o' ) {
         if ( ports[y_pos].record == OVR )
           ports[y_pos].record = NO;
         else
           ports[y_pos].record = OVR;
+        
+        if (recording==ONGOING) 
+          recording = STOP ;
       }
-
+      
+/* NOT GOOD : need to be more subtile in handling the data structure       
+      if (edit_change) {
+      
+        save_session(session_file);
+        save_setup(setup_file);
+        
+        if (reading==ONGOING) 
+          reading = STOP ;
+          
+        if (recording==ONGOING) 
+          recording = STOP ;
+          
+        load_session(session_file);
+        load_setup(setup_file);
+        
+      }
+*/
 
       display_session(y_pos, x_pos);
     
     } else {
 
+      /* reset absolute maximum markers */
+      if (key == 'm') 
+        for ( port=0 ; port < n_ports ; port++) 
+          ports[port].max_in = 0;
+
       display_meter(console_width - 2);
 
     }
 
-    key = wgetch(stdscr);
 
-    if ( key == 9 ) {
+    /*
+    ** KEYs handled in all modes
+    */
     
+    /* edit or not edit */
+    if ( key == 9 ) 
       edit_mode = !edit_mode ;
-      
-    }
     
-    if ( key == 'q') {
-    
-      cleanup(0); 
-    
-    }
-    
-    if (key == 'm') 
-      for ( port=0 ; port < n_ports ; port++) 
-        ports[port].max_in = 0;
-
-
+    /* playback start/stop control */
     if ( key == ' ') {
     
       if (reading==ONGOING) {
-
+      
         reading = STOP ;
         
-/*
-        fprintf(stderr, "Waiting end of reading.");
-        while(reading && reading!=DONE) {
-          fprintf(stderr, ".");
-          fsleep( 0.25f );
-        }
-        fprintf(stderr, " Done.\n");
-*/
+        if (recording==ONGOING) 
+          recording = STOP ;
+        
       } else if (reading==DONE) {
 
         reading = START ;
         
-        fprintf(stderr,"Starting reader thread\n");
         pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
 
-/*
-        fprintf(stderr, "Waiting read ongoing.");
-        while(reading!=ONGOING) {
-          fprintf(stderr, ".");
-          fsleep( 0.25f );
-        }
-        fprintf(stderr, " Done.\n");
-*/
       }
     
     }
 
+    if ( key == 'q') 
+      cleanup(0); 
+    
     refresh();
     
-       
     fsleep( 1.0f/rate );
     
   }
