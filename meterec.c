@@ -50,13 +50,18 @@
 /* size of disk write buffer */
 #define BUF_SIZE 4096
 
-/* recording and playing state machines */
+/* command */
 #define NO 0
 #define START 1
-#define STARTING 2
-#define ONGOING 3
-#define STOP 4
-#define DONE 5
+#define RESTART 2
+#define STOP 3
+
+/* status */
+#define OFF 0
+#define STARTING 1
+#define ONGOING 2
+#define STARVING 3
+#define STOPING 4
 
 /* type of recording */
 #define REC 1
@@ -98,8 +103,11 @@ static unsigned int read_disk_buffer_thread_pos = 1; /* Hum... Would be better t
 static unsigned int read_disk_buffer_process_pos = 0;
 static unsigned int read_disk_buffer_overflow = 0;
 
-unsigned int recording = NO;
-unsigned int reading = START;
+unsigned int record_sts = OFF;
+unsigned int record_cmd = NO;
+
+unsigned int playback_sts = OFF;
+unsigned int playback_cmd = START;
 
 
 /*
@@ -393,7 +401,7 @@ int writer_thread(void *d)
     float buf[BUF_SIZE * MAX_PORTS];
     char *take_file ;
 
-		recording = STARTING ;
+		record_sts = STARTING ;
     
     fprintf(stderr, "Writer thread: Started.\n");
 
@@ -405,7 +413,7 @@ int writer_thread(void *d)
 
     if (!sf_format_check(&info)) {
 	    fprintf(stderr, PACKAGE ": Output file format error\n");
-      recording = DONE;
+      record_sts = OFF;
       return 0;
     }
     
@@ -415,7 +423,7 @@ int writer_thread(void *d)
     out = sf_open(take_file, SFM_WRITE, &info);
     if (!out) {
       perror("Writer thread: Cannot open file for writing");
-      recording = DONE;
+      record_sts = OFF;
       return 0;
     }
     
@@ -424,9 +432,9 @@ int writer_thread(void *d)
     free(take_file);
 
     /* Start writing the RT ringbuffer to disk */
-    recording = ONGOING ;
+    record_sts = ONGOING ;
     opos = 0;
-    while (recording==ONGOING) {
+    while (record_cmd == START) {
     
 	    for (i  = write_disk_buffer_thread_pos; 
            i != write_disk_buffer_process_pos && opos < BUF_SIZE;
@@ -456,7 +464,7 @@ int writer_thread(void *d)
 
     printf("Writer thread: done.\n");
 
-    recording = DONE;
+    record_sts = OFF;
 
     return 0;
 }
@@ -465,7 +473,7 @@ int reader_thread(void *d)
 {
     unsigned int i, ntrack=0, track, port, take, opos, fill;
     
-    reading = STARTING ;
+    playback_sts = STARTING ;
     
 		fprintf(stderr, "Reader thread: started.\n");
 
@@ -488,7 +496,7 @@ int reader_thread(void *d)
       }
       
       /* do not open a file for a port that wants to be recoded in REC mode */
-      if (ports[port].record==REC && recording) {
+      if (ports[port].record==REC && record_cmd==START) {
       
         fprintf(stderr,"Reader thread: Port %d beeing recorded in REC mode will not have a take associated\n", port+1);
 
@@ -529,7 +537,7 @@ int reader_thread(void *d)
     
     /* Start reading disk to fill the RT ringbuffer */
     opos = 0;
-    while (reading==ONGOING || reading==STARTING) {
+    while ( playback_cmd==START )  {
 	
     /* load the local buffer */
     for(take=1; take<n_takes+1; take++) {
@@ -576,7 +584,7 @@ int reader_thread(void *d)
           /* check if this port needs data from this take */
           if (ports[port].playback_take == take)
             /* Only fill buffer if in playback, dub or overdub */
-            if (ports[port].record != REC || !recording)
+            if (ports[port].record != REC || !record_cmd)
             ports[port].read_disk_buffer[i] = takes[take].buf[opos * ntrack + track] ;
 						
         }
@@ -586,9 +594,10 @@ int reader_thread(void *d)
     }
       
 	  read_disk_buffer_thread_pos = i;
-		
-		if ( reading==STARTING && read_disk_buffer_thread_pos>(DISK_SIZE*4/5) )
-		  reading=ONGOING;
+					  
+		if ( playback_sts==STARTING && (read_disk_buffer_thread_pos > (DISK_SIZE*4/5)))
+		  playback_sts=ONGOING;
+
     
     if (opos == BUF_SIZE) 
       opos = 0;
@@ -604,7 +613,7 @@ int reader_thread(void *d)
 
     fprintf(stderr,"Reader thread: done.\n");
 
-    reading = DONE;
+    playback_sts = OFF;
 
     return 0;
 }
@@ -625,18 +634,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
 	/* get the audio samples, and find the peak sample */
   for (port = 0; port < n_ports; port++) {
 
-	  // just in case the port isn't registered yet 
+	  /* just in case the port isn't registered yet */
 	  if (ports[port].input == NULL) 
       continue;
 
-	  // just in case the port isn't registered yet
+	  /* just in case the port isn't registered yet */
 	  if (ports[port].output == NULL) 
       continue;
 
     out = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].output, nframes);
     in = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].input, nframes);
 
-    if ((recording==ONGOING || recording==NO) && reading==ONGOING) {
+    if ( (record_sts==ONGOING || record_cmd==NO) && playback_sts==ONGOING) {
   
       write_pos = write_disk_buffer_process_pos;
       read_pos = read_disk_buffer_process_pos;
@@ -647,7 +656,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
 
         // Fill write disk buffer
-        if (recording==ONGOING && ports[port].record) {
+        if (record_sts==ONGOING && ports[port].record) {
           if (ports[port].record==OVR) 
             ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
           else 
@@ -656,7 +665,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
           write_pos = (write_pos + 1) & (DISK_SIZE - 1);
         }
 
-        // compute peak
+        /* compute peak */
 		    s = fabs(in[i] * 1.0f) ;
 		    if (s > ports[port].peak_in) {
 			    ports[port].peak_in = s;
@@ -681,7 +690,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   }
 
 
-  if (recording==ONGOING && n_tracks) {
+  if (record_sts==ONGOING && n_tracks) {
     
     remaining_write_disk_buffer = DISK_SIZE - ((write_disk_buffer_process_pos-write_disk_buffer_thread_pos) & (DISK_SIZE-1));
     
@@ -699,7 +708,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
 
  
  
-  if ((recording==ONGOING || recording==NO) && reading==ONGOING) {
+  if ((record_sts==ONGOING || record_cmd==NO) && playback_sts==ONGOING) {
 
 		// positon write pointer to end of ringbuffer
 		write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
@@ -798,11 +807,11 @@ static void cleanup(int sig)
 	const char **all_ports;
 	unsigned int i, port;
 
-  if (recording)
-    recording = STOP ;
+  if (record_sts)
+    record_cmd = STOP ;
   
-  if (reading)
-    reading = STOP ;
+  if (playback_sts)
+    playback_cmd = STOP ;
   
 
   delwin(mainwin);
@@ -843,7 +852,7 @@ static void cleanup(int sig)
   
 
   fprintf(stderr, "Waiting end of reading.");
-  while(reading && reading!=DONE) {
+  while(playback_cmd && playback_sts!=OFF) {
     fprintf(stderr, ".");
     fsleep( 0.25f );
   }
@@ -851,7 +860,7 @@ static void cleanup(int sig)
 
 
   fprintf(stderr, "Waiting end of recording.");
-  while(recording && recording!=DONE) {
+  while(record_cmd && record_sts!=OFF) {
     fprintf(stderr, ".");
     fsleep( 0.25f );
   }
@@ -1272,7 +1281,7 @@ void display_status(void) {
   
   printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%)", rate, h, m, s, ds, load , max_load);
   
-  if (recording==ONGOING) {
+  if (record_sts==ONGOING) {
 
     color_set(RED, NULL);
 
@@ -1312,7 +1321,7 @@ void display_buffer(int width) {
   }
   printw("%sRD\n", pedale);
 
-  if (recording==ONGOING) {
+  if (record_sts==ONGOING) {
 		if (n_tracks) {
 
       wrlevel = (write_disk_buffer_process_pos - write_disk_buffer_thread_pos) & (DISK_SIZE-1);
@@ -1361,7 +1370,7 @@ void display_meter( int width )
   for ( port=0 ; port < n_ports ; port++) {
     
     if ( ports[port].record ) 
-      if (recording == ONGOING)
+      if (record_sts == ONGOING)
         color_set(RED, NULL);
       else 
         color_set(YELLOW, NULL);
@@ -1476,7 +1485,7 @@ int main(int argc, char *argv[])
 				fprintf(stderr,"Jack client name: %s\n", jackname);
         break;
       case 't':
-        recording = START;
+        record_cmd = START;
 				fprintf(stderr,"Recording new take.\n");
         break;
 			case 'h':
@@ -1520,7 +1529,7 @@ int main(int argc, char *argv[])
   load_session(session_file);
   
   // start the thread emptying disk buffer to file
-  if (recording==START) {
+  if (record_cmd==START) {
 
     if (n_tracks) {
 			fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
@@ -1532,13 +1541,13 @@ int main(int argc, char *argv[])
     	fprintf(stderr,"Starting writer thread\n");
     	pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
 
-    	while(recording!=ONGOING) 
+    	while(record_sts!=ONGOING) 
       	fsleep( 0.1f );
 			
 		} else {
 		  fprintf(stderr,"ERROR: Cannot do a new take without port selected for recording (R/D/O) in first column of %s\n",setup_file);
-			recording=NO;
-			reading=NO;
+			record_cmd=STOP;
+			playback_cmd=STOP;
 			cleanup(0); 
 		}
   } 
@@ -1546,7 +1555,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr,"Starting reader thread\n");
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
     
-  while(reading!=ONGOING) 
+  while(playback_sts!=ONGOING) 
     fsleep( 0.1f );
 
 	// Register the cleanup function to be called when C-c 
