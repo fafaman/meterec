@@ -1303,19 +1303,7 @@ void display_status(void) {
   
   printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%)", rate, h, m, s, ds, load , max_load);
   
-  if (record_sts==ONGOING) {
-
-    color_set(RED, NULL);
-
-    printw(" REC");
-  
-    if (write_disk_buffer_overflow)
-      printw(" *-*-* %d write disk buffer overflow(s) *-*-*",write_disk_buffer_overflow);
-
-    color_set(DEFAULT, NULL);
-    
-  }
-  
+	  
   printw(" PLAYBACK[");
   
   if (playback_sts==OFF) 
@@ -1325,7 +1313,31 @@ void display_status(void) {
   if (playback_sts==ONGOING) 
     printw("%8s","ONGOING");
 
-  printw("]\n");
+  printw("]");
+
+
+  if (record_sts) 
+    color_set(RED, NULL);
+  
+  printw(" RECORD[");
+
+  if (record_sts==OFF) 
+    printw("%8s","OFF");
+  if (record_sts==STARTING) 
+    printw("%8s","STARTING");
+  if (record_sts==ONGOING) 
+    printw("%8s","ONGOING");
+
+  printw("]");
+  
+	
+  if (write_disk_buffer_overflow)
+    printw(" OVERFLOWS[%d]",write_disk_buffer_overflow);
+
+  printw("\n");
+
+  color_set(DEFAULT, NULL);
+
   
 }
 
