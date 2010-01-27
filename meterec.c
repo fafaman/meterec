@@ -1316,18 +1316,16 @@ void display_status(void) {
     
   }
   
-  printw(" playing=");
+  printw(" PLAYBACK[");
   
   if (playback_sts==OFF) 
-    printw("OFF");
-  if (playback_sts==START) 
-    printw("START");
+    printw("%8s","OFF");
   if (playback_sts==STARTING) 
-    printw("STARTING");
+    printw("%8s","STARTING");
   if (playback_sts==ONGOING) 
-    printw("ONGOING");
+    printw("%8s","ONGOING");
 
-  printw("\n");
+  printw("]\n");
   
 }
 
