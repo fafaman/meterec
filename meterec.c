@@ -42,7 +42,7 @@
 #define MAX_TRACKS MAX_PORTS
 
 /* maximum number of takes - no known limit, only extra memory used */
-#define MAX_TAKES 20
+#define MAX_TAKES 100
 
 /* size of disk wait buffer, must be power of two */
 #define DISK_SIZE 131072
@@ -92,6 +92,8 @@ char *session = "meterec";
 char *session_file;
 char *setup_file;
 char *jackname = "meterec" ;
+
+pthread_t wr_dt, rd_dt ;
 
 unsigned int thread_delay = 10000; // in us
 
@@ -192,7 +194,6 @@ struct port_s
   int record;
 
   unsigned int playback_take;
-  unsigned int take_track_playback[MAX_TAKES];
 
 };
 
@@ -272,13 +273,66 @@ void read_peak(void)
   
 }
 
+void compute_takes_to_playback() {
+
+  unsigned int take, port;
+	
+
+	for ( port = 0; port < n_ports; port++ ) {
+    
+    /* start investigation from latest take */
+  	take = n_takes;
+
+  	/* look for a lock along the takes for this port */
+		take ++;
+		while (take--)
+    	if (takes[take].port_has_lock[port])
+      	break;
+
+		take ++;
+		
+    /* start for latest take if no lock found */
+		if (!take)
+		  take = n_takes ;
+
+  	/* look for latest take at or before that postition */
+  	while (take--) {
+    	if (takes[take].port_has_track[port]) {
+      	ports[port].playback_take = take;
+      	break;
+    	}
+    	ports[port].playback_take = 0;
+  	}
+	
+	}
+
+}
+
+void compute_tracks_to_record() {
+  
+	unsigned int port;
+	
+	n_tracks = 0;
+	
+	for ( port = 0; port < n_ports; port++ ) 
+		if ( ports[port].record ) {
+    
+      takes[n_takes+1].port_has_track[port] = 1;
+      takes[n_takes+1].track_port_map[n_tracks] = port ;
+
+		  n_tracks ++;
+      
+    }  
+      
+}
+
 /******************************************************************************
 ** INITs
 */
 
-void init()
+void init_ports()
 {
-  unsigned int port, take, track ;
+  unsigned int port;
   
   for (port = 0; port < MAX_PORTS; port++) {
   
@@ -289,7 +343,7 @@ void init()
     
     ports[port].write_disk_buffer = NULL;
     ports[port].read_disk_buffer = NULL;
-    ports[port].record = 0;
+    ports[port].record = OFF;
     
     ports[port].peak_out = 0.0f;
     ports[port].db_out = 0.0f;
@@ -304,7 +358,11 @@ void init()
     ports[port].playback_take = 0;
     
   }
+}
 
+void init_takes() {
+
+  unsigned int port, take, track ;
 
   for (take=0; take<MAX_TAKES; take++) {
 
@@ -486,7 +544,6 @@ int reader_thread(void *d)
     /* open all files needed for this session */
     for (port=0; port<n_ports; port++) {
  
-      
       take = ports[port].playback_take;
       
       /* do not open a file for a port that wants to playback take 0 */
@@ -523,12 +580,13 @@ int reader_thread(void *d)
         /* check file is (was) opened properly */
         if (takes[take].take_fd == NULL) {
           perror("Reader thread: Cannot open file for reading");
+          playback_sts = OFF;
           exit(1);
         }
         
         fprintf(stderr,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
         
-        //TODO check the number of channels vs number of tracks
+        /* TODO check the number of channels vs number of tracks */
 
         /* allocate buffer space for this take */
         fprintf(stderr,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
@@ -613,8 +671,12 @@ int reader_thread(void *d)
     
     /* close all fd's */
     for (take=1; take<n_takes+1; take++) 
-      if (takes[take].take_fd)
+      if (takes[take].take_fd) {
         sf_close(takes[take].take_fd);
+        free(takes[take].buf);
+        takes[take].buf = NULL;
+        takes[take].take_fd = NULL;
+			}
 
     fprintf(stderr,"Reader thread: done.\n");
 
@@ -625,7 +687,6 @@ int reader_thread(void *d)
 
     return 0;
 }
-
 
 /******************************************************************************
 ** JACK callback process
@@ -657,13 +718,14 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   
       write_pos = write_disk_buffer_process_pos;
       read_pos = read_disk_buffer_process_pos;
+      
       for (i = 0; i < nframes; i++) {
 
-        // Empty read disk buffer
+        /* Empty read disk buffer */
         out[i] = ports[port].read_disk_buffer[read_pos];
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
 
-        // Fill write disk buffer
+        /* Fill write disk buffer */
         if (record_sts==ONGOING && ports[port].record) {
           if (ports[port].record==OVR) 
             ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
@@ -690,7 +752,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     }
     else {
       
-      // fill output with silence while disk threads are not ready
+      /* fill output with silence while disk threads are not ready */
       for (i = 0; i < nframes; i++) {
       
         out[i] = 0.0f ;
@@ -874,7 +936,7 @@ static void cleanup(int sig)
   
 
   fprintf(stderr, "Waiting end of reading.");
-  while(playback_cmd && playback_sts!=OFF) {
+  while(playback_cmd && playback_sts) {
     fprintf(stderr, ".");
     fsleep( 0.25f );
   }
@@ -882,7 +944,7 @@ static void cleanup(int sig)
 
 
   fprintf(stderr, "Waiting end of recording.");
-  while(record_cmd && record_sts!=OFF) {
+  while(record_cmd && record_sts) {
     fprintf(stderr, ".");
     fsleep( 0.25f );
   }
@@ -914,12 +976,8 @@ void parse_port_con(FILE *fd_conf, unsigned int port)
   ports[port].portmap = (char *) malloc( strlen(line)+1 );
   strcpy(ports[port].portmap, line);
   
-//  fprintf(stderr,"Port %d needs to connect to\n", port+1);
-
   i = 0;
   while ( sscanf(line+i,"%s%n",port_name,&u ) ) {
-
-//    fprintf(stderr,"  - '%s'(%s)\n", port_name, line+i);
 
     connect_any_port(client, port_name, port);
 
@@ -1011,7 +1069,7 @@ void load_session(char * file)
 
   FILE *fd_conf;
   char buf[2];
-  unsigned int take=1, port=0, track=0, i;
+  unsigned int take=1, port=0, track=0;
   
   buf[1] = 0;
   
@@ -1024,42 +1082,26 @@ void load_session(char * file)
 
   while ( fread(buf, sizeof(char), 1, fd_conf) ) {
     
+    /* content for a given port/take pair */
     if (*buf == 'X') {
+      
       track = takes[take].ntrack ;
+      
       takes[take].track_port_map[track] = port ;
       takes[take].port_has_track[port] = 1 ;
       takes[take].ntrack++;
       
-      ports[port].playback_take = take ;
-      ports[port].take_track_playback[take] = track ;
-      
+      ports[port].playback_take = take ;      
+    
     }
 
-    /* new port / new take */
+    /* end of description of all takes for a port detected on trailing 'pipe' */
     if (*buf == '|') {
-      
-      
-      /* look for a lock along the takes for this port */
-      i = take+1;
-      while (i--)
-        if (takes[i].port_has_lock[port])
-          break;
-      
-      i++;
-      
-      /* look for latest take at or before that lock */
-      while (i--) {
-        if (takes[i].port_has_track[port]) {
-          ports[port].playback_take = i;
-          break;
-        }
-        ports[port].playback_take = 0;
-      }
-    
       port++;
       n_takes = take - 1;
     }
     
+    /* increment take unless beginning of line is detected */
     if (*buf == '=') 
       take=1;
     else 
@@ -1194,6 +1236,54 @@ void save_setup(char *file)
   
 }
 
+/******************************************************************************
+** THREAD Utils
+*/
+
+void start_playback() {
+
+  playback_cmd = START ;
+	
+  compute_takes_to_playback();
+	
+  pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
+
+}
+
+void start_record() {
+
+  compute_tracks_to_record();
+  
+  if (n_tracks) {
+  
+    record_cmd = START;
+
+    save_session(session_file);
+    save_setup(setup_file);
+
+    pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
+
+    while(record_sts!=ONGOING) 
+      fsleep( 0.1f );
+
+  }
+	
+}
+
+void stop() {
+
+  if (record_sts) {
+    record_cmd = STOP ;
+  
+		/* get ready for the next take */
+		n_takes ++;
+  }
+  
+  if (playback_sts)
+    playback_cmd = STOP ;
+
+}
+
 
 
 /******************************************************************************
@@ -1218,7 +1308,7 @@ void display_session(int y_pos, int x_pos)
   else 
      printw("[   ]");
      
-  if ( ports[y_pos].playback_take && ( ports[y_pos].record == OVR || ports[y_pos].record == DUB )) 
+  if ( ports[y_pos].playback_take ) 
     printw(" PLAYING Take %2d", ports[y_pos].playback_take);
 
    printw("\n");
@@ -1303,7 +1393,7 @@ void display_status(void) {
   
   printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%)", rate, h, m, s, ds, load , max_load);
   
-	  
+//	addch(ACS_BULLET);
   printw(" PLAYBACK[");
   
   if (playback_sts==OFF) 
@@ -1504,9 +1594,9 @@ int main(int argc, char *argv[])
   int edit_change =0;
   int x_pos = 0, y_pos = 0;
   int port;
-  pthread_t wr_dt, rd_dt ;
   
-  init();
+  init_ports();
+  init_takes();
   
   while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
     switch (opt) {
@@ -1574,9 +1664,11 @@ int main(int argc, char *argv[])
   load_setup(setup_file);
 
   load_session(session_file);
-  
+	
   // start the thread emptying disk buffer to file
   if (record_cmd==START) {
+
+  	compute_tracks_to_record();
 
     if (n_tracks) {
 			fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
@@ -1599,6 +1691,8 @@ int main(int argc, char *argv[])
 		}
   } 
 
+	compute_takes_to_playback();
+	  
   fprintf(stderr,"Starting reader thread\n");
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
     
@@ -1686,8 +1780,7 @@ int main(int argc, char *argv[])
         else
           ports[y_pos].record = REC;
 
-        if (record_sts==ONGOING) 
-          record_cmd = STOP ;
+        stop();
       }
       if ( key == 'd' ) {
         if ( ports[y_pos].record == DUB )
@@ -1695,8 +1788,7 @@ int main(int argc, char *argv[])
         else
           ports[y_pos].record = DUB;
 
-        if (record_sts==ONGOING) 
-          record_cmd = STOP ;
+        stop();
       }
       if ( key == 'o' ) {
         if ( ports[y_pos].record == OVR )
@@ -1704,28 +1796,9 @@ int main(int argc, char *argv[])
         else
           ports[y_pos].record = OVR;
         
-        if (record_sts==ONGOING) 
-          record_cmd = STOP ;
+        stop();
       }
       
-/* NOT GOOD : need to be more subtile in handling the data structure       
-      if (edit_change) {
-      
-        save_session(session_file);
-        save_setup(setup_file);
-        
-        if (reading==ONGOING) 
-          reading = STOP ;
-          
-        if (recording==ONGOING) 
-          recording = STOP ;
-          
-        load_session(session_file);
-        load_setup(setup_file);
-        
-      }
-*/
-
       display_session(y_pos, x_pos);
     
     } else {
@@ -1749,23 +1822,20 @@ int main(int argc, char *argv[])
       edit_mode = !edit_mode ;
     
     /* playback start/stop control */
-    if ( key == ' ') {
-    
-      if (playback_sts==ONGOING) {
-        playback_cmd = STOP ;
-        
-        if (record_sts==ONGOING) 
-          record_cmd = STOP ;
-        
-      } else if (playback_sts==OFF) {
-
-        playback_cmd = START ;
-        
-        pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
-
-      }
-    
+    if ( key == ' ') { 
+      if (playback_sts == ONGOING) 
+        stop();
+      else if (playback_sts == OFF) 
+        start_playback();
     }
+
+    if (key == 10 )
+      if (playback_sts == OFF) {
+		
+	  	  start_playback();
+	  		start_record();    
+		
+		  }		
 
     if ( key == 'q') 
       cleanup(0); 
