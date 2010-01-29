@@ -1587,7 +1587,7 @@ int main(int argc, char *argv[])
   jack_status_t status;
   int running = 1;
   float ref_lev;
-  int rate = 8;
+  int rate = 24;
   int opt;
   int key = 0;
   int edit_mode = 0;
