@@ -91,9 +91,12 @@ char *line ;
 char *session = "meterec";
 char *session_file;
 char *setup_file;
+char *log_file;
 char *jackname = "meterec" ;
 
 pthread_t wr_dt, rd_dt ;
+
+FILE *fd_log ;
 
 unsigned int thread_delay = 10000; // in us
 
@@ -383,6 +386,9 @@ void post_option_init(void) {
   setup_file = (char *) malloc( strlen(session) + strlen(".conf") + 1 );
   sprintf(setup_file,"%s.conf",session);
   
+  log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
+  sprintf(log_file,"%s.log",session);
+  
   for (take=0; take<MAX_TAKES; take++) {
     takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.w64") + 1 );
     sprintf(takes[take].take_file,"%s_%04d.w64",session,take);
@@ -455,7 +461,10 @@ int writer_thread(void *d)
 
     record_sts = STARTING ;
     
-    fprintf(stderr, "Writer thread: Started.\n");
+    fprintf(fd_log, "Writer thread: Started.\n");
+
+    /* empty buffer ( reposition thread position in order to empty where process will first fill) */
+    write_disk_buffer_thread_pos = write_disk_buffer_process_pos;
 
     /* Open the output file */
     info.format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
@@ -464,7 +473,7 @@ int writer_thread(void *d)
     
 
     if (!sf_format_check(&info)) {
-      fprintf(stderr, PACKAGE ": Output file format error\n");
+      fprintf(fd_log, PACKAGE ": Output file format error\n");
       record_sts = OFF;
       return 0;
     }
@@ -479,7 +488,7 @@ int writer_thread(void *d)
       return 0;
     }
     
-    printf("Writer thread: Opened  %d track(s) file '%s' for writing.\n", n_tracks, take_file);
+    fprintf(fd_log,"Writer thread: Opened %d track(s) file '%s' for writing.\n", n_tracks, take_file);
     
     free(take_file);
 
@@ -514,7 +523,7 @@ int writer_thread(void *d)
     
     sf_close(out);
 
-    printf("Writer thread: done.\n");
+    fprintf(fd_log,"Writer thread: done.\n");
 
     record_sts = OFF;
 
@@ -527,7 +536,10 @@ int reader_thread(void *d)
     
     playback_sts = STARTING ;
     
-    fprintf(stderr, "Reader thread: started.\n");
+    fprintf(fd_log, "Reader thread: started.\n");
+
+    /* empty buffer ( reposition thread position in order to refill where process will first read) */
+    read_disk_buffer_thread_pos = read_disk_buffer_process_pos + 1;
 
     /* open all files needed for this session */
     for (port=0; port<n_ports; port++) {
@@ -537,7 +549,7 @@ int reader_thread(void *d)
       /* do not open a file for a port that wants to playback take 0 */
       if (!take ) {
       
-        fprintf(stderr,"Reader thread: Port %d does not have a take associated\n", port+1);
+        fprintf(fd_log,"Reader thread: Port %d does not have a take associated\n", port+1);
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
@@ -549,7 +561,7 @@ int reader_thread(void *d)
       /* do not open a file for a port that wants to be recoded in REC mode */
       if (ports[port].record==REC && record_cmd==START) {
       
-        fprintf(stderr,"Reader thread: Port %d beeing recorded in REC mode will not have a take associated\n", port+1);
+        fprintf(fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a take associated\n", port+1);
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
@@ -559,7 +571,7 @@ int reader_thread(void *d)
         
       }
       
-      fprintf(stderr,"Reader thread: Port %d has take %d associated\n", port+1, take );
+      fprintf(fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
       
       /* only open a take file that is not defined yet  */  
       if (takes[take].take_fd == NULL) {
@@ -572,17 +584,17 @@ int reader_thread(void *d)
           exit(1);
         }
         
-        fprintf(stderr,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
+        fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
         
         /* TODO check the number of channels vs number of tracks */
 
         /* allocate buffer space for this take */
-        fprintf(stderr,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
+        fprintf(fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
         takes[take].buf = calloc(BUF_SIZE*takes[take].ntrack, sizeof(float));
 
       } 
       else {
-        fprintf(stderr,"Reader thread: File and buffer already setup.\n");
+        fprintf(fd_log,"Reader thread: File and buffer already setup.\n");
       }
       
     }
@@ -666,12 +678,9 @@ int reader_thread(void *d)
         takes[take].take_fd = NULL;
       }
 
-    fprintf(stderr,"Reader thread: done.\n");
+    fprintf(fd_log,"Reader thread: done.\n");
 
     playback_sts = OFF;
-
-    /* empty buffer ( reposition thread position in order to refill where process will first read) */
-    read_disk_buffer_thread_pos = read_disk_buffer_process_pos + 1;
 
     return 0;
 }
@@ -805,10 +814,10 @@ void create_input_port(unsigned int port) {
   
   sprintf(port_name,"in_%d",port+1);
 
-  fprintf(stderr,"Creating input port '%s'.\n", port_name );
+  fprintf(fd_log,"Creating input port '%s'.\n", port_name );
 
   if (!(ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
-    fprintf(stderr, "Cannot register input port '%s'.\n",port_name);
+    fprintf(fd_log, "Cannot register input port '%s'.\n",port_name);
     exit(1);
   }
   
@@ -820,10 +829,10 @@ void create_output_port(unsigned int port) {
 
   sprintf(port_name,"out_%d",port+1);
 
-  fprintf(stderr,"Creating output port '%s'.\n", port_name );
+  fprintf(fd_log,"Creating output port '%s'.\n", port_name );
 
   if (!(ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-    fprintf(stderr, "Cannot register output port '%s'.\n",port_name);
+    fprintf(fd_log, "Cannot register output port '%s'.\n",port_name);
     exit(1);
   }
   
@@ -842,7 +851,7 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   
   // Check if port exists
   if (jack_port == NULL) {
-    fprintf(stderr, "Can't find port '%s'\n", port_name);
+    fprintf(fd_log, "Can't find port '%s'\n", port_name);
     exit(1);
   }
 
@@ -852,9 +861,9 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   if ( jack_flags & JackPortIsInput ) {
   
     // Connect the port to our output port
-    fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
+    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
     if (jack_connect(client, jack_port_name(ports[port].output), jack_port_name(jack_port))) {
-      fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
+      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
       exit(1);
     }
 
@@ -863,9 +872,9 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   if ( jack_flags & JackPortIsOutput ) {
   
     // Connect the port to our input port
-    fprintf(stderr,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
+    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
     if (jack_connect(client, jack_port_name(jack_port), jack_port_name(ports[port].input))) {
-      fprintf(stderr, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
+      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
       exit(1);
     }
 
@@ -892,7 +901,7 @@ static void cleanup(int sig)
 
   refresh();
 
-  fprintf(stderr, "Stopped ncurses interface.\n");
+  fprintf(fd_log, "Stopped ncurses interface.\n");
 
 
   for (port = 0; port < n_ports; port++) {
@@ -902,7 +911,7 @@ static void cleanup(int sig)
       all_ports = jack_port_get_all_connections(client, ports[port].input);
 
       for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(stderr,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(ports[port].input), all_ports[i] );
+        fprintf(fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(ports[port].input), all_ports[i] );
         jack_disconnect(client, all_ports[i], jack_port_name(ports[port].input));
       }
     }
@@ -912,7 +921,7 @@ static void cleanup(int sig)
       all_ports = jack_port_get_all_connections(client, ports[port].output);
 
       for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(stderr,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(ports[port].output), all_ports[i] );
+        fprintf(fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(ports[port].output), all_ports[i] );
         jack_disconnect(client, all_ports[i], jack_port_name(ports[port].output));
       }
     }
@@ -923,21 +932,22 @@ static void cleanup(int sig)
   jack_client_close(client);
   
 
-  fprintf(stderr, "Waiting end of reading.");
+  fprintf(fd_log, "Waiting end of reading.");
   while(playback_cmd && playback_sts) {
-    fprintf(stderr, ".");
+    fprintf(fd_log, ".");
     fsleep( 0.25f );
   }
-  fprintf(stderr, " Done.\n");
+  fprintf(fd_log, " Done.\n");
 
 
-  fprintf(stderr, "Waiting end of recording.");
+  fprintf(fd_log, "Waiting end of recording.");
   while(record_cmd && record_sts) {
-    fprintf(stderr, ".");
+    fprintf(fd_log, ".");
     fsleep( 0.25f );
   }
-  fprintf(stderr, " Done.\n");
-
+  fprintf(fd_log, " Done.\n");
+  
+  fclose(fd_log);
 
   (void) signal(SIGINT, SIG_DFL);
   
@@ -991,16 +1001,16 @@ void load_setup(char *file)
   buf[1] = 0;
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for reading\n", file);
+    fprintf(fd_log,"ERROR: could not open '%s' for reading\n", file);
     exit(1);
   }
   
-  fprintf(stderr,"Loading '%s'\n", file);
+  fprintf(fd_log,"Loading '%s'\n", file);
   
   while ( fread(buf, sizeof(char), 1, fd_conf) ) {
     
     if (*buf == 'L' || *buf == 'l') {
-      fprintf(stderr,"Playback LOCK on Port %d take %d\n", port+1,take);
+      fprintf(fd_log,"Playback LOCK on Port %d take %d\n", port+1,take);
       takes[take].port_has_lock[port] = 1 ;
     }
     
@@ -1062,11 +1072,11 @@ void load_session(char * file)
   buf[1] = 0;
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for reading\n", file);
+    fprintf(fd_log,"ERROR: could not open '%s' for reading\n", file);
     exit(1);
   }
 
-  fprintf(stderr,"Loading '%s'\n", file);
+  fprintf(fd_log,"Loading '%s'\n", file);
 
   while ( fread(buf, sizeof(char), 1, fd_conf) ) {
     
@@ -1101,7 +1111,7 @@ void load_session(char * file)
   fclose(fd_conf);
   
   if (port>n_ports) {
-    fprintf(stderr,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,n_ports);
+    fprintf(fd_log,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,n_ports);
     exit(1);
   }
   
@@ -1144,7 +1154,7 @@ void save_session(char * file)
   unsigned int take, port;
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for writing\n", file);
+    fprintf(fd_log,"ERROR: could not open '%s' for writing\n", file);
     exit(1);
   }
   
@@ -1175,7 +1185,6 @@ void save_session(char * file)
 
 }
 
-
 void save_setup(char *file)
 {
 
@@ -1183,7 +1192,7 @@ void save_setup(char *file)
   unsigned int take, port;
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for writing\n", file);
+    fprintf(fd_log,"ERROR: could not open '%s' for writing\n", file);
     exit(1);
   }
   
@@ -1422,10 +1431,9 @@ void display_status(void) {
   if (write_disk_buffer_overflow)
     printw(" OVERFLOWS(%d)",write_disk_buffer_overflow);
 
-  printw("\n");
-
   color_set(DEFAULT, NULL);
 
+  printw("\n");
   
 }
 
@@ -1569,22 +1577,22 @@ void display_meter( int width )
 static int usage( const char * progname )
 {
   fprintf(stderr, "meterec version %s\n\n", VERSION);
-  fprintf(stderr, "Usage %s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
-  fprintf(stderr, "where  -f      is how often to update the meter per second [8]\n");
+  fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
+  fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
   fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter\n");
-  fprintf(stderr, "       -w      is how wide to make the meter [79]\n");
+  fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
   fprintf(stderr, "       -s      is session name [%s]\n",session);
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
-  fprintf(stderr, "       -t      record a new take\n");
+  fprintf(stderr, "       -t      record a new take at start\n");
   exit(1);
 }
 
 int main(int argc, char *argv[])
 {
-  int console_width = 79; //GetTermSize(&rows, &cols); 
+  int console_width = 0; 
   jack_status_t status;
   int running = 1;
-  float ref_lev;
+  float ref_lev = 0;
   int rate = 24;
   int opt;
   int key = 0;
@@ -1595,33 +1603,27 @@ int main(int argc, char *argv[])
   
   init_ports();
   init_takes();
-  
+   
   while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
     switch (opt) {
       case 'r':
         ref_lev = atof(optarg);
-        fprintf(stderr,"Reference level: %.1fdB\n", ref_lev);
         bias = powf(10.0f, ref_lev * -0.05f);
         break;
       case 'f':
         rate = atoi(optarg);
-        fprintf(stderr,"Updates per second: %d\n", rate);
         break;
       case 'w':
         console_width = atoi(optarg);
-        fprintf(stderr,"Console Width: %d\n", console_width);
         break;
       case 's':
         session = optarg ;
-        fprintf(stderr,"Session name: %s\n", session);
         break;
       case 'j':
         jackname = optarg ;
-        fprintf(stderr,"Jack client name: %s\n", jackname);
         break;
       case 't':
         record_cmd = START;
-        fprintf(stderr,"Recording new take.\n");
         break;
       case 'h':
       case 'v':
@@ -1634,6 +1636,45 @@ int main(int argc, char *argv[])
 
   /* init vars that rely on a changable option */
   post_option_init();
+  
+  if ( (fd_log = fopen(log_file,"w")) == NULL ) {
+    fprintf(stderr,"ERROR: could not open '%s' for writing\n", log_file);
+    exit(1);
+  }
+  
+  
+  fprintf(fd_log, "Starting ncurses interface...\n");
+
+  mainwin = initscr();
+  
+  if ( mainwin == NULL ) {
+    fprintf(fd_log, "Error initialising ncurses.\n");
+    exit(1);
+  }
+
+  start_color();
+  
+  // choose our color pairs
+  init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
+  init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
+  init_pair(RED,    COLOR_RED,     COLOR_BLACK);
+
+  noecho();  
+  keypad(stdscr, TRUE);
+  timeout(0); 
+  
+  if (!console_width)
+    console_width = getmaxx(mainwin);
+  
+  console_width --;
+   
+  fprintf(fd_log,"Reference level: %.1fdB\n", ref_lev);
+  fprintf(fd_log,"Updates per second: %d\n", rate);
+  fprintf(fd_log,"Console Width: %d\n", console_width);
+  fprintf(fd_log,"Session name: %s\n", session);
+  fprintf(fd_log,"Jack client name: %s\n", jackname);
+  if (record_cmd)
+    fprintf(fd_log,"Recording new take.\n");
 
   /* Calculate the decay length (should be 1600ms) */
   decay_len = (int)(1.6f / (1.0f/rate));
@@ -1643,21 +1684,21 @@ int main(int argc, char *argv[])
 
   /* Register with Jack */
   if ((client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
-    fprintf(stderr, "Failed to start '%s' jack client: %d\n", jackname, status);
+    fprintf(fd_log, "Failed to start '%s' jack client: %d\n", jackname, status);
     exit(1);
   }
-  fprintf(stderr,"Registered as '%s'.\n", jack_get_client_name( client ) );
+  fprintf(fd_log,"Registered as '%s'.\n", jack_get_client_name( client ) );
 
   /* Register the signal process callback */
   jack_set_process_callback(client, process_jack_data, 0);
 
   if (jack_activate(client)) {
-    fprintf(stderr, "Cannot activate client.\n");
+    fprintf(fd_log, "Cannot activate client.\n");
     exit(1);
   }
 
   /* How long should we wait to read 10 times faster than data goes away */
-  thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
+  thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 2; 
     
   load_setup(setup_file);
 
@@ -1679,25 +1720,6 @@ int main(int argc, char *argv[])
   /* Register the cleanup function to be called when C-c */
   signal(SIGINT, cleanup);
 
-  fprintf(stderr, "Starting ncurses interface...\n");
-
-  mainwin = initscr();
-  
-  if ( mainwin == NULL ) {
-    fprintf(stderr, "Error initialising ncurses.\n");
-    exit(1);
-  }
-
-  start_color();
-  
-  // choose our color pairs
-  init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
-  init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
-  init_pair(RED,    COLOR_RED,     COLOR_BLACK);
-
-  noecho();  
-  keypad(stdscr, TRUE);
-  timeout(0);  
   
   x_pos = n_takes;
 
