@@ -276,35 +276,23 @@ void read_peak(void)
 void compute_takes_to_playback() {
 
   unsigned int take, port;
-  
 
   for ( port = 0; port < n_ports; port++ ) {
     
-    /* start investigation from latest take */
-    take = n_takes;
-
-    /* look for a lock along the takes for this port */
-    take ++;
-    while (take--)
+    for ( take = n_takes + 1; take > 0; take-- )
       if (takes[take].port_has_lock[port])
         break;
-
-    take ++;
     
-    /* start for latest take if no lock found */
     if (!take)
-      take = n_takes ;
-
-    /* look for latest take at or before that postition */
-    while (take--) {
-      if (takes[take].port_has_track[port]) {
-        ports[port].playback_take = take;
+      take = n_takes + 1;
+      
+    for ( ; take > 0; take-- )
+      if (takes[take].port_has_track[port])
         break;
-      }
-      ports[port].playback_take = 0;
-    }
-  
-  }
+        
+    ports[port].playback_take = take;
+    
+  }  
 
 }
 
@@ -1242,9 +1230,11 @@ void save_setup(char *file)
 
 void start_playback() {
 
-  playback_cmd = START ;
-  
   compute_takes_to_playback();
+  
+  save_setup(setup_file);
+
+  playback_cmd = START ;
   
   pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
 
@@ -1256,10 +1246,9 @@ void start_record() {
   
   if (n_tracks) {
   
-    record_cmd = START;
-
     save_session(session_file);
-    save_setup(setup_file);
+
+    record_cmd = START;
 
     pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
 
@@ -1309,15 +1298,19 @@ void display_session(int y_pos, int x_pos)
      printw("[   ]");
      
   if ( ports[y_pos].playback_take ) 
-    printw(" PLAYING Take %2d", ports[y_pos].playback_take);
-
-   printw("\n");
+    printw(" PLAYING Take %d", ports[y_pos].playback_take);
+  else 
+    printw(" No take yet");
+    
+  printw("\n");
   
   
   printw("  Take %2d ",x_pos);
-  printw("%s", (ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
   printw("%s", takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
-  printw("%s\n", takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
+  printw("%s", takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
+  printw("%s", (ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
+  
+  printw("\n");
 
   for (port=0; port<n_ports; port++) {
   
@@ -1368,7 +1361,7 @@ void display_session(int y_pos, int x_pos)
   
   attroff(A_REVERSE);
   color_set(DEFAULT, NULL);
-      
+        
 }
 
 void display_status(void) {
@@ -1391,17 +1384,16 @@ void display_status(void) {
   
   
   
-  printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%)", rate, h, m, s, ds, load , max_load);
+  printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%) ", rate, h, m, s, ds, load , max_load);
   
-//  addch(ACS_BULLET);
-  printw(" PLAYBACK[");
+  printw("[> ");
   
   if (playback_sts==OFF) 
-    printw("%8s","OFF");
+    printw("%-8s","OFF");
   if (playback_sts==STARTING) 
-    printw("%8s","STARTING");
+    printw("%-8s","STARTING");
   if (playback_sts==ONGOING) 
-    printw("%8s","ONGOING");
+    printw("%-8s","ONGOING");
 
   printw("]");
 
@@ -1409,20 +1401,26 @@ void display_status(void) {
   if (record_sts) 
     color_set(RED, NULL);
   
-  printw(" RECORD[");
+  printw("[O ");
 
   if (record_sts==OFF) 
-    printw("%8s","OFF");
+    printw("%-8s","OFF");
   if (record_sts==STARTING) 
-    printw("%8s","STARTING");
+    printw("%-8s","STARTING");
   if (record_sts==ONGOING) 
-    printw("%8s","ONGOING");
+    printw("%-8s","ONGOING");
 
   printw("]");
   
+  if (record_sts==ONGOING) {
+    attron(A_BOLD);
+    printw(" Take %d",n_takes+1);
+    attroff(A_BOLD); 
+  }
+    
   
   if (write_disk_buffer_overflow)
-    printw(" OVERFLOWS[%d]",write_disk_buffer_overflow);
+    printw(" OVERFLOWS(%d)",write_disk_buffer_overflow);
 
   printw("\n");
 
@@ -1634,23 +1632,23 @@ int main(int argc, char *argv[])
     }
   }
 
-  // init vars that rely on a changable option
+  /* init vars that rely on a changable option */
   post_option_init();
 
-  // Calculate the decay length (should be 1600ms)
+  /* Calculate the decay length (should be 1600ms) */
   decay_len = (int)(1.6f / (1.0f/rate));
   
-  // Init the scale
+  /* Init the scale */
   init_display_scale(console_width - 2);
 
-  // Register with Jack
+  /* Register with Jack */
   if ((client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
     fprintf(stderr, "Failed to start '%s' jack client: %d\n", jackname, status);
     exit(1);
   }
   fprintf(stderr,"Registered as '%s'.\n", jack_get_client_name( client ) );
 
-  // Register the signal process callback
+  /* Register the signal process callback */
   jack_set_process_callback(client, process_jack_data, 0);
 
   if (jack_activate(client)) {
@@ -1667,39 +1665,18 @@ int main(int argc, char *argv[])
   
   // start the thread emptying disk buffer to file
   if (record_cmd==START) {
-
-    compute_tracks_to_record();
-
-    if (n_tracks) {
-      fprintf(stderr,"Saving session of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, session_file );
-      save_session(session_file);
-
-      fprintf(stderr,"Saving setup of n_ports=%d, n_takes=%d+1, n_tracks=%d to '%s'.\n", n_ports, n_takes, n_tracks, setup_file );
-      save_setup(setup_file);
-
-      fprintf(stderr,"Starting writer thread\n");
-      pthread_create(&wr_dt, NULL, (void *)&writer_thread, NULL);
-
-      while(record_sts!=ONGOING) 
-        fsleep( 0.1f );
-      
-    } else {
-      fprintf(stderr,"ERROR: Cannot do a new take without port selected for recording (R/D/O) in first column of %s\n",setup_file);
-      record_cmd=STOP;
-      playback_cmd=STOP;
-      cleanup(0); 
-    }
-  } 
-
-  compute_takes_to_playback();
-    
-  fprintf(stderr,"Starting reader thread\n");
-  pthread_create(&rd_dt, NULL, (void *)&reader_thread, NULL);
-    
-  while(playback_sts!=ONGOING) 
-    fsleep( 0.1f );
-
-  // Register the cleanup function to be called when C-c 
+  
+    start_record();    
+    start_playback();
+  
+  }
+  else if (playback_cmd==START) {
+  
+    start_playback();
+  
+  }
+  
+  /* Register the cleanup function to be called when C-c */
   signal(SIGINT, cleanup);
 
   fprintf(stderr, "Starting ncurses interface...\n");
@@ -1817,28 +1794,38 @@ int main(int argc, char *argv[])
     ** KEYs handled in all modes
     */
     
-    /* edit or not edit */
-    if ( key == 9 ) 
-      edit_mode = !edit_mode ;
+    switch (key) {
     
-    /* playback start/stop control */
-    if ( key == ' ') { 
-      if (playback_sts == ONGOING) 
-        stop();
-      else if (playback_sts == OFF) 
-        start_playback();
+      /* TAB */
+      case 9:
+        edit_mode = !edit_mode ;
+        break;
+    
+      /* RETURN */
+      case 10:
+        if (playback_sts == ONGOING)
+          stop();
+        else if (playback_sts == OFF) {
+          start_record();    
+          start_playback();
+        }
+        break;
+        
+      /* SPACE */
+      case ' ':
+        if (playback_sts == ONGOING)
+          stop();
+        else if (playback_sts == OFF) 
+          start_playback();
+        break;
+        
+      /* Quit */
+     case 'Q':         
+     case 'q':         
+       cleanup(0); 
+       break;
+       
     }
-
-    if (key == 10 )
-      if (playback_sts == OFF) {
-    
-        start_playback();
-        start_record();    
-    
-      }   
-
-    if ( key == 'q') 
-      cleanup(0); 
     
     refresh();
     
