@@ -1614,7 +1614,6 @@ int main(int argc, char *argv[])
   int opt;
   int key = 0;
   int edit_mode = 0;
-  int edit_change =0;
   int x_pos = 0, y_pos = 0;
   int port;
   
@@ -1755,65 +1754,78 @@ int main(int argc, char *argv[])
 
     if (edit_mode) {
       
-      edit_change = 0;
-      
-      if ( key == KEY_UP ) {
+    switch (key) {
+    
+      /* Move cursor */
+      case KEY_UP :
         if ( y_pos > 0 )
           y_pos--;
-      }
-      if ( key == KEY_DOWN ) {
+        break;
+        
+      case KEY_DOWN :
         if ( y_pos < n_ports - 1 )
           y_pos++;
-      }
-      if ( key == KEY_LEFT ) {
+        break;
+      
+      case KEY_LEFT :
         if ( x_pos > 1 )
           x_pos--;
-      }
-      if ( key == KEY_RIGHT ) {
+        break;
+      
+      case KEY_RIGHT :
         if ( x_pos < n_takes )
           x_pos++;
-      }
-
-
-      if ( key == 'l' ) 
+        break;
+      
+      /* Change Locks */
+      case 'l' : 
         takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
+        break;
 
-      if ( key == 'L' ) 
+      case 'L' : 
         for ( port=0 ; port < n_ports ; port++) 
           takes[x_pos].port_has_lock[port] = !takes[x_pos].port_has_lock[port] ;
+        break;
 
-      if ( key == 'A' ) 
+      case 'A' : 
         for ( port=0 ; port < n_ports ; port++) 
           takes[x_pos].port_has_lock[port] = 1 ;
+        break;
 
-      if ( key == 'a' ) 
+      case 'a' : 
         for ( port=0 ; port < n_ports ; port++) 
           takes[x_pos].port_has_lock[port] = 0 ;
+        break;
       
+      }
       
-      if ( key == 'r' ) {
-        if ( ports[y_pos].record == REC )
-          ports[y_pos].record = NO;
-        else
-          ports[y_pos].record = REC;
+      if (record_sts==OFF) {
+      
+        switch (key) {
+        /* Change record mode */
+        case 'r' : 
+          if ( ports[y_pos].record == REC )
+            ports[y_pos].record = NO;
+          else
+            ports[y_pos].record = REC;
+          break;
 
-        stop();
-      }
-      if ( key == 'd' ) {
-        if ( ports[y_pos].record == DUB )
-          ports[y_pos].record = NO;
-        else
-          ports[y_pos].record = DUB;
+        case 'd' : 
+          if ( ports[y_pos].record == DUB )
+            ports[y_pos].record = NO;
+          else
+            ports[y_pos].record = DUB;
+          break;
 
-        stop();
-      }
-      if ( key == 'o' ) {
-        if ( ports[y_pos].record == OVR )
-          ports[y_pos].record = NO;
-        else
-          ports[y_pos].record = OVR;
+        case 'o' : 
+          if ( ports[y_pos].record == OVR )
+            ports[y_pos].record = NO;
+          else
+            ports[y_pos].record = OVR;
+          break;
+
+        }
         
-        stop();
       }
       
       display_session(y_pos, x_pos);
