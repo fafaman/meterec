@@ -315,7 +315,9 @@ void compute_tracks_to_record() {
       n_tracks ++;
       
     }  
-      
+  
+  takes[n_takes+1].ntrack = n_tracks ;
+  
 }
 
 /******************************************************************************
@@ -648,7 +650,7 @@ int reader_thread(void *d)
           /* check if this port needs data from this take */
           if (ports[port].playback_take == take)
             /* Only fill buffer if in playback, dub or overdub */
-            if (ports[port].record != REC || !record_cmd)
+            if (ports[port].record != REC || !record_sts)
             ports[port].read_disk_buffer[i] = takes[take].buf[opos * ntrack + track] ;
             
         }
@@ -1476,33 +1478,29 @@ void display_buffer(int width) {
   }
   printw("%sRD\n", pedale);
 
-  if (record_sts==ONGOING) {
-    if (n_tracks) {
 
-      wrlevel = (write_disk_buffer_process_pos - write_disk_buffer_thread_pos) & (DISK_SIZE-1);
-      wrsize = (width * wrlevel) / DISK_SIZE;
-
-      if (wrsize > peak_wrsize) 
-        peak_wrsize = wrsize;
-  
-      printw("WR%s", pedale);
-
-      for (i=0; i<peak_wrsize; i++) {
-        if (i < wrsize-1)
-          printw("+");
-        else if (i == peak_wrsize-1)
-          printw(":");
-        else 
-          printw(" ");
-      }
-      printw("\n");
-
-    }
-    else 
-      printw("WR- IDLE !!! No ports selected for recording in %s !!! \n", setup_file);
+  if (record_sts==ONGOING && playback_sts == ONGOING) {
+    printw("WR%s", pedale);
   } else {
-    printw("WR-\n");
+    printw("WR-");
   }
+
+  wrlevel = (write_disk_buffer_process_pos - write_disk_buffer_thread_pos) & (DISK_SIZE-1);
+  wrsize = (width * wrlevel) / DISK_SIZE;
+
+  if (wrsize > peak_wrsize) 
+    peak_wrsize = wrsize;
+
+  for (i=0; i<peak_wrsize; i++) {
+    if (i < wrsize-1)
+      printw("+");
+    else if (i == peak_wrsize-1)
+      printw(":");
+    else 
+      printw(" ");
+  }
+  printw("\n");
+
     
   if (playback_sts==ONGOING) {
     if      (pedale=="/")
@@ -1848,13 +1846,11 @@ int main(int argc, char *argv[])
     
     switch (key) {
     
-      /* TAB */
-      case 9:
+      case 9: /* TAB */
         edit_mode = !edit_mode ;
         break;
     
-      /* RETURN */
-      case 10:
+      case 10: /* RETURN */
         if (playback_sts == ONGOING)
           stop();
         else if (playback_sts == OFF) {
@@ -1863,7 +1859,6 @@ int main(int argc, char *argv[])
         }
         break;
         
-      /* SPACE */
       case ' ':
         if (playback_sts == ONGOING)
           stop();
@@ -1871,7 +1866,6 @@ int main(int argc, char *argv[])
           start_playback();
         break;
         
-      /* Quit */
      case 'Q':         
      case 'q':         
        cleanup(0); 
