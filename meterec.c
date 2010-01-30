@@ -74,6 +74,7 @@
 #define GREEN 1
 #define YELLOW 2
 #define RED 3
+#define BLUE 3
 
 WINDOW * mainwin;
 
@@ -520,7 +521,6 @@ int writer_thread(void *d)
       
     }
     
-    
     sf_close(out);
 
     fprintf(fd_log,"Writer thread: done.\n");
@@ -539,7 +539,7 @@ int reader_thread(void *d)
     fprintf(fd_log, "Reader thread: started.\n");
 
     /* empty buffer ( reposition thread position in order to refill where process will first read) */
-    read_disk_buffer_thread_pos = read_disk_buffer_process_pos + 1;
+    read_disk_buffer_thread_pos = (read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
 
     /* open all files needed for this session */
     for (port=0; port<n_ports; port++) {
@@ -711,34 +711,26 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     out = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].output, nframes);
     in = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].input, nframes);
 
-    if ( (record_sts==ONGOING || record_cmd==NO) && playback_sts==ONGOING) {
-  
-      write_pos = write_disk_buffer_process_pos;
-      read_pos = read_disk_buffer_process_pos;
-      
-      for (i = 0; i < nframes; i++) {
 
+    if (playback_sts==ONGOING) {
+    
+      read_pos = read_disk_buffer_process_pos;
+
+      for (i = 0; i < nframes; i++) {
+      
         /* Empty read disk buffer */
         out[i] = ports[port].read_disk_buffer[read_pos];
+        
+        /* update buffer pointer */
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
-
-        /* Fill write disk buffer */
-        if (record_sts==ONGOING && ports[port].record) {
-          if (ports[port].record==OVR) 
-            ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
-          else 
-            ports[port].write_disk_buffer[write_pos] = in[i];
-            
-          write_pos = (write_pos + 1) & (DISK_SIZE - 1);
-        }
-
-        /* compute peak */
+        
+        /* compute peak of input (recordable) data*/
         s = fabs(in[i] * 1.0f) ;
         if (s > ports[port].peak_in) {
           ports[port].peak_in = s;
         }
         
-        /* compute peak of output data */
+        /* compute peak of output (playback) data */
         s = fabs(out[i] * 1.0f) ;
         if (s > ports[port].peak_out) {
           ports[port].peak_out = s;
@@ -746,28 +738,45 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         
       }
       
-    }
-    else {
+      if (record_sts==ONGOING) {
       
-      /* fill output with silence while disk threads are not ready */
+        write_pos = write_disk_buffer_process_pos;
+        
+        for (i = 0; i < nframes; i++) {
+        
+          /* Fill write disk buffer */
+          if (ports[port].record==OVR) 
+            ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
+          else if (ports[port].record)
+            ports[port].write_disk_buffer[write_pos] = in[i];
+            
+          /* update buffer pointer */
+          write_pos = (write_pos + 1) & (DISK_SIZE - 1);
+          
+        }
+      
+      }
+      
+    } else {
+    
       for (i = 0; i < nframes; i++) {
       
         out[i] = 0.0f ;
-        
-        // compute peak of input port
+      
+        /* compute peak */
         s = fabs(in[i] * 1.0f) ;
         if (s > ports[port].peak_in) {
           ports[port].peak_in = s;
         }
         
-      }
-        
+      } 
+       
     }
-    
+        
   }
 
 
-  if (record_sts==ONGOING && n_tracks) {
+  if (record_sts==ONGOING) {
     
     remaining_write_disk_buffer = DISK_SIZE - ((write_disk_buffer_process_pos-write_disk_buffer_thread_pos) & (DISK_SIZE-1));
     
@@ -784,15 +793,11 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     read_disk_buffer_overflow++;
 
  
- 
-  if ((record_sts==ONGOING || record_cmd==NO) && playback_sts==ONGOING) {
-
-    // positon write pointer to end of ringbuffer
-    write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
-
+  if (playback_sts==ONGOING) {
+  
     // positon read pointer to end of ringbuffer
     read_disk_buffer_process_pos = (read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
-
+  
     total_nframes +=  nframes ;
     
   } else {
@@ -800,6 +805,13 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     total_nframes = 0 ;
   
   }
+  
+  if (record_sts==ONGOING) {
+
+    // positon write pointer to end of ringbuffer
+    write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+
+  } 
  
    
   return 0;
@@ -1240,7 +1252,7 @@ void save_setup(char *file)
 void start_playback() {
 
   compute_takes_to_playback();
-  
+
   save_setup(setup_file);
 
   playback_cmd = START ;
@@ -1326,14 +1338,14 @@ void display_session(int y_pos, int x_pos)
     if (ports[port].record) 
       color_set(YELLOW, NULL);
     else 
-      color_set(DEFAULT, NULL);
+      color_set(GREEN, NULL);
     
     if (y_pos == port) 
        attron(A_REVERSE);
     else 
        attroff(A_REVERSE);
   
-    printw("%02d ",port+1,ports[port].playback_take);
+    printw("%02d",port+1,ports[port].playback_take);
 
     if ( ports[port].record == REC )
       printw("R");
@@ -1354,6 +1366,9 @@ void display_session(int y_pos, int x_pos)
       if ((y_pos == port) && (x_pos == take))
          attroff(A_REVERSE);
 
+      if ( ports[port].playback_take == take )
+        attron(A_BOLD);
+        
       if ( takes[take].port_has_lock[port] )
         printw("L");
       else if ( ports[port].playback_take == take ) 
@@ -1362,6 +1377,8 @@ void display_session(int y_pos, int x_pos)
         printw("X");
       else 
         printw("-");
+        
+      attroff(A_BOLD);
               
     }
 
@@ -1445,7 +1462,7 @@ void display_buffer(int width) {
   
   rdsize = width * read_disk_buffer_level();
   
-  if (rdsize > peak_rdsize) 
+  if (rdsize > peak_rdsize && playback_sts == ONGOING) 
     peak_rdsize = rdsize;
   
   printw("  ");
@@ -1657,6 +1674,7 @@ int main(int argc, char *argv[])
   // choose our color pairs
   init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
   init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
+  init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
   init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 
   noecho();  
@@ -1698,13 +1716,13 @@ int main(int argc, char *argv[])
   }
 
   /* How long should we wait to read 10 times faster than data goes away */
-  thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 2; 
+  thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
     
   load_setup(setup_file);
 
   load_session(session_file);
   
-  // start the thread emptying disk buffer to file
+  /* Start threads doign disk accesses */
   if (record_cmd==START) {
   
     start_record();    
