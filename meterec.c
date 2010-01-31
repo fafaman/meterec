@@ -594,8 +594,6 @@ int reader_thread(void *d)
         
         fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
         
-        /* TODO check the number of channels vs number of tracks */
-
         /* allocate buffer space for this take */
         fprintf(fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
         takes[take].buf = calloc(BUF_SIZE*takes[take].ntrack, sizeof(float));
@@ -692,6 +690,7 @@ int reader_thread(void *d)
 
     return 0;
 }
+
 
 /******************************************************************************
 ** JACK callback process
