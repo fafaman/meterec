@@ -51,10 +51,9 @@
 #define BUF_SIZE 4096
 
 /* command */
-#define NO 0
+#define STOP 0
 #define START 1
 #define RESTART 2
-#define STOP 3
 
 /* status */
 #define OFF 0
@@ -75,6 +74,8 @@
 #define YELLOW 2
 #define RED 3
 #define BLUE 3
+
+void stop(void);
 
 WINDOW * mainwin;
 
@@ -110,7 +111,7 @@ static unsigned int read_disk_buffer_process_pos = 0;
 static unsigned int read_disk_buffer_overflow = 0;
 
 unsigned int record_sts = OFF;
-unsigned int record_cmd = NO;
+unsigned int record_cmd = STOP;
 
 unsigned int playback_sts = OFF;
 unsigned int playback_cmd = START;
@@ -466,9 +467,6 @@ int writer_thread(void *d)
     
     fprintf(fd_log, "Writer thread: Started.\n");
 
-    /* empty buffer ( reposition thread position in order to empty where process will first fill) */
-    write_disk_buffer_thread_pos = write_disk_buffer_process_pos;
-
     /* Open the output file */
     info.format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
     info.channels = n_tracks;
@@ -486,7 +484,7 @@ int writer_thread(void *d)
     
     out = sf_open(take_file, SFM_WRITE, &info);
     if (!out) {
-      perror("Writer thread: Cannot open file for writing");
+      fprintf(fd_log,"Writer thread: Cannot open '%s' file for writing",take_file);
       record_sts = OFF;
       return 0;
     }
@@ -497,9 +495,10 @@ int writer_thread(void *d)
 
     /* Start writing the RT ringbuffer to disk */
     record_sts = ONGOING ;
-    opos = 0;
-    while (record_cmd == START) {
+    while (record_sts) {
     
+      opos = 0;
+
       for (i  = write_disk_buffer_thread_pos; 
            i != write_disk_buffer_process_pos && opos < BUF_SIZE;
            i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
@@ -517,8 +516,15 @@ int writer_thread(void *d)
       sf_writef_float(out, buf, opos);
 
       write_disk_buffer_thread_pos = i;
-      opos = 0;
       
+      /* run until empty buffer after a stop requets */
+      if (record_sts == STOPING)
+        if ( write_disk_buffer_thread_pos == write_disk_buffer_process_pos )
+          break;
+      
+      if (record_cmd == STOP)
+        record_sts = STOPING ;
+         
       usleep(thread_delay);
       
     }
@@ -697,7 +703,12 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *in;
   jack_default_audio_sample_t *out;
   unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
+  unsigned int playback_sts_local, record_sts_local;
   float s;
+  
+  /* make sure statuses do not change during callback */
+  playback_sts_local = playback_sts;
+  record_sts_local = record_sts;
     
   /* get the audio samples, and find the peak sample */
   for (port = 0; port < n_ports; port++) {
@@ -714,7 +725,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     in = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].input, nframes);
 
 
-    if (playback_sts==ONGOING) {
+    if (playback_sts_local==ONGOING) {
     
       read_pos = read_disk_buffer_process_pos;
 
@@ -740,7 +751,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         
       }
       
-      if (record_sts==ONGOING) {
+      if (record_sts_local==ONGOING) {
       
         write_pos = write_disk_buffer_process_pos;
         
@@ -778,42 +789,40 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   }
 
 
-  if (record_sts==ONGOING) {
-    
-    remaining_write_disk_buffer = DISK_SIZE - ((write_disk_buffer_process_pos-write_disk_buffer_thread_pos) & (DISK_SIZE-1));
-    
-    if (remaining_write_disk_buffer <= nframes)
-      write_disk_buffer_overflow++;
-
-  }
-  
-  
-  // needs rework
-  remaining_read_disk_buffer = DISK_SIZE - ((read_disk_buffer_thread_pos-read_disk_buffer_process_pos) & (DISK_SIZE-1));
-    
-  if (remaining_read_disk_buffer <= nframes)
-    read_disk_buffer_overflow++;
-
  
-  if (playback_sts==ONGOING) {
+  if (playback_sts_local==ONGOING) {
   
-    // positon read pointer to end of ringbuffer
+    /* track buffer over/under flow -- needs rework */
+    remaining_read_disk_buffer = DISK_SIZE - ((read_disk_buffer_thread_pos-read_disk_buffer_process_pos) & (DISK_SIZE-1));
+
+    if (remaining_read_disk_buffer <= nframes)
+      read_disk_buffer_overflow++;
+
+    /* positon read pointer to end of ringbuffer */
     read_disk_buffer_process_pos = (read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
   
+    /* update frame/time counter */
     total_nframes +=  nframes ;
     
+    if (record_sts_local==ONGOING) {
+
+      /* track buffer over/under flow */
+      remaining_write_disk_buffer = DISK_SIZE - ((write_disk_buffer_process_pos-write_disk_buffer_thread_pos) & (DISK_SIZE-1));
+
+      if (remaining_write_disk_buffer <= nframes)
+        write_disk_buffer_overflow++;
+
+      /* positon write pointer to end of ringbuffer*/
+      write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+
+    }
+  
   } else {
   
     total_nframes = 0 ;
   
   }
   
-  if (record_sts==ONGOING) {
-
-    // positon write pointer to end of ringbuffer
-    write_disk_buffer_process_pos = (write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
-
-  } 
  
    
   return 0;
@@ -902,13 +911,8 @@ static void cleanup(int sig)
   const char **all_ports;
   unsigned int i, port;
 
-  if (record_sts)
-    record_cmd = STOP ;
+  stop();
   
-  if (playback_sts)
-    playback_cmd = STOP ;
-  
-
   delwin(mainwin);
 
   endwin();
@@ -916,7 +920,6 @@ static void cleanup(int sig)
   refresh();
 
   fprintf(fd_log, "Stopped ncurses interface.\n");
-
 
   for (port = 0; port < n_ports; port++) {
   
@@ -944,23 +947,7 @@ static void cleanup(int sig)
 
   /* Leave the jack graph */
   jack_client_close(client);
-  
-
-  fprintf(fd_log, "Waiting end of reading.");
-  while(playback_cmd && playback_sts) {
-    fprintf(fd_log, ".");
-    fsleep( 0.25f );
-  }
-  fprintf(fd_log, " Done.\n");
-
-
-  fprintf(fd_log, "Waiting end of recording.");
-  while(record_cmd && record_sts) {
-    fprintf(fd_log, ".");
-    fsleep( 0.25f );
-  }
-  fprintf(fd_log, " Done.\n");
-  
+    
   fclose(fd_log);
 
   (void) signal(SIGINT, SIG_DFL);
@@ -1287,12 +1274,24 @@ void stop() {
   if (record_sts) {
     record_cmd = STOP ;
   
+    fprintf(fd_log, "Waiting end of recording.\n");
+    while(record_cmd || record_sts) {
+      fsleep( 0.05f );
+    }
+
     /* get ready for the next take */
     n_takes ++;
   }
   
-  if (playback_sts)
+  if (playback_sts) {
     playback_cmd = STOP ;
+
+    fprintf(fd_log, "Waiting end of reading.\n");
+    while(playback_cmd || playback_sts) {
+      fsleep( 0.05f );
+    }
+
+  }
 
 }
 
@@ -1803,21 +1802,21 @@ int main(int argc, char *argv[])
         /* Change record mode */
         case 'r' : 
           if ( ports[y_pos].record == REC )
-            ports[y_pos].record = NO;
+            ports[y_pos].record = OFF;
           else
             ports[y_pos].record = REC;
           break;
 
         case 'd' : 
           if ( ports[y_pos].record == DUB )
-            ports[y_pos].record = NO;
+            ports[y_pos].record = OFF;
           else
             ports[y_pos].record = DUB;
           break;
 
         case 'o' : 
           if ( ports[y_pos].record == OVR )
-            ports[y_pos].record = NO;
+            ports[y_pos].record = OFF;
           else
             ports[y_pos].record = OVR;
           break;
