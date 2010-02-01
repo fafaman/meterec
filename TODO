@@ -1,6 +1,7 @@
 BUG
 - OVR record mode seams to need lock to perform properly. observed bounce in audio recorded without
 lock...
+x problem with "not take yet" information
 x port map trailing spaces
 x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()

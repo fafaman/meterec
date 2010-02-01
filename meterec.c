@@ -1319,9 +1319,9 @@ void display_session(int y_pos, int x_pos)
      printw("[   ]");
      
   if ( ports[y_pos].playback_take ) 
-    printw(" PLAYING Take %d", ports[y_pos].playback_take);
+    printw(" PLAYING take %d", ports[y_pos].playback_take);
   else 
-    printw(" No take yet");
+    printw(" PLAYING empty take 0");
     
   printw("\n");
   
