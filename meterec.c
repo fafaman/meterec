@@ -1611,7 +1611,7 @@ int main(int argc, char *argv[])
   int key = 0;
   int edit_mode = 0;
   int x_pos = 0, y_pos = 0;
-  int port;
+  unsigned int port, take;
   
   init_ports();
   init_takes();
@@ -1752,7 +1752,9 @@ int main(int argc, char *argv[])
       
     switch (key) {
     
-      /* Move cursor */
+      /* 
+      ** Move cursor 
+      */
       case KEY_UP :
         if ( y_pos > 0 )
           y_pos--;
@@ -1773,26 +1775,34 @@ int main(int argc, char *argv[])
           x_pos++;
         break;
       
-      /* Change Locks */
-      case 'l' : 
+      /* 
+      ** Change Locks 
+      */
+      case 'L' : /* clear all other locks for that port if no lock yet */
+        if ( !takes[x_pos].port_has_lock[y_pos] ) 
+          for ( take=0 ; take < n_takes+1 ; take++) 
+            takes[take].port_has_lock[y_pos] = 0 ;
+
+      case 'l' : /* toggle lock at this position */
         takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
         break;
 
-      case 'L' : 
-        for ( port=0 ; port < n_ports ; port++) 
-          takes[x_pos].port_has_lock[port] = !takes[x_pos].port_has_lock[port] ;
-        break;
+      case 'A' : /* clear all other locks if no lock yet at this position */
+        if ( !takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < n_ports ; port++)
+            for ( take=0 ; take < n_takes+1 ; take++)  
+              takes[take].port_has_lock[port] = 0 ;
 
-      case 'A' : 
-        for ( port=0 ; port < n_ports ; port++) 
-          takes[x_pos].port_has_lock[port] = 1 ;
-        break;
-
-      case 'a' : 
-        for ( port=0 ; port < n_ports ; port++) 
-          takes[x_pos].port_has_lock[port] = 0 ;
+      case 'a' : /* toggle lock for all ports depending on this position */
+        if ( takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < n_ports ; port++) 
+            takes[x_pos].port_has_lock[port] = 0;
+        else 
+          for ( port=0 ; port < n_ports ; port++) 
+            takes[x_pos].port_has_lock[port] = 1;
         break;
       
+
       }
       
       if (record_sts==OFF) {
