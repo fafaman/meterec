@@ -1,5 +1,5 @@
 bin_PROGRAMS = meterec
-EXTRA_DIST=meterec-init-conf
+bin_SCRIPTS = meterec-init-conf
 
 AM_CFLAGS = -g -Wall @JACK_CFLAGS@ @SNDFILE_CFLAGS@
 AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@
