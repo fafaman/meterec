@@ -1,13 +1,35 @@
 <pre>
                                     METEREC
 
-Bugs?
-=====
+Help
+====
 
-Please use sourceforge to report bugs. 
+% ./meterec -h
+meterec version 0.6
 
-N meterec-init-conf script is not copied during "make install"
+./meterec [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]
 
+where  -f      is how often to update the meter per second [24]
+       -r      is the reference signal level for 0dB on the meter [0]
+       -w      is how wide to make the meter [auto]
+       -s      is session name [meterec]
+       -j      is the jack client name [meterec]
+       -t      record a new take at start
+
+
+Command keys:
+       <SPACE> start playback; stop
+       <ENTER> start record; stop
+       m       reset maximum level vu-meter markers
+       q       quit
+       <TAB>   edit mode
+       l       toggle lock for that position
+       a       toggle lock for all ports for that take
+       L       clear all locks for that port, toggle lock for that position
+       A       clear all locks, toggle lock for all ports for that take
+       r       toggle REC record mode for that port - record without listening playback
+       d       toggle DUB record mode for that port - record listening playback
+       o       toggle OVR record mode for that port - record listening and mixing playback
 
 Why is it so basic?
 ===================
@@ -131,7 +153,7 @@ Will show all tracks vu-meter. you may adjust meter behavior with -f -r -w optio
 Make sure no instrument reaches the 0dB by adjusting gain on the mixer console or in
 the sound card mixer.
 
-Stop meterec with <Control>+c 
+Stop meterec with CTRL+c 
 
 Session base
 ------------
@@ -161,11 +183,11 @@ R|11 system:capture_11 system:playback_11
 
 We are ready for first take... Let's go
 
-%meterec -t
+hit ENTER key
 
 ...Time for pleasure and concentration...
 
-Once Iris+Hakim are done, Stop meterec with <Control>+c.
+Once Iris+Hakim are done, Stop meterec with ENTER or SPACE key.
 
 demo.conf now looks like this: 
 =-|1 system:capture_1 system:playback_1
@@ -188,14 +210,14 @@ RX|11 system:capture_11 system:playback_11
 
 You can listen to what was done right away
 
-%meterec
+hit SPACE key
 
 You can repeat take to make sure Iris+Hakim where recoreded at their best 
 
-%meterec -t
-%meterec -t
-%meterec -t
-%meterec -t
+hit ENTER key
+hit ENTER key
+hit ENTER key
+hit ENTER key
 
 demo.conf now looks like this: 
 =-----|1 system:capture_1 system:playback_1
@@ -219,7 +241,7 @@ RXXXXX|11 system:capture_11 system:playback_11
 When you start meterec, you get to hear the latest take of each track, now you may
 find out that take 4 what the best for Iris+Hakim. 
 
-Let's edit demo.conf so it looks like this:
+Let's use TAB key to edit demo.conf so it looks like this:
 =-----|1 system:capture_1 system:playback_1
 =-----|2 system:capture_2 system:playback_2
 =-----|3 system:capture_3 system:playback_3
@@ -250,7 +272,7 @@ Igor plays electric piano on tracks 14+15
 
 Paul+Igor will now play over take 4 of Iris+Hakim and recod their parts.
 
-Let's edit demo.conf so it looks like this:
+Let's use TAB key to edit demo.conf so it looks like this:
 R-----|1 system:capture_1 system:playback_1
 =-----|2 system:capture_2 system:playback_2
 =-----|3 system:capture_3 system:playback_3
@@ -269,19 +291,17 @@ R-----|15 system:capture_15 system:playback_15
 =-----|16 system:capture_16 system:playback_16
 012345
 
-You may let them warm-up by starting 
-
-%meterec
+You may let them warm-up by starting playback with SPACE key
 
 This gives a good chance to adjust input gain again (trying to get the best dynamic)
 
-^c and once Paul+Igor are ready...
+SPACE to stop and once Paul+Igor are ready...
 
-%meterec -t
+ENTER to start recording
 
 ... Enjoy the groove and feel of your mates ...
 
-Stop meterec with ^c
+Stop meterec with ENTER or SPACE
 
 As you have guessed, demo.conf now looks like this
 R-----X|1 system:capture_1 system:playback_1
@@ -305,7 +325,7 @@ R-----X|15 system:capture_15 system:playback_15
 Well, it appears that Paul is still suffuring from hangover while Igor's performance
 was sharp and still...
 
-Let's edit demo.conf to give an other chance to Paul:
+Let's use TAB key to edit demo.conf to give an other chance to Paul:
 R-----X|1 system:capture_1 system:playback_1
 =------|2 system:capture_2 system:playback_2
 =------|3 system:capture_3 system:playback_3
@@ -326,17 +346,17 @@ R-----X|1 system:capture_1 system:playback_1
 
 Give a glass of water to you friend and run meterec
 
-%meterec -t
-%meterec -t
-%meterec -t
+ENTER 
+ENTER 
+ENTER 
 
 If needed, make sure he gets some fresh air and
 
-%meterec -t
+ENTER 
 
 Great, everybody is happy (fed-up?) with Paul's guitar riffs
 
-demo.conf now looks like this:
+edit mode view now looks like this:
 R-----XXXXX|1 system:capture_1 system:playback_1
 =----------|2 system:capture_2 system:playback_2
 =----------|3 system:capture_3 system:playback_3
@@ -360,7 +380,7 @@ Igor Just had and Idea and would like to add a few notes to his previous take. H
 use the Overdub feature of meterec to create a new track that contains previous
 content plus new content...
 
-Let's edit demo.conf so it looks like this:
+Let's use TAB key to edit demo.conf so it looks like this:
 =-----XXXXX|1 system:capture_1 system:playback_1
 =----------|2 system:capture_2 system:playback_2
 =----------|3 system:capture_3 system:playback_3
@@ -382,13 +402,13 @@ O-----X----|15 system:capture_15 system:playback_15
 
 Ready, steady, go!
 
-%meterec -t
+ENTER
 
 ... hummm does not sound that good ...
 
-^c
+ENTER or SPACE
 
-demo.conf looks like this
+edit mode view looks like this
 =-----XXXXX-|1 system:capture_1 system:playback_1
 =-----------|2 system:capture_2 system:playback_2
 =-----------|3 system:capture_3 system:playback_3
@@ -413,7 +433,7 @@ with content added during take 11 and want to do it again, we have to Lock track
 on take 6 to create take 12. Take 12 will then contain notes played during take 6 and
 take 12.
 
-Let's edit demo.conf
+Let's use TAB key to edit demo.conf
 =-----XXXXX-|1 system:capture_1 system:playback_1
 =-----------|2 system:capture_2 system:playback_2
 =-----------|3 system:capture_3 system:playback_3
@@ -435,11 +455,11 @@ O-----L----X|15 system:capture_15 system:playback_15
 
 Ready for recording...
 
-%meterec -t 
+ENTER
 
 ... This sounds far better ...
 
-^c
+ENTER to stop
 
 Now if we want to listen to the result a little update in demo.conf is needed...
 =-----XXXXX--|1 system:capture_1 system:playback_1
@@ -469,7 +489,7 @@ Lead singer
 
 Yoanna sings on track 2
 
-Lets edit demo.conf so it looks like this:
+Lets use TAB key to edit demo.conf so it looks like this:
 =-----XXXXX--|1 system:capture_1 system:playback_1
 R------------|2 system:capture_2 system:playback_2
 =------------|3 system:capture_3 system:playback_3
@@ -489,12 +509,12 @@ R------------|2 system:capture_2 system:playback_2
 0123456789012
           1
 
-%meterec -t
+ENTER to start recording
 
 Now Yoanna would like to listen to her previous take and sing over it without ending
 with both takes mixed together. In meterec this is called Dubbing.
 
-Lets edit demo.conf so it looks like this:
+Lets use TAB key to edit demo.conf so it looks like this:
 =-----XXXXX---|1 system:capture_1 system:playback_1
 D------------X|2 system:capture_2 system:playback_2
 =-------------|3 system:capture_3 system:playback_3
@@ -514,7 +534,7 @@ D------------X|2 system:capture_2 system:playback_2
 01234567890123
           1
 
-%meterec -t
+ENTER
 
 Now demo.conf looks like this
 =-----XXXXX----|1 system:capture_1 system:playback_1
@@ -560,6 +580,14 @@ to minimise delays in jackd. Make sure you do not have a cascading aproach in yo
 recording session, but rather stick to one of the first takes as a reference for
 playing other instruments.
 
+
+
+Bugs?
+=====
+
+See TODO file for known bugs.
+
+Please use sourceforge to report new bugs. 
 
 
 </pre>

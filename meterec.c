@@ -1592,11 +1592,25 @@ static int usage( const char * progname )
   fprintf(stderr, "meterec version %s\n\n", VERSION);
   fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
   fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
-  fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter\n");
+  fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
   fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
   fprintf(stderr, "       -s      is session name [%s]\n",session);
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
   fprintf(stderr, "       -t      record a new take at start\n");
+  fprintf(stderr, "\n\n");
+  fprintf(stderr, "Command keys:\n");
+  fprintf(stderr, "       <SPACE> start playback; stop\n");
+  fprintf(stderr, "       <ENTER> start record; stop\n");
+  fprintf(stderr, "       m       reset maximum level vu-meter markers\n");
+  fprintf(stderr, "       q       quit\n");
+  fprintf(stderr, "       <TAB>   edit mode\n");
+  fprintf(stderr, "       l       toggle lock for that position\n");
+  fprintf(stderr, "       a       toggle lock for all ports for that take\n");
+  fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
+  fprintf(stderr, "       A       clear all locks, toggle lock for all ports for that take\n");
+  fprintf(stderr, "       r       toggle REC record mode for that port - record without listening playback\n");
+  fprintf(stderr, "       d       toggle DUB record mode for that port - record listening playback\n");
+  fprintf(stderr, "       o       toggle OVR record mode for that port - record listening and mixing playback\n");
   exit(1);
 }
 
