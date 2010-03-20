@@ -213,6 +213,24 @@ unsigned int n_tracks = 0; /* number of tracks to be recorded during current tak
 ** UTILs
 */
 
+void exit_on_error(char * reason) {
+
+  fprintf(fd_log, "%s\n", reason);
+  
+  fclose(fd_log);
+  
+  delwin(mainwin);
+
+  endwin();
+
+  refresh();
+  
+  printf("%s\n", reason);
+  
+  exit(1);
+  
+}
+
 float read_disk_buffer_level(void) {
   float rdlevel;
 
@@ -587,9 +605,8 @@ int reader_thread(void *d)
       
         /* check file is (was) opened properly */
         if (takes[take].take_fd == NULL) {
-          perror("Reader thread: Cannot open file for reading");
           playback_sts = OFF;
-          exit(1);
+          exit_on_error("Reader thread: Cannot open file for reading");
         }
         
         fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
@@ -840,7 +857,7 @@ void create_input_port(unsigned int port) {
 
   if (!(ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
     fprintf(fd_log, "Cannot register input port '%s'.\n",port_name);
-    exit(1);
+    exit_on_error("Cannot register input port");
   }
   
 }
@@ -855,7 +872,7 @@ void create_output_port(unsigned int port) {
 
   if (!(ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
     fprintf(fd_log, "Cannot register output port '%s'.\n",port_name);
-    exit(1);
+    exit_on_error("Cannot register output port");
   }
   
 }
@@ -874,7 +891,7 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   // Check if port exists
   if (jack_port == NULL) {
     fprintf(fd_log, "Can't find port '%s'\n", port_name);
-    exit(1);
+    exit_on_error("Cannot find port");
   }
 
   /* check port flags */
@@ -886,7 +903,7 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
     fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
     if (jack_connect(client, jack_port_name(ports[port].output), jack_port_name(jack_port))) {
       fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
-      exit(1);
+      exit_on_error("Cannot connect ports");
     }
 
   }
@@ -897,7 +914,7 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
     fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
     if (jack_connect(client, jack_port_name(jack_port), jack_port_name(ports[port].input))) {
       fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
-      exit(1);
+      exit_on_error("Cannot connect ports");
     }
 
   }
@@ -1002,7 +1019,7 @@ void load_setup(char *file)
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
     fprintf(fd_log,"ERROR: could not open '%s' for reading\n", file);
-    exit(1);
+    exit_on_error("Cannot open setup file for reading.");
   }
   
   fprintf(fd_log,"Loading '%s'\n", file);
@@ -1073,8 +1090,8 @@ void load_session(char * file)
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
     fprintf(fd_log,"ERROR: could not open '%s' for reading\n", file);
-    exit(1);
-  }
+     exit_on_error("Cannot open session file for reading.");
+ }
 
   fprintf(fd_log,"Loading '%s'\n", file);
 
@@ -1112,7 +1129,7 @@ void load_session(char * file)
   
   if (port>n_ports) {
     fprintf(fd_log,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,n_ports);
-    exit(1);
+    exit_on_error("Session and setup not consistent");
   }
   
 }
@@ -1155,7 +1172,7 @@ void save_session(char * file)
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(fd_log,"ERROR: could not open '%s' for writing\n", file);
-    exit(1);
+    exit_on_error("Cannot open session file for writing.");
   }
   
   for (port=0; port<n_ports; port++) {
@@ -1193,7 +1210,7 @@ void save_setup(char *file)
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(fd_log,"ERROR: could not open '%s' for writing\n", file);
-    exit(1);
+    exit_on_error("Cannot open setup file for writing.");
   }
   
   for (port=0; port<n_ports; port++) {
@@ -1712,7 +1729,7 @@ int main(int argc, char *argv[])
   /* Register with Jack */
   if ((client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
     fprintf(fd_log, "Failed to start '%s' jack client: %d\n", jackname, status);
-    exit(1);
+    exit_on_error("Failed to start jack client. Is jackd running?");
   }
   fprintf(fd_log,"Registered as '%s'.\n", jack_get_client_name( client ) );
 
@@ -1721,7 +1738,7 @@ int main(int argc, char *argv[])
 
   if (jack_activate(client)) {
     fprintf(fd_log, "Cannot activate client.\n");
-    exit(1);
+    exit_on_error("Cannot activate client");
   }
 
   /* How long should we wait to read 10 times faster than data goes away */
