@@ -8,6 +8,11 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
+- integrate a tuner (use tuneit) with a single key to select what port to tune
+- toggle pass tru (using jack conection) on a keystroke, this is to avoid larsen when playback 
+- toggle pass tru (using hw monitor) - see what "use HW mon" of jackd does.
+- center meterec in the console verticaly, this is not to be bothered by bad/misstuned screens not dsiplqying whole console
+- center meterec in the console horizontaly...
 x Option to produce in stdout template file based on system...
 x Add creation of empty session file if file does not exists.
 - Add support for compensating internal delays ( move initial position of process read buf pos)
