@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "${1}connecting all jack system ports capture -> playback"
+
+for CAPTURE in `jack_lsp system:capture`
+do
+	INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
+	CMD="jack_${1}connect $CAPTURE `jack_lsp system:playback $INDEX | head -1`"
+  echo $CMD
+  $CMD
+  
+done
