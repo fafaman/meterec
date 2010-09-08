@@ -20,6 +20,8 @@
 
 */
 
+
+
 /* maximum number of ports - no known limit, only extra memory used */
 #define MAX_PORTS 24
 
@@ -144,3 +146,18 @@ struct port_s
   unsigned int playback_take;
 
 };
+
+struct meterec_s
+{
+  char *session_file;
+  char *setup_file;
+  char *log_file;
+
+  unsigned int n_ports;
+  struct port_s ports[MAX_PORTS];
+  
+  unsigned int n_takes;
+  struct take_s takes[MAX_TAKES];
+
+};
+

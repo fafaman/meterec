@@ -2,7 +2,7 @@
 
   meterec.c 
   Console based multi track digital peak meter and recorder for JACK
-  Copyright (C) 2009 Fabrice Lebas
+  Copyright (C) 2009 2010 Fabrice Lebas
   
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -34,55 +34,15 @@
 #include <curses.h>
 
 #include "config.h"
+#include "meterec.h"
+#include "display.h"
 
-/* maximum number of ports - no known limit, only extra memory used */
-#define MAX_PORTS 24
-
-/* maximum number of tracks - no known limit, only extra memory used */
-#define MAX_TRACKS MAX_PORTS
-
-/* maximum number of takes - no known limit, only extra memory used */
-#define MAX_TAKES 100
-
-/* size of disk wait buffer, must be power of two */
-#define DISK_SIZE 131072
-
-/* size of disk write buffer */
-#define BUF_SIZE 4096
-
-/* command */
-#define STOP 0
-#define START 1
-#define RESTART 2
-
-/* status */
-#define OFF 0
-#define STARTING 1
-#define ONGOING 2
-#define STARVING 3
-#define STOPING 4
-
-/* type of recording */
-#define REC 1
-#define DUB 2
-#define OVR 4
-#define MAX_REC OVR*2
-
-/* colors */
-#define DEFAULT 0
-#define GREEN 1
-#define YELLOW 2
-#define RED 3
-#define BLUE 3
 
 void stop(void);
 
 WINDOW * mainwin;
 
 jack_client_t *client = NULL;
-
-float bias = 1.0f;
-int decay_len;
 
 static unsigned long  total_nframes = 0 ;
 
@@ -91,9 +51,6 @@ unsigned int dump_initial_periods = 100;
 char *scale ;
 char *line ;
 char *session = "meterec";
-char *session_file;
-char *setup_file;
-char *log_file;
 char *jackname = "meterec" ;
 
 pthread_t wr_dt, rd_dt ;
@@ -116,96 +73,8 @@ unsigned int record_cmd = STOP;
 unsigned int playback_sts = OFF;
 unsigned int playback_cmd = START;
 
-/*
-note : 
-- take 0 is before the session start, there will never be data in take 0
-- track 0 is the first track, displayed as 1 
-*/
+struct meterec_s * meterec ;
 
-/*
-note : 
-- a session contains several takes
-- a take contains one or several tracks that where recorded at the same time.
-  - in a take, the number of tracks will vary depending on the number of ports beeing recorded during that take.
-  - in a take, the number of tracks beeing used for playback can be less than the total number of tracks in the take.
-- current take contains tracks beeing recorded during this run.
-- port refers to jack in/out port.
-  - an in port can be recorded during the current take. it will then be a track of this take, potentially played back duing next(s) take(s).
-  - an out port can playback previous take track, as long as this previous take contains a track mapped to that port.
-
-
-=PP-----|01
-=PP-----|02
-=-P----P|03
-=-P-----|04
-=--PP---|05
-=--PP---|06
-=----P--|07
-=-----PP|08recording
-01234567
-
-take 0 cannot contain any track. This is the state of the session when first started.
-take 1 contains 2 tracks that are mapped on port 1 and 2
-take 2 contains 4 tracks that are mapped on port 1, 2, 3 and 4
-take 3 contains 2 tracks that are mapped on port 5 and 6
-take 4 contains 2 tracks that are mapped on port 5 and 6
-take 5 contains 1 track that is mapped on port 7
-take 6 contains 1 track that is mapped on port 8
-take 7 contains 2 tracks that are mapped on port 8 and 3
-
-*/
-
-
-struct take_s
-{
-  unsigned int ntrack; /* number of tracks in this take */
-  
-  unsigned int track_port_map[MAX_TRACKS]; /* track maps to a port : track_port_map[track] = port */
-  unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */ 
-  unsigned int port_has_lock[MAX_PORTS]; /* port is marked locked for playback on this take : port_has_lock[port] = 1/0 */
-
-  char *take_file;
-  SNDFILE *take_fd;
-  SF_INFO info;
-  
-  float *buf ;
- 
-};
-
-struct take_s takes[MAX_TAKES]; /* table containing info of previous takes */
-
-struct port_s
-{
-
-  jack_port_t *input;
-  jack_port_t *output;
-  
-  char *portmap;
-  
-  float *write_disk_buffer;
-  float *read_disk_buffer;
-  
-  float peak_in;
-  float peak_out;
-
-  float db_in;
-  float db_out;
-  
-  int max_in;
-
-  int dkpeak_in;
-  int dktime_in;
-  
-  int record;
-
-  unsigned int playback_take;
-
-};
-
-struct port_s ports[MAX_PORTS];
-
-unsigned int n_ports = 0; /* beurk */
-unsigned int n_takes = 0; /* number of takes before current take */
 unsigned int n_tracks = 0; /* number of tracks to be recorded during current take */
 
 
@@ -280,17 +149,17 @@ static int fsleep( float secs )
 }
 
 /* Read and reset the recent peak sample */
-void read_peak(void)
+void read_peak(float bias)
 {
   unsigned int port;
         
-  for (port = 0; port < n_ports; port++) {
+  for (port = 0; port < meterec->n_ports; port++) {
 
-    ports[port].db_in = 20.0f * log10f( ports[port].peak_in * bias ) ;
-    ports[port].peak_in = 0.0f;
+    meterec->ports[port].db_in = 20.0f * log10f( meterec->ports[port].peak_in * bias ) ;
+    meterec->ports[port].peak_in = 0.0f;
     
-    ports[port].db_out = 20.0f * log10f( ports[port].peak_out * bias ) ;
-    ports[port].peak_out = 0.0f;
+    meterec->ports[port].db_out = 20.0f * log10f( meterec->ports[port].peak_out * bias ) ;
+    meterec->ports[port].peak_out = 0.0f;
     
   }
   
@@ -300,20 +169,20 @@ void compute_takes_to_playback() {
 
   unsigned int take, port;
 
-  for ( port = 0; port < n_ports; port++ ) {
+  for ( port = 0; port < meterec->n_ports; port++ ) {
     
-    for ( take = n_takes + 1; take > 0; take-- )
-      if (takes[take].port_has_lock[port])
+    for ( take = meterec->n_takes + 1; take > 0; take-- )
+      if (meterec->takes[take].port_has_lock[port])
         break;
     
     if (!take)
-      take = n_takes + 1;
+      take = meterec->n_takes + 1;
       
     for ( ; take > 0; take-- )
-      if (takes[take].port_has_track[port])
+      if (meterec->takes[take].port_has_track[port])
         break;
         
-    ports[port].playback_take = take;
+    meterec->ports[port].playback_take = take;
     
   }  
 
@@ -325,17 +194,17 @@ void compute_tracks_to_record() {
   
   n_tracks = 0;
   
-  for ( port = 0; port < n_ports; port++ ) 
-    if ( ports[port].record ) {
+  for ( port = 0; port < meterec->n_ports; port++ ) 
+    if ( meterec->ports[port].record ) {
     
-      takes[n_takes+1].port_has_track[port] = 1;
-      takes[n_takes+1].track_port_map[n_tracks] = port ;
+      meterec->takes[meterec->n_takes+1].port_has_track[port] = 1;
+      meterec->takes[meterec->n_takes+1].track_port_map[n_tracks] = port ;
 
       n_tracks ++;
       
     }  
   
-  takes[n_takes+1].ntrack = n_tracks ;
+  meterec->takes[meterec->n_takes+1].ntrack = n_tracks ;
   
 }
 
@@ -343,77 +212,81 @@ void compute_tracks_to_record() {
 ** INITs
 */
 
-void init_ports()
+void init_ports(struct meterec_s *meterec)
 {
   unsigned int port;
   
+  meterec->n_ports = 0;
+
   for (port = 0; port < MAX_PORTS; port++) {
   
-    ports[port].input = NULL;
-    ports[port].output = NULL;
+    meterec->ports[port].input = NULL;
+    meterec->ports[port].output = NULL;
     
-    ports[port].portmap = NULL;
+    meterec->ports[port].portmap = NULL;
     
-    ports[port].write_disk_buffer = NULL;
-    ports[port].read_disk_buffer = NULL;
-    ports[port].record = OFF;
+    meterec->ports[port].write_disk_buffer = NULL;
+    meterec->ports[port].read_disk_buffer = NULL;
+    meterec->ports[port].record = OFF;
     
-    ports[port].peak_out = 0.0f;
-    ports[port].db_out = 0.0f;
+    meterec->ports[port].peak_out = 0.0f;
+    meterec->ports[port].db_out = 0.0f;
     
-    ports[port].peak_in = 0.0f;
-    ports[port].db_in = 0.0f;
+    meterec->ports[port].peak_in = 0.0f;
+    meterec->ports[port].db_in = 0.0f;
     
-    ports[port].dkpeak_in = 0;
-    ports[port].dktime_in = 0;
-    ports[port].max_in = 0;
+    meterec->ports[port].dkpeak_in = 0;
+    meterec->ports[port].dktime_in = 0;
+    meterec->ports[port].max_in = 0;
     
-    ports[port].playback_take = 0;
+    meterec->ports[port].playback_take = 0;
     
   }
 }
 
-void init_takes() {
+void init_takes(struct meterec_s *meterec) {
 
   unsigned int port, take, track ;
 
-  for (take=0; take<MAX_TAKES; take++) {
+  meterec->n_takes = 0;
 
-    takes[take].take_fd = NULL;
-    takes[take].buf = NULL;
-    takes[take].info.format = 0 ; //When opening a file for read, the format field should be set to zero before calling sf_open()
+    for (take=0; take<MAX_TAKES; take++) {
 
-    takes[take].ntrack = 0;
+    meterec->takes[take].take_fd = NULL;
+    meterec->takes[take].buf = NULL;
+    meterec->takes[take].info.format = 0 ; //When opening a file for read, the format field should be set to zero before calling sf_open()
+
+    meterec->takes[take].ntrack = 0;
     
     for (track=0; track<MAX_TRACKS; track++) {
-      takes[take].track_port_map[track] = 0 ;
+      meterec->takes[take].track_port_map[track] = 0 ;
     }
     
     for (port=0; port<MAX_PORTS; port++) {
-      takes[take].port_has_track[port] = 0 ;
-      takes[take].port_has_lock[port] = 0 ;
+      meterec->takes[take].port_has_track[port] = 0 ;
+      meterec->takes[take].port_has_lock[port] = 0 ;
     }
 
   }
 
 }
 
-void post_option_init(void) {
+void post_option_init(struct meterec_s *meterec, char *session) {
 
   unsigned int take ;
-  
-  session_file = (char *) malloc( strlen(session) + strlen("..sess") + 1 );
-  sprintf(session_file,".%s.sess",session);
 
-  setup_file = (char *) malloc( strlen(session) + strlen(".conf") + 1 );
-  sprintf(setup_file,"%s.conf",session);
+  meterec->session_file = (char *) malloc( strlen(session) + strlen("..sess") + 1 );
+  sprintf(meterec->session_file,".%s.sess",session);
+
+  meterec->setup_file = (char *) malloc( strlen(session) + strlen(".conf") + 1 );
+  sprintf(meterec->setup_file,"%s.conf",session);
   
-  log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
-  sprintf(log_file,"%s.log",session);
+  meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
+  sprintf(meterec->log_file,"%s.log",session);
   
   for (take=0; take<MAX_TAKES; take++) {
-    takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.w64") + 1 );
-    sprintf(takes[take].take_file,"%s_%04d.w64",session,take);
+    meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.w64") + 1 );
+    sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
   }
    
 }
@@ -498,7 +371,7 @@ int writer_thread(void *d)
     }
     
     take_file = (char *) malloc( strlen(session) + strlen("_0000.w64") + 1 );
-    sprintf(take_file, "%s_%04d.w64", session,n_takes + 1);
+    sprintf(take_file, "%s_%04d.w64", session,meterec->n_takes + 1);
     
     out = sf_open(take_file, SFM_WRITE, &info);
     if (!out) {
@@ -522,9 +395,9 @@ int writer_thread(void *d)
            i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
         
         track = 0;
-        for (port = 0; port < n_ports; port++) {
-          if (ports[port].record) {
-            buf[opos * n_tracks + track] = ports[port].write_disk_buffer[i]; 
+        for (port = 0; port < meterec->n_ports; port++) {
+          if (meterec->ports[port].record) {
+            buf[opos * n_tracks + track] = meterec->ports[port].write_disk_buffer[i]; 
             track++;
           }
         }
@@ -568,9 +441,9 @@ int reader_thread(void *d)
     read_disk_buffer_thread_pos = (read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
 
     /* open all files needed for this session */
-    for (port=0; port<n_ports; port++) {
+    for (port=0; port<meterec->n_ports; port++) {
  
-      take = ports[port].playback_take;
+      take = meterec->ports[port].playback_take;
       
       /* do not open a file for a port that wants to playback take 0 */
       if (!take ) {
@@ -579,19 +452,19 @@ int reader_thread(void *d)
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
-          ports[port].read_disk_buffer[i] = 0.0f ;
+          meterec->ports[port].read_disk_buffer[i] = 0.0f ;
           
         continue;
       }
       
       /* do not open a file for a port that wants to be recoded in REC mode */
-      if (ports[port].record==REC && record_cmd==START) {
+      if (meterec->ports[port].record==REC && record_cmd==START) {
       
         fprintf(fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a take associated\n", port+1);
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
-          ports[port].read_disk_buffer[i] = 0.0f ;
+          meterec->ports[port].read_disk_buffer[i] = 0.0f ;
           
         continue;
         
@@ -600,20 +473,20 @@ int reader_thread(void *d)
       fprintf(fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
       
       /* only open a take file that is not defined yet  */  
-      if (takes[take].take_fd == NULL) {
-        takes[take].take_fd = sf_open(takes[take].take_file, SFM_READ, &takes[take].info);
+      if (meterec->takes[take].take_fd == NULL) {
+        meterec->takes[take].take_fd = sf_open(meterec->takes[take].take_file, SFM_READ, &meterec->takes[take].info);
       
         /* check file is (was) opened properly */
-        if (takes[take].take_fd == NULL) {
+        if (meterec->takes[take].take_fd == NULL) {
           playback_sts = OFF;
           exit_on_error("Reader thread: Cannot open file for reading");
         }
         
-        fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", takes[take].take_file);
+        fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
         
         /* allocate buffer space for this take */
-        fprintf(fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", takes[take].ntrack, BUF_SIZE, take);
-        takes[take].buf = calloc(BUF_SIZE*takes[take].ntrack, sizeof(float));
+        fprintf(fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
+        meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
 
       } 
       else {
@@ -627,23 +500,23 @@ int reader_thread(void *d)
     while ( playback_cmd==START )  {
   
     /* load the local buffer */
-    for(take=1; take<n_takes+1; take++) {
+    for(take=1; take<meterec->n_takes+1; take++) {
       
       /* check if track is used */
-      if (takes[take].take_fd == NULL)
+      if (meterec->takes[take].take_fd == NULL)
         continue;
         
       /* get the number of tracks in this take */
-      ntrack = takes[take].ntrack;
+      ntrack = meterec->takes[take].ntrack;
     
       /* lets fill local buffer only if previously emptied*/
       if (opos == 0) {
       
-        fill = sf_read_float(takes[take].take_fd, takes[take].buf, (BUF_SIZE * ntrack) ); 
+        fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, (BUF_SIZE * ntrack) ); 
     
         /* complete buffer with 0's if reached end of file */
         for ( ; fill<(BUF_SIZE * ntrack); fill++) 
-          takes[take].buf[fill] = 0.0f;
+          meterec->takes[take].buf[fill] = 0.0f;
       } 
 
     }
@@ -653,26 +526,26 @@ int reader_thread(void *d)
          i != read_disk_buffer_process_pos && opos < BUF_SIZE;
          i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
          
-      for(take=1; take<n_takes+1; take++) {
+      for(take=1; take<meterec->n_takes+1; take++) {
 
         
         /* check if take is used */
-        if (takes[take].take_fd == NULL)
+        if (meterec->takes[take].take_fd == NULL)
           continue;
           
-        ntrack = takes[take].ntrack;
+        ntrack = meterec->takes[take].ntrack;
 
         /* for each track belonging to this take */
         for (track=0; track<ntrack; track++) {
 
           /* find what port is mapped to this track */
-          port = takes[take].track_port_map[track] ;
+          port = meterec->takes[take].track_port_map[track] ;
 
           /* check if this port needs data from this take */
-          if (ports[port].playback_take == take)
+          if (meterec->ports[port].playback_take == take)
             /* Only fill buffer if in playback, dub or overdub */
-            if (ports[port].record != REC || !record_sts)
-            ports[port].read_disk_buffer[i] = takes[take].buf[opos * ntrack + track] ;
+            if (meterec->ports[port].record != REC || !record_sts)
+            meterec->ports[port].read_disk_buffer[i] = meterec->takes[take].buf[opos * ntrack + track] ;
             
         }
         
@@ -693,12 +566,12 @@ int reader_thread(void *d)
     }
     
     /* close all fd's */
-    for (take=1; take<n_takes+1; take++) 
-      if (takes[take].take_fd) {
-        sf_close(takes[take].take_fd);
-        free(takes[take].buf);
-        takes[take].buf = NULL;
-        takes[take].take_fd = NULL;
+    for (take=1; take<meterec->n_takes+1; take++) 
+      if (meterec->takes[take].take_fd) {
+        sf_close(meterec->takes[take].take_fd);
+        free(meterec->takes[take].buf);
+        meterec->takes[take].buf = NULL;
+        meterec->takes[take].take_fd = NULL;
       }
 
     fprintf(fd_log,"Reader thread: done.\n");
@@ -727,18 +600,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   record_sts_local = record_sts;
     
   /* get the audio samples, and find the peak sample */
-  for (port = 0; port < n_ports; port++) {
+  for (port = 0; port < meterec->n_ports; port++) {
 
     /* just in case the port isn't registered yet */
-    if (ports[port].input == NULL) 
+    if (meterec->ports[port].input == NULL) 
       continue;
 
     /* just in case the port isn't registered yet */
-    if (ports[port].output == NULL) 
+    if (meterec->ports[port].output == NULL) 
       continue;
 
-    out = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].output, nframes);
-    in = (jack_default_audio_sample_t *) jack_port_get_buffer(ports[port].input, nframes);
+    out = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->ports[port].output, nframes);
+    in = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->ports[port].input, nframes);
 
 
     if (playback_sts_local==ONGOING) {
@@ -748,21 +621,21 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
       for (i = 0; i < nframes; i++) {
       
         /* Empty read disk buffer */
-        out[i] = ports[port].read_disk_buffer[read_pos];
+        out[i] = meterec->ports[port].read_disk_buffer[read_pos];
         
         /* update buffer pointer */
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
         
         /* compute peak of input (recordable) data*/
         s = fabs(in[i] * 1.0f) ;
-        if (s > ports[port].peak_in) {
-          ports[port].peak_in = s;
+        if (s > meterec->ports[port].peak_in) {
+          meterec->ports[port].peak_in = s;
         }
         
         /* compute peak of output (playback) data */
         s = fabs(out[i] * 1.0f) ;
-        if (s > ports[port].peak_out) {
-          ports[port].peak_out = s;
+        if (s > meterec->ports[port].peak_out) {
+          meterec->ports[port].peak_out = s;
         }
         
       }
@@ -774,10 +647,10 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         for (i = 0; i < nframes; i++) {
         
           /* Fill write disk buffer */
-          if (ports[port].record==OVR) 
-            ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
-          else if (ports[port].record)
-            ports[port].write_disk_buffer[write_pos] = in[i];
+          if (meterec->ports[port].record==OVR) 
+            meterec->ports[port].write_disk_buffer[write_pos] = in[i] + out[i];
+          else if (meterec->ports[port].record)
+            meterec->ports[port].write_disk_buffer[write_pos] = in[i];
             
           /* update buffer pointer */
           write_pos = (write_pos + 1) & (DISK_SIZE - 1);
@@ -794,8 +667,8 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
       
         /* compute peak */
         s = fabs(in[i] * 1.0f) ;
-        if (s > ports[port].peak_in) {
-          ports[port].peak_in = s;
+        if (s > meterec->ports[port].peak_in) {
+          meterec->ports[port].peak_in = s;
         }
         
       } 
@@ -855,7 +728,7 @@ void create_input_port(unsigned int port) {
 
   fprintf(fd_log,"Creating input port '%s'.\n", port_name );
 
-  if (!(ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
+  if (!(meterec->ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
     fprintf(fd_log, "Cannot register input port '%s'.\n",port_name);
     exit_on_error("Cannot register input port");
   }
@@ -870,7 +743,7 @@ void create_output_port(unsigned int port) {
 
   fprintf(fd_log,"Creating output port '%s'.\n", port_name );
 
-  if (!(ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+  if (!(meterec->ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
     fprintf(fd_log, "Cannot register output port '%s'.\n",port_name);
     exit_on_error("Cannot register output port");
   }
@@ -900,9 +773,9 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   if ( jack_flags & JackPortIsInput ) {
   
     // Connect the port to our output port
-    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
-    if (jack_connect(client, jack_port_name(ports[port].output), jack_port_name(jack_port))) {
-      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(ports[port].output), jack_port_name(jack_port));
+    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+    if (jack_connect(client, jack_port_name(meterec->ports[port].output), jack_port_name(jack_port))) {
+      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
       exit_on_error("Cannot connect ports");
     }
 
@@ -911,9 +784,9 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   if ( jack_flags & JackPortIsOutput ) {
   
     // Connect the port to our input port
-    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
-    if (jack_connect(client, jack_port_name(jack_port), jack_port_name(ports[port].input))) {
-      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(ports[port].input));
+    fprintf(fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
+    if (jack_connect(client, jack_port_name(jack_port), jack_port_name(meterec->ports[port].input))) {
+      fprintf(fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
       exit_on_error("Cannot connect ports");
     }
 
@@ -937,25 +810,25 @@ static void cleanup(int sig)
 
   fprintf(fd_log, "Stopped ncurses interface.\n");
 
-  for (port = 0; port < n_ports; port++) {
+  for (port = 0; port < meterec->n_ports; port++) {
   
-    if (ports[port].input != NULL ) {
+    if (meterec->ports[port].input != NULL ) {
 
-      all_ports = jack_port_get_all_connections(client, ports[port].input);
+      all_ports = jack_port_get_all_connections(client, meterec->ports[port].input);
 
       for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(ports[port].input), all_ports[i] );
-        jack_disconnect(client, all_ports[i], jack_port_name(ports[port].input));
+        fprintf(fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].input), all_ports[i] );
+        jack_disconnect(client, all_ports[i], jack_port_name(meterec->ports[port].input));
       }
     }
     
-    if (ports[port].output != NULL ) {
+    if (meterec->ports[port].output != NULL ) {
 
-      all_ports = jack_port_get_all_connections(client, ports[port].output);
+      all_ports = jack_port_get_all_connections(client, meterec->ports[port].output);
 
       for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(ports[port].output), all_ports[i] );
-        jack_disconnect(client, all_ports[i], jack_port_name(ports[port].output));
+        fprintf(fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].output), all_ports[i] );
+        jack_disconnect(client, all_ports[i], jack_port_name(meterec->ports[port].output));
       }
     }
         
@@ -988,8 +861,8 @@ void parse_port_con(FILE *fd_conf, unsigned int port)
   
   fscanf(fd_conf,"%s%[^\r\n]%*[\r\n ]",label, line);
   
-  ports[port].portmap = (char *) malloc( strlen(line)+1 );
-  strcpy(ports[port].portmap, line);
+  meterec->ports[port].portmap = (char *) malloc( strlen(line)+1 );
+  strcpy(meterec->ports[port].portmap, line);
   
   i = 0;
   while ( sscanf(line+i,"%s%n",port_name,&u ) ) {
@@ -1028,7 +901,7 @@ void load_setup(char *file)
     
     if (*buf == 'L' || *buf == 'l') {
       fprintf(fd_log,"Playback LOCK on Port %d take %d\n", port+1,take);
-      takes[take].port_has_lock[port] = 1 ;
+      meterec->takes[take].port_has_lock[port] = 1 ;
     }
     
     
@@ -1037,8 +910,8 @@ void load_setup(char *file)
     if (*buf == '|') {
     
       // allocate memory for this port
-      ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-      ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+      meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+      meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
       
       // create input ports
       create_input_port ( port );
@@ -1054,17 +927,17 @@ void load_setup(char *file)
       take=1;
     }
     else if (*buf == 'R' || *buf == 'r') {
-      ports[port].record = REC;
+      meterec->ports[port].record = REC;
       n_tracks++;
       take=1;
     }
     else if (*buf == 'D' || *buf == 'd') {
-      ports[port].record = DUB;
+      meterec->ports[port].record = DUB;
       n_tracks++;
       take=1;
     }
     else if (*buf == 'O' || *buf == 'o') {
-      ports[port].record = OVR;
+      meterec->ports[port].record = OVR;
       n_tracks++;
       take=1;
     } else {
@@ -1075,7 +948,7 @@ void load_setup(char *file)
 
   fclose(fd_conf);
   
-  n_ports = port ;
+  meterec->n_ports = port ;
   
 }
 
@@ -1100,20 +973,20 @@ void load_session(char * file)
     /* content for a given port/take pair */
     if (*buf == 'X') {
       
-      track = takes[take].ntrack ;
+      track = meterec->takes[take].ntrack ;
       
-      takes[take].track_port_map[track] = port ;
-      takes[take].port_has_track[port] = 1 ;
-      takes[take].ntrack++;
+      meterec->takes[take].track_port_map[track] = port ;
+      meterec->takes[take].port_has_track[port] = 1 ;
+      meterec->takes[take].ntrack++;
       
-      ports[port].playback_take = take ;      
+      meterec->ports[port].playback_take = take ;      
     
     }
 
     /* end of description of all takes for a port detected on trailing 'pipe' */
     if (*buf == '|') {
       port++;
-      n_takes = take - 1;
+      meterec->n_takes = take - 1;
     }
     
     /* increment take unless beginning of line is detected */
@@ -1127,8 +1000,8 @@ void load_session(char * file)
     
   fclose(fd_conf);
   
-  if (port>n_ports) {
-    fprintf(fd_log,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,n_ports);
+  if (port>meterec->n_ports) {
+    fprintf(fd_log,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,meterec->n_ports);
     exit_on_error("Session and setup not consistent");
   }
   
@@ -1140,7 +1013,7 @@ void session_tail (FILE * fd_conf)
   unsigned int ntakes, take, step=1, i;
   char *spaces;
   
-  ntakes = n_takes+1;
+  ntakes = meterec->n_takes+1;
 
   while (step < ntakes+1) {
 
@@ -1175,20 +1048,20 @@ void save_session(char * file)
     exit_on_error("Cannot open session file for writing.");
   }
   
-  for (port=0; port<n_ports; port++) {
+  for (port=0; port<meterec->n_ports; port++) {
   
     fprintf(fd_conf,"=");
       
-    for (take=1; take<n_takes+1; take++) {
+    for (take=1; take<meterec->n_takes+1; take++) {
     
-      if ( takes[take].port_has_track[port] ) 
+      if ( meterec->takes[take].port_has_track[port] ) 
         fprintf(fd_conf,"X");
       else 
         fprintf(fd_conf,"-");
         
     }
     
-    if (ports[port].record)
+    if (meterec->ports[port].record)
       fprintf(fd_conf,"X");
     else 
       fprintf(fd_conf,"-");
@@ -1213,35 +1086,35 @@ void save_setup(char *file)
     exit_on_error("Cannot open setup file for writing.");
   }
   
-  for (port=0; port<n_ports; port++) {
+  for (port=0; port<meterec->n_ports; port++) {
   
-    if (ports[port].record==REC)
+    if (meterec->ports[port].record==REC)
       fprintf(fd_conf,"R");
-    else if (ports[port].record==DUB)
+    else if (meterec->ports[port].record==DUB)
       fprintf(fd_conf,"D");
-    else if (ports[port].record==OVR)
+    else if (meterec->ports[port].record==OVR)
       fprintf(fd_conf,"O");
     else
       fprintf(fd_conf,"=");
       
-    for (take=1; take<n_takes+1; take++) {
+    for (take=1; take<meterec->n_takes+1; take++) {
       
-      if ( takes[take].port_has_lock[port] )
+      if ( meterec->takes[take].port_has_lock[port] )
         fprintf(fd_conf,"L");
       else 
-        if ( takes[take].port_has_track[port] ) 
+        if ( meterec->takes[take].port_has_track[port] ) 
           fprintf(fd_conf,"X");
       else 
         fprintf(fd_conf,"-");
         
     }
     
-    if (ports[port].record)
+    if (meterec->ports[port].record)
       fprintf(fd_conf,"X");
     else 
       fprintf(fd_conf,"-");
 
-    fprintf(fd_conf,"|%02d%s\n",port+1,ports[port].portmap);
+    fprintf(fd_conf,"|%02d%s\n",port+1,meterec->ports[port].portmap);
   }
     
   session_tail(fd_conf);
@@ -1258,7 +1131,7 @@ void start_playback() {
 
   compute_takes_to_playback();
 
-  save_setup(setup_file);
+  save_setup(meterec->setup_file);
 
   playback_cmd = START ;
   
@@ -1272,7 +1145,7 @@ void start_record() {
   
   if (n_tracks) {
   
-    save_session(session_file);
+    save_session(meterec->session_file);
 
     record_cmd = START;
 
@@ -1296,7 +1169,7 @@ void stop() {
     }
 
     /* get ready for the next take */
-    n_takes ++;
+    meterec->n_takes ++;
   }
   
   if (playback_sts) {
@@ -1316,96 +1189,6 @@ void stop() {
 /******************************************************************************
 ** DISPLAYs
 */
-
-void display_session(int y_pos, int x_pos) 
-{
-  unsigned int take, port;
-
-  /* y - port */
-  /* x - take */
-
-
-  printw("  Port %2d ", y_pos+1);
-  if (ports[y_pos].record==REC)
-     printw("[REC]");
-  else if (ports[y_pos].record==OVR)
-     printw("[OVR]");
-  else if (ports[y_pos].record==DUB)
-     printw("[DUB]");
-  else 
-     printw("[   ]");
-     
-  if ( ports[y_pos].playback_take ) 
-    printw(" PLAYING take %d", ports[y_pos].playback_take);
-  else 
-    printw(" PLAYING empty take 0");
-    
-  printw("\n");
-  
-  
-  printw("  Take %2d ",x_pos);
-  printw("%s", takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
-  printw("%s", takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
-  printw("%s", (ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
-  
-  printw("\n");
-
-  for (port=0; port<n_ports; port++) {
-  
-    if (ports[port].record) 
-      color_set(YELLOW, NULL);
-    else 
-      color_set(GREEN, NULL);
-    
-    if (y_pos == port) 
-       attron(A_REVERSE);
-    else 
-       attroff(A_REVERSE);
-  
-    printw("%02d",port+1,ports[port].playback_take);
-
-    if ( ports[port].record == REC )
-      printw("R");
-    else if ( ports[port].record == DUB )
-      printw("D");
-    else if ( ports[port].record == OVR )
-      printw("O");
-    else 
-      printw("=");
-      
-    for (take=1; take<n_takes+1; take++) {
-    
-      if ((y_pos == port) || (x_pos == take))
-         attron(A_REVERSE);
-      else 
-         attroff(A_REVERSE);
-
-      if ((y_pos == port) && (x_pos == take))
-         attroff(A_REVERSE);
-
-      if ( ports[port].playback_take == take )
-        attron(A_BOLD);
-        
-      if ( takes[take].port_has_lock[port] )
-        printw("L");
-      else if ( ports[port].playback_take == take ) 
-        printw("P");
-      else if ( takes[take].port_has_track[port] ) 
-        printw("X");
-      else 
-        printw("-");
-        
-      attroff(A_BOLD);
-              
-    }
-
-    printw("\n");
-  }
-  
-  attroff(A_REVERSE);
-  color_set(DEFAULT, NULL);
-        
-}
 
 void display_status(void) {
   
@@ -1457,7 +1240,7 @@ void display_status(void) {
   
   if (record_sts==ONGOING) {
     attron(A_BOLD);
-    printw(" Take %d",n_takes+1);
+    printw(" Take %d",meterec->n_takes+1);
     attroff(A_BOLD); 
   }
     
@@ -1530,7 +1313,7 @@ void display_buffer(int width) {
 
 }
 
-void display_meter( int width )
+void display_meter( int width, int decay_len )
 {
   int size_out, size_in, i;
   unsigned int port ;
@@ -1538,9 +1321,9 @@ void display_meter( int width )
   printw("%s\n", scale);
   printw("%s\n", line);
   
-  for ( port=0 ; port < n_ports ; port++) {
+  for ( port=0 ; port < meterec->n_ports ; port++) {
         
-    if ( ports[port].record ) 
+    if ( meterec->ports[port].record ) 
       if (record_sts == ONGOING)
         color_set(RED, NULL);
       else 
@@ -1550,28 +1333,28 @@ void display_meter( int width )
     
     printw("%02d",port+1);
     
-    size_in = iec_scale( ports[port].db_in, width );
-    size_out = iec_scale( ports[port].db_out, width );
+    size_in = iec_scale( meterec->ports[port].db_in, width );
+    size_out = iec_scale( meterec->ports[port].db_out, width );
     
-    if (size_in > ports[port].max_in)
-      ports[port].max_in = size_in;
+    if (size_in > meterec->ports[port].max_in)
+      meterec->ports[port].max_in = size_in;
       
-    if (size_in > ports[port].dkpeak_in) {
-      ports[port].dkpeak_in = size_in;
-      ports[port].dktime_in = 0;
-    } else if (ports[port].dktime_in++ > decay_len) {
-      ports[port].dkpeak_in = size_in;
+    if (size_in > meterec->ports[port].dkpeak_in) {
+      meterec->ports[port].dkpeak_in = size_in;
+      meterec->ports[port].dktime_in = 0;
+    } else if (meterec->ports[port].dktime_in++ > decay_len) {
+      meterec->ports[port].dkpeak_in = size_in;
     }
 
-    for (i=0; i<ports[port].max_in || i<size_out; i++) {
+    for (i=0; i<meterec->ports[port].max_in || i<size_out; i++) {
 
       if (i < size_in-1) {
         printw("#");
       }
-      else if ( i==ports[port].dkpeak_in-1 ) {
+      else if ( i==meterec->ports[port].dkpeak_in-1 ) {
         printw("I");
       }
-      else if ( i==ports[port].max_in-1 ) {
+      else if ( i==meterec->ports[port].max_in-1 ) {
         printw(":");
       }
       else if ( i < size_out-1 ) {
@@ -1643,9 +1426,14 @@ int main(int argc, char *argv[])
   int edit_mode = 0;
   int x_pos = 0, y_pos = 0;
   unsigned int port, take;
-  
-  init_ports();
-  init_takes();
+  int decay_len;
+  float bias = 1.0f;
+
+  meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
+
+  	
+  init_ports(meterec);
+  init_takes(meterec);
    
   while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
     switch (opt) {
@@ -1678,10 +1466,10 @@ int main(int argc, char *argv[])
   }
 
   /* init vars that rely on a changable option */
-  post_option_init();
+  post_option_init(meterec, session);
   
-  if ( (fd_log = fopen(log_file,"w")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for writing\n", log_file);
+  if ( (fd_log = fopen(meterec->log_file,"w")) == NULL ) {
+    fprintf(stderr,"ERROR: could not open '%s' for writing\n", meterec->log_file);
     exit(1);
   }
   
@@ -1744,9 +1532,9 @@ int main(int argc, char *argv[])
   /* How long should we wait to read 10 times faster than data goes away */
   thread_delay = 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
     
-  load_setup(setup_file);
+  load_setup(meterec->setup_file);
 
-  load_session(session_file);
+  load_session(meterec->session_file);
   
   /* Start threads doign disk accesses */
   if (record_cmd==START) {
@@ -1765,11 +1553,11 @@ int main(int argc, char *argv[])
   signal(SIGINT, cleanup);
 
   
-  x_pos = n_takes;
+  x_pos = meterec->n_takes;
 
   while (running) {
   
-    read_peak();
+    read_peak(bias);
   
     clear();
 
@@ -1792,7 +1580,7 @@ int main(int argc, char *argv[])
         break;
         
       case KEY_DOWN :
-        if ( y_pos < n_ports - 1 )
+        if ( y_pos < meterec->n_ports - 1 )
           y_pos++;
         break;
       
@@ -1802,7 +1590,7 @@ int main(int argc, char *argv[])
         break;
       
       case KEY_RIGHT :
-        if ( x_pos < n_takes )
+        if ( x_pos < meterec->n_takes )
           x_pos++;
         break;
       
@@ -1810,27 +1598,27 @@ int main(int argc, char *argv[])
       ** Change Locks 
       */
       case 'L' : /* clear all other locks for that port if no lock yet */
-        if ( !takes[x_pos].port_has_lock[y_pos] ) 
-          for ( take=0 ; take < n_takes+1 ; take++) 
-            takes[take].port_has_lock[y_pos] = 0 ;
+        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( take=0 ; take < meterec->n_takes+1 ; take++) 
+            meterec->takes[take].port_has_lock[y_pos] = 0 ;
 
       case 'l' : /* toggle lock at this position */
-        takes[x_pos].port_has_lock[y_pos] = !takes[x_pos].port_has_lock[y_pos] ;
+        meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
         break;
 
       case 'A' : /* clear all other locks if no lock yet at this position */
-        if ( !takes[x_pos].port_has_lock[y_pos] ) 
-          for ( port=0 ; port < n_ports ; port++)
-            for ( take=0 ; take < n_takes+1 ; take++)  
-              takes[take].port_has_lock[port] = 0 ;
+        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < meterec->n_ports ; port++)
+            for ( take=0 ; take < meterec->n_takes+1 ; take++)  
+              meterec->takes[take].port_has_lock[port] = 0 ;
 
       case 'a' : /* toggle lock for all ports depending on this position */
-        if ( takes[x_pos].port_has_lock[y_pos] ) 
-          for ( port=0 ; port < n_ports ; port++) 
-            takes[x_pos].port_has_lock[port] = 0;
+        if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->takes[x_pos].port_has_lock[port] = 0;
         else 
-          for ( port=0 ; port < n_ports ; port++) 
-            takes[x_pos].port_has_lock[port] = 1;
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->takes[x_pos].port_has_lock[port] = 1;
         break;
       
 
@@ -1841,40 +1629,40 @@ int main(int argc, char *argv[])
         switch (key) {
         /* Change record mode */
         case 'r' : 
-          if ( ports[y_pos].record == REC )
-            ports[y_pos].record = OFF;
+          if ( meterec->ports[y_pos].record == REC )
+            meterec->ports[y_pos].record = OFF;
           else
-            ports[y_pos].record = REC;
+            meterec->ports[y_pos].record = REC;
           break;
 
         case 'd' : 
-          if ( ports[y_pos].record == DUB )
-            ports[y_pos].record = OFF;
+          if ( meterec->ports[y_pos].record == DUB )
+            meterec->ports[y_pos].record = OFF;
           else
-            ports[y_pos].record = DUB;
+            meterec->ports[y_pos].record = DUB;
           break;
 
         case 'o' : 
-          if ( ports[y_pos].record == OVR )
-            ports[y_pos].record = OFF;
+          if ( meterec->ports[y_pos].record == OVR )
+            meterec->ports[y_pos].record = OFF;
           else
-            ports[y_pos].record = OVR;
+            meterec->ports[y_pos].record = OVR;
           break;
 
         }
         
       }
       
-      display_session(y_pos, x_pos);
+      display_session(meterec, y_pos, x_pos);
     
     } else {
 
       /* reset absolute maximum markers */
       if (key == 'm') 
-        for ( port=0 ; port < n_ports ; port++) 
-          ports[port].max_in = 0;
+        for ( port=0 ; port < meterec->n_ports ; port++) 
+          meterec->ports[port].max_in = 0;
 
-      display_meter(console_width - 2);
+      display_meter(console_width - 2 , decay_len);
 
     }
 

@@ -14,10 +14,10 @@ then
 
 	echo Creating $CONF_FILE file mapping all jack system ports
 
-	for CAPTURE in `jack_lsp system:capture`
+	for CAPTURE in `jack_lsp system:capture | grep system`
 	do
 		INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
-		echo =\|$INDEX $CAPTURE `jack_lsp system:playback $INDEX | head -1` >> $CONF_FILE
+		echo =\|$INDEX $CAPTURE `jack_lsp system:playback $INDEX | grep system | head -1` >> $CONF_FILE
 	done
 
 else 
