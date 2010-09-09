@@ -4,5 +4,5 @@ bin_SCRIPTS = meterec-init-conf meterec-pass-thru
 AM_CFLAGS = -g -Wall @JACK_CFLAGS@ @SNDFILE_CFLAGS@
 AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@
 
-meterec_SOURCES = meterec.c display.c
+meterec_SOURCES = meterec.c display.c disk.c
 meterec_LDADD = @JACK_LIBS@ @SNDFILE_LIBS@

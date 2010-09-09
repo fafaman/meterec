@@ -15,7 +15,7 @@
 
 int writer_thread(void *d)
 {
-    unsigned int i, port, opos, track;
+    unsigned int i, port, opos, track, thread_delay;
     SNDFILE *out;
     SF_INFO info;
     float buf[BUF_SIZE * MAX_PORTS];
@@ -25,17 +25,19 @@ int writer_thread(void *d)
 	meterec = (struct meterec_s *)d ;
 
     meterec->record_sts = STARTING ;
-    
-    fprintf(fd_log, "Writer thread: Started.\n");
+	
+    fprintf(meterec->fd_log, "Writer thread: Started.\n");
+	
+	thread_delay = set_thread_delay(meterec->client);
 
     /* Open the output file */
     info.format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
     info.channels = meterec->n_tracks;
-    info.samplerate = jack_get_sample_rate(client);
+    info.samplerate = jack_get_sample_rate(meterec->client);
     
 
     if (!sf_format_check(&info)) {
-      fprintf(fd_log, PACKAGE ": Output file format error\n");
+      fprintf(meterec->fd_log, PACKAGE ": Output file format error\n");
       meterec->record_sts = OFF;
       return 0;
     }
@@ -44,23 +46,21 @@ int writer_thread(void *d)
     
     out = sf_open(take_file, SFM_WRITE, &info);
     if (!out) {
-      fprintf(fd_log,"Writer thread: Cannot open '%s' file for writing",take_file);
+      fprintf(meterec->fd_log,"Writer thread: Cannot open '%s' file for writing",take_file);
       meterec->record_sts = OFF;
       return 0;
     }
     
-    fprintf(fd_log,"Writer thread: Opened %d track(s) file '%s' for writing.\n", meterec->n_tracks, take_file);
+    fprintf(meterec->fd_log,"Writer thread: Opened %d track(s) file '%s' for writing.\n", meterec->n_tracks, take_file);
     
-    free(take_file);
-
     /* Start writing the RT ringbuffer to disk */
     meterec->record_sts = ONGOING ;
     while (meterec->record_sts) {
     
       opos = 0;
 
-      for (i  = write_disk_buffer_thread_pos; 
-           i != write_disk_buffer_process_pos && opos < BUF_SIZE;
+      for (i  = meterec->write_disk_buffer_thread_pos; 
+           i != meterec->write_disk_buffer_process_pos && opos < BUF_SIZE;
            i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
         
         track = 0;
@@ -75,11 +75,11 @@ int writer_thread(void *d)
       
       sf_writef_float(out, buf, opos);
 
-      write_disk_buffer_thread_pos = i;
+      meterec->write_disk_buffer_thread_pos = i;
       
       /* run until empty buffer after a stop requets */
       if (meterec->record_sts == STOPING)
-        if ( write_disk_buffer_thread_pos == write_disk_buffer_process_pos )
+        if ( meterec->write_disk_buffer_thread_pos == meterec->write_disk_buffer_process_pos )
           break;
       
       if (meterec->record_cmd == STOP)
@@ -91,7 +91,7 @@ int writer_thread(void *d)
     
     sf_close(out);
 
-    fprintf(fd_log,"Writer thread: done.\n");
+    fprintf(meterec->fd_log,"Writer thread: done.\n");
 
     meterec->record_sts = OFF;
 
@@ -100,17 +100,19 @@ int writer_thread(void *d)
 
 int reader_thread(void *d)
 {
-    unsigned int i, ntrack=0, track, port, take, opos, fill;
+    unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay;
 	struct meterec_s *meterec ;
 
 	meterec = (struct meterec_s *)d ;
     
     meterec->playback_sts = STARTING ;
     
-    fprintf(fd_log, "Reader thread: started.\n");
+    fprintf(meterec->fd_log, "Reader thread: started.\n");
+
+	thread_delay = set_thread_delay(meterec->client);
 
     /* empty buffer ( reposition thread position in order to refill where process will first read) */
-    read_disk_buffer_thread_pos = (read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
+    meterec->read_disk_buffer_thread_pos = (meterec->read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
 
     /* open all files needed for this session */
     for (port=0; port<meterec->n_ports; port++) {
@@ -120,7 +122,7 @@ int reader_thread(void *d)
       /* do not open a file for a port that wants to playback take 0 */
       if (!take ) {
       
-        fprintf(fd_log,"Reader thread: Port %d does not have a take associated\n", port+1);
+        fprintf(meterec->fd_log,"Reader thread: Port %d does not have a take associated\n", port+1);
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
@@ -132,7 +134,7 @@ int reader_thread(void *d)
       /* do not open a file for a port that wants to be recoded in REC mode */
       if (meterec->ports[port].record==REC && meterec->record_cmd==START) {
       
-        fprintf(fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a take associated\n", port+1);
+        fprintf(meterec->fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a playback take associated\n", port+1);
 
         /* rather fill buffer with 0's */
         for (i=0; i<DISK_SIZE; i++) 
@@ -142,7 +144,7 @@ int reader_thread(void *d)
         
       }
       
-      fprintf(fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
+      fprintf(meterec->fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
       
       /* only open a take file that is not defined yet  */  
       if (meterec->takes[take].take_fd == NULL) {
@@ -151,18 +153,19 @@ int reader_thread(void *d)
         /* check file is (was) opened properly */
         if (meterec->takes[take].take_fd == NULL) {
           meterec->playback_sts = OFF;
-          exit_on_error("Reader thread: Cannot open file for reading");
+          fprintf(meterec->fd_log,"Reader thread: Cannot open file '%s' for reading\n", meterec->takes[take].take_file);
+		  exit_on_error("Reader thread: Cannot open file for reading");
         }
         
-        fprintf(fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
+        fprintf(meterec->fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
         
         /* allocate buffer space for this take */
-        fprintf(fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
+        fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
         meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
 
       } 
       else {
-        fprintf(fd_log,"Reader thread: File and buffer already setup.\n");
+        fprintf(meterec->fd_log,"Reader thread: File and buffer already setup.\n");
       }
       
     }
@@ -194,8 +197,8 @@ int reader_thread(void *d)
     }
     
     /* walk in the local buffer and copy it to each port buffers (demux)*/
-    for (i  = read_disk_buffer_thread_pos; 
-         i != read_disk_buffer_process_pos && opos < BUF_SIZE;
+    for (i  = meterec->read_disk_buffer_thread_pos; 
+         i != meterec->read_disk_buffer_process_pos && opos < BUF_SIZE;
          i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
          
       for(take=1; take<meterec->n_takes+1; take++) {
@@ -225,9 +228,9 @@ int reader_thread(void *d)
       
     }
       
-    read_disk_buffer_thread_pos = i;
+    meterec->read_disk_buffer_thread_pos = i;
             
-    if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level() > (4.0f/5)) )
+    if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
       meterec->playback_sts=ONGOING;
     
     if (opos == BUF_SIZE) 
@@ -246,17 +249,25 @@ int reader_thread(void *d)
         meterec->takes[take].take_fd = NULL;
       }
 
-    fprintf(fd_log,"Reader thread: done.\n");
+    fprintf(meterec->fd_log,"Reader thread: done.\n");
 
     meterec->playback_sts = OFF;
 
     return 0;
 }
 
-float read_disk_buffer_level(void) {
+float read_disk_buffer_level(struct meterec_s *meterec) {
   float rdlevel;
 
-  rdlevel = (read_disk_buffer_process_pos - read_disk_buffer_thread_pos) & (DISK_SIZE-1);
+  rdlevel = (meterec->read_disk_buffer_process_pos - meterec->read_disk_buffer_thread_pos) & (DISK_SIZE-1);
   return  (float)(rdlevel / DISK_SIZE);
 }
+
+
+unsigned int set_thread_delay(jack_client_t *client) {
+
+    /* How long should we wait to read 10 times faster than data goes away */
+    return 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
+	
+}	
 

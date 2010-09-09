@@ -34,7 +34,7 @@
 /* size of disk wait buffer, must be power of two */
 #define DISK_SIZE 131072
 
-/* size of disk write buffer */
+/* size of disk buffers */
 #define BUF_SIZE 4096
 
 /* commands */
@@ -149,9 +149,17 @@ struct port_s
 
 struct meterec_s
 {
+  FILE *fd_log ;
+
   char *session_file;
   char *setup_file;
   char *log_file;
+
+  unsigned int record_sts;
+  unsigned int record_cmd;
+
+  unsigned int playback_sts;
+  unsigned int playback_cmd;
 
   unsigned int n_ports;
   struct port_s ports[MAX_PORTS];
@@ -159,5 +167,18 @@ struct meterec_s
   unsigned int n_takes;
   struct take_s takes[MAX_TAKES];
 
+  unsigned int n_tracks;
+
+  jack_client_t *client;
+
+  unsigned int write_disk_buffer_thread_pos;
+  unsigned int write_disk_buffer_process_pos;
+  unsigned int write_disk_buffer_overflow;
+
+  unsigned int read_disk_buffer_thread_pos; /* Hum... Would be better to rework thread loop... */
+  unsigned int read_disk_buffer_process_pos;
+  unsigned int read_disk_buffer_overflow;
+
 };
 
+void exit_on_error(char * reason);
