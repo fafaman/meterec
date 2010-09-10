@@ -170,6 +170,8 @@ struct meterec_s
   unsigned int n_tracks;
 
   jack_client_t *client;
+  jack_nframes_t jack_buffsize;
+  jack_nframes_t seek ;
 
   unsigned int write_disk_buffer_thread_pos;
   unsigned int write_disk_buffer_process_pos;

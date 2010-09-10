@@ -338,6 +338,12 @@ void init_display_scale( int width )
 /******************************************************************************
 ** JACK callback process
 */
+static int update_jack_buffsize(jack_nframes_t nframes, void *arg)
+{
+  meterec->jack_buffsize = nframes;
+  
+  return 0;
+}
 
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg)
@@ -1281,6 +1287,12 @@ int main(int argc, char *argv[])
   /* Register the signal process callback */
   jack_set_process_callback(meterec->client, process_jack_data, 0);
 
+  /* Register function to handle buffer size change */
+  jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, 0);
+  
+  /* get initial buffer size */
+  meterec->jack_buffsize = jack_get_buffer_size(meterec->client);
+  
   if (jack_activate(meterec->client)) {
     fprintf(meterec->fd_log, "Cannot activate client.\n");
     exit_on_error("Cannot activate client");
