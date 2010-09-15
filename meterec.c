@@ -281,6 +281,14 @@ void post_option_init(struct meterec_s *meterec, char *session) {
     sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
   }
   
+  meterec->seek.target_requested = 0;
+  meterec->seek.target_reached = 0;
+  
+  meterec->seek.buffer_pos_requested = 0;
+  meterec->seek.buffer_pos_reached = 0;
+  
+  meterec->seek.total_nframes_requested = 0;
+  meterec->seek.total_nframes_reached = 0;
 }
 
 void init_display_scale( int width )
@@ -357,6 +365,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   /* make sure statuses do not change during callback */
   playback_sts_local = meterec->playback_sts;
   record_sts_local = meterec->record_sts;
+  
+  /* check if there is a new buffer */
+  if (meterec->seek.buffer_pos_requested != meterec->seek.buffer_pos_reached) {
+    meterec->read_disk_buffer_process_pos = meterec->seek.buffer_pos_requested;
+    meterec->seek.buffer_pos_reached = meterec->seek.buffer_pos_requested;
+  }
+  
+  /* check if there is a new position */
+  if (meterec->seek.total_nframes_requested != meterec->seek.total_nframes_reached) {
+    total_nframes = meterec->seek.total_nframes_reached = meterec->seek.total_nframes_requested ;
+  }
+    
     
   /* get the audio samples, and find the peak sample */
   for (port = 0; port < meterec->n_ports; port++) {
@@ -943,6 +963,22 @@ void stop() {
 
 }
 
+jack_nframes_t seek(int seek_sec) {
+
+  jack_nframes_t nframes;
+  jack_nframes_t sample_rate;
+  
+  nframes = total_nframes;
+  sample_rate = jack_get_sample_rate(meterec->client);
+  
+  fprintf(meterec->fd_log,"seek: at %d needs to seek %d (sr=%d)\n",nframes,seek_sec * sample_rate,sample_rate );
+  
+  if ( nframes < seek_sec * sample_rate );
+    return 0;
+  
+  return nframes - seek_sec * sample_rate; 
+   
+}
 
 
 /******************************************************************************
@@ -1457,6 +1493,14 @@ int main(int argc, char *argv[])
           stop();
         else if (meterec->playback_sts == OFF) 
           start_playback();
+        break;
+      
+      case KEY_LEFT:
+        meterec->seek.target_requested = seek(-5);
+        break;
+        
+      case KEY_RIGHT:
+        meterec->seek.target_requested = seek(5);
         break;
         
      case 'Q':         

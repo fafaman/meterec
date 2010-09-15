@@ -147,6 +147,19 @@ struct port_s
 
 };
 
+struct seek_s 
+{
+  jack_nframes_t target_requested;
+  jack_nframes_t target_reached;
+  
+  unsigned int buffer_pos_requested;
+  unsigned int buffer_pos_reached;
+
+  jack_nframes_t total_nframes_requested;
+  jack_nframes_t total_nframes_reached;
+  
+};
+
 struct meterec_s
 {
   FILE *fd_log ;
@@ -171,7 +184,8 @@ struct meterec_s
 
   jack_client_t *client;
   jack_nframes_t jack_buffsize;
-  jack_nframes_t seek ;
+  
+  struct seek_s seek;
 
   unsigned int write_disk_buffer_thread_pos;
   unsigned int write_disk_buffer_process_pos;

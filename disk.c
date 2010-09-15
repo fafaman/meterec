@@ -36,13 +36,14 @@ int writer_thread(void *d)
     info.samplerate = jack_get_sample_rate(meterec->client);
     
 
+	take_file = meterec->takes[meterec->n_takes + 1].take_file;
+    
     if (!sf_format_check(&info)) {
-      fprintf(meterec->fd_log, PACKAGE ": Output file format error\n");
+      fprintf(meterec->fd_log, "Writer thread: Cannot open take file '%s' for writing (%d, %d, %d)\n",take_file,info.format, info.channels, info.samplerate);
       meterec->record_sts = OFF;
+      exit_on_error("Writer thread: Output file format error\n" );
       return 0;
     }
-    
-	take_file = meterec->takes[meterec->n_takes + 1].take_file;
     
     out = sf_open(take_file, SFM_WRITE, &info);
     if (!out) {
@@ -100,8 +101,9 @@ int writer_thread(void *d)
 
 int reader_thread(void *d)
 {
-    unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay;
+    unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay, new_buffer_pos;
 	struct meterec_s *meterec ;
+    jack_nframes_t seek;
 
 	meterec = (struct meterec_s *)d ;
     
@@ -170,28 +172,57 @@ int reader_thread(void *d)
       
     }
     
+    fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
+    
     /* Start reading disk to fill the RT ringbuffer */
+    new_buffer_pos = 0;
     opos = 0;
     while ( meterec->playback_cmd==START )  {
   
-    /* load the local buffer */
-    for(take=1; take<meterec->n_takes+1; take++) {
+    /* seek audio back and forth upon user request */
+    seek = meterec->seek.target_requested;
+    if (meterec->seek.target_reached != seek) {
       
-      /* check if track is used */
-      if (meterec->takes[take].take_fd == NULL)
-        continue;
-        
-      /* get the number of tracks in this take */
-      ntrack = meterec->takes[take].ntrack;
+      fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
+     
+      for(take=1; take<meterec->n_takes+1; take++) {
+
+        /* check if track is used */
+        if (meterec->takes[take].take_fd == NULL)
+          continue;
+
+        sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
+      
+      }
+      
+      /* allow to copy fresh buffer */
+      opos = 0;
+      
+      /* clear processed request */
+      meterec->seek.target_reached = seek;
+      
+      /* store position of new buffer start */
+      new_buffer_pos = meterec->read_disk_buffer_thread_pos;
     
-      /* lets fill local buffer only if previously emptied*/
-      if (opos == 0) {
-      
+    /* lets fill local buffer only if previously emptied*/
+    } else if (opos == 0) {
+
+      /* load the local buffer */
+      for(take=1; take<meterec->n_takes+1; take++) {
+
+        /* check if take is used */
+        if (meterec->takes[take].take_fd == NULL)
+          continue;
+
+        /* get the number of tracks in this take */
+        ntrack = meterec->takes[take].ntrack;
+
         fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, (BUF_SIZE * ntrack) ); 
-    
+
         /* complete buffer with 0's if reached end of file */
         for ( ; fill<(BUF_SIZE * ntrack); fill++) 
           meterec->takes[take].buf[fill] = 0.0f;
+        
       } 
 
     }
@@ -229,6 +260,12 @@ int reader_thread(void *d)
     }
       
     meterec->read_disk_buffer_thread_pos = i;
+    
+    if (new_buffer_pos) {
+      meterec->seek.buffer_pos_requested = (new_buffer_pos - 1) & (DISK_SIZE - 1);
+      meterec->seek.total_nframes_requested = seek ;
+      new_buffer_pos = 0;
+    }
             
     if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
       meterec->playback_sts=ONGOING;
