@@ -281,14 +281,14 @@ void post_option_init(struct meterec_s *meterec, char *session) {
     sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
   }
   
-  meterec->seek.target_requested = 0;
-  meterec->seek.target_reached = 0;
+  meterec->seek.target_requested = -1;
+  meterec->seek.target_reached = -1;
   
   meterec->seek.buffer_pos_requested = 0;
   meterec->seek.buffer_pos_reached = 0;
   
-  meterec->seek.total_nframes_requested = 0;
-  meterec->seek.total_nframes_reached = 0;
+  meterec->seek.total_nframes_requested = -1;
+  meterec->seek.total_nframes_reached = -1;
 }
 
 void init_display_scale( int width )
@@ -963,7 +963,7 @@ void stop() {
 
 }
 
-jack_nframes_t seek(int seek_sec) {
+unsigned int seek(int seek_sec) {
 
   jack_nframes_t nframes;
   jack_nframes_t sample_rate;
@@ -973,10 +973,11 @@ jack_nframes_t seek(int seek_sec) {
   
   fprintf(meterec->fd_log,"seek: at %d needs to seek %d (sr=%d)\n",nframes,seek_sec * sample_rate,sample_rate );
   
-  if ( nframes < seek_sec * sample_rate );
-    return 0;
+  if ( seek_sec < 0 )
+    if ( nframes < abs( seek_sec ) * sample_rate )
+      return 0;
   
-  return nframes - seek_sec * sample_rate; 
+  return (nframes + seek_sec * sample_rate); 
    
 }
 
@@ -1459,13 +1460,23 @@ int main(int argc, char *argv[])
     
     } else {
 
-      /* reset absolute maximum markers */
-      if (key == 'm') 
-        for ( port=0 ; port < meterec->n_ports ; port++) 
-          meterec->ports[port].max_in = 0;
+      switch (key) {
+    	/* reset absolute maximum markers */
+    	case 'm':
+	      for ( port=0 ; port < meterec->n_ports ; port++) 
+        	meterec->ports[port].max_in = 0;
+		  break;
 
+    	case KEY_LEFT:
+          meterec->seek.target_requested = seek(-5);
+          break;
+
+    	case KEY_RIGHT:
+          meterec->seek.target_requested = seek(5);
+          break;
+	  }
+	     
       display_meter(console_width - 2 , decay_len);
-
     }
 
 
@@ -1495,14 +1506,6 @@ int main(int argc, char *argv[])
           start_playback();
         break;
       
-      case KEY_LEFT:
-        meterec->seek.target_requested = seek(-5);
-        break;
-        
-      case KEY_RIGHT:
-        meterec->seek.target_requested = seek(5);
-        break;
-        
      case 'Q':         
      case 'q':         
        cleanup(0); 
