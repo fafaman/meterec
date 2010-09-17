@@ -102,6 +102,12 @@ take 7 contains 2 tracks that are mapped on port 8 and 3
 
 */
 
+struct time_s 
+{
+	unsigned int h,m,s,ds;
+	jack_nframes_t nframes;
+};
+
 struct take_s
 {
   unsigned int ntrack; /* number of tracks in this take */
@@ -157,6 +163,8 @@ struct seek_s
 
   jack_nframes_t total_nframes_requested;
   jack_nframes_t total_nframes_reached;
+  
+  jack_nframes_t index[12];
   
 };
 

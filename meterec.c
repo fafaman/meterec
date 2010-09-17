@@ -986,6 +986,23 @@ unsigned int seek(int seek_sec) {
 ** DISPLAYs
 */
 
+void compute_time(struct time_s * time, unsigned int rate) {
+  time->h = (unsigned int) ( time->nframes / rate ) / 3600;
+  time->m = (unsigned int) ((time->nframes / rate ) / 60 ) % 60;
+  time->s = (unsigned int) ( time->nframes / rate ) % 60;
+  time->ds =(unsigned int) ((100*time->nframes) / rate ) % 100;
+}
+
+void compute_nframes(struct time_s * time, unsigned int rate) {
+  time->nframes = 
+		  (jack_nframes_t) (
+		  time->h  * rate * 3600 +
+		  time->m  * rate * 60 +
+		  time->s  * rate +
+		  time->ds * rate / 100 
+		  ) ;
+}
+
 void display_status(void) {
   
   float load;
@@ -1468,11 +1485,13 @@ int main(int argc, char *argv[])
 		  break;
 
     	case KEY_LEFT:
-          meterec->seek.target_requested = seek(-5);
+          if (!meterec->record_sts && meterec->playback_sts )
+		    meterec->seek.target_requested = seek(-5);
           break;
 
     	case KEY_RIGHT:
-          meterec->seek.target_requested = seek(5);
+          if (!meterec->record_sts && meterec->playback_sts )
+            meterec->seek.target_requested = seek(5);
           break;
 	  }
 	     
@@ -1505,12 +1524,33 @@ int main(int argc, char *argv[])
         else if (meterec->playback_sts == OFF) 
           start_playback();
         break;
-      
-     case 'Q':         
-     case 'q':         
-       cleanup(0); 
-       break;
-       
+	
+	  /* set indexes */	
+	  case '=': meterec->seek.index[11] = total_nframes ; break;
+	  case '-': meterec->seek.index[10] = total_nframes ; break;
+	  case '0': meterec->seek.index[9] = total_nframes ; break;
+	  case '9': meterec->seek.index[8] = total_nframes ; break;
+	  case '8': meterec->seek.index[7] = total_nframes ; break;
+	  case '7': meterec->seek.index[6] = total_nframes ; break;
+	  case '6': meterec->seek.index[5] = total_nframes ; break;
+	  case '5': meterec->seek.index[4] = total_nframes ; break;
+	  case '4': meterec->seek.index[3] = total_nframes ; break;
+	  case '3': meterec->seek.index[2] = total_nframes ; break;
+	  case '2': meterec->seek.index[1] = total_nframes ; break;
+	  case '1': meterec->seek.index[0] = total_nframes ; break;
+
+	  /* exit */	  
+      case 'Q':         
+      case 'q':         
+    	cleanup(0); 
+    	break;
+
+    }
+	
+	/* seek to index */
+	if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
+      if (!meterec->record_sts && meterec->playback_sts )
+		meterec->seek.target_requested = meterec->seek.index[key - KEY_F0];
     }
     
     refresh();
