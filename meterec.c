@@ -1008,22 +1008,18 @@ void display_status(void) {
   float load;
   static float  max_load=0.0f;
   jack_nframes_t rate;
-  unsigned int h, m, s, ds ;
+  struct time_s time;
   
   rate = jack_get_sample_rate(meterec->client);
   load = jack_cpu_load(meterec->client);
   
-  h = (unsigned int) (total_nframes / rate ) / 3600;
-  m = (unsigned int) ((total_nframes / rate ) / 60 ) % 60;
-  s = (unsigned int) ( total_nframes / rate ) % 60;
-  ds =(unsigned int) ((100*total_nframes) / rate ) % 100;
+  time.nframes = total_nframes ;
+  compute_time(&time, rate);
   
   if (load>max_load) 
     max_load = load;
   
-  
-  
-  printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%) ", rate, h, m, s, ds, load , max_load);
+  printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ds, load , max_load);
   
   printw("[> ");
   
