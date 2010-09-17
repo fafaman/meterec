@@ -1029,6 +1029,8 @@ void display_status(void) {
     printw("%-8s","STARTING");
   if (meterec->playback_sts==ONGOING) 
     printw("%-8s","ONGOING");
+  if (meterec->playback_sts==PAUSED) 
+    printw("%-8s","PAUSED");
 
   printw("]");
 

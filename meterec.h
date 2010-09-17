@@ -41,6 +41,7 @@
 #define STOP 0
 #define START 1
 #define RESTART 2
+#define PAUSE 3 
 
 /* status */
 #define OFF 0
@@ -48,6 +49,7 @@
 #define ONGOING 2
 #define STARVING 3
 #define STOPING 4
+#define PAUSED 5
 
 /* type of recording */
 #define REC 1
