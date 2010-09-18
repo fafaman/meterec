@@ -265,7 +265,7 @@ void pre_option_init(struct meterec_s *meterec) {
 
 void post_option_init(struct meterec_s *meterec, char *session) {
 
-  unsigned int take ;
+  unsigned int take, index ;
 
   meterec->session_file = (char *) malloc( strlen(session) + strlen("..sess") + 1 );
   sprintf(meterec->session_file,".%s.sess",session);
@@ -281,14 +281,18 @@ void post_option_init(struct meterec_s *meterec, char *session) {
     sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
   }
   
-  meterec->seek.target_requested = -1;
-  meterec->seek.target_reached = -1;
+  pthread_mutex_init(&meterec->seek.mutex, NULL);
+    
+  for (index=0; index<MAX_INDEX; index++)
+     meterec->seek.index[index] = -1;
+
+  meterec->seek.disk_target = -1;
+
+  meterec->seek.buffer_pos_target = 0;
   
-  meterec->seek.buffer_pos_requested = 0;
-  meterec->seek.buffer_pos_reached = 0;
+  meterec->seek.buffer_pos_new_nframe = 0;
+  meterec->seek.nframes_target = -1;
   
-  meterec->seek.total_nframes_requested = -1;
-  meterec->seek.total_nframes_reached = -1;
 }
 
 void init_display_scale( int width )
@@ -366,18 +370,16 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   playback_sts_local = meterec->playback_sts;
   record_sts_local = meterec->record_sts;
   
-  /* check if there is a new buffer */
-  if (meterec->seek.buffer_pos_requested != meterec->seek.buffer_pos_reached) {
-    meterec->read_disk_buffer_process_pos = meterec->seek.buffer_pos_requested;
-    meterec->seek.buffer_pos_reached = meterec->seek.buffer_pos_requested;
-  }
-  
-  /* check if there is a new position */
-  if (meterec->seek.total_nframes_requested != meterec->seek.total_nframes_reached) {
-    total_nframes = meterec->seek.total_nframes_reached = meterec->seek.total_nframes_requested ;
-  }
+  /* check if there is a new buffer position to go to*/
+  if (meterec->seek.buffer_pos_target) {
+    meterec->read_disk_buffer_process_pos = meterec->seek.buffer_pos_target;
     
+    pthread_mutex_lock( &meterec->seek.mutex );
+    meterec->seek.buffer_pos_target = 0;
+    pthread_mutex_unlock( &meterec->seek.mutex );
     
+  }
+      
   /* get the audio samples, and find the peak sample */
   for (port = 0; port < meterec->n_ports; port++) {
 
@@ -402,6 +404,15 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         /* Empty read disk buffer */
         out[i] = meterec->ports[port].read_disk_buffer[read_pos];
         
+        /* check if there is a new position */
+        if (meterec->seek.buffer_pos_new_nframe) 
+          if (meterec->seek.buffer_pos_new_nframe == read_pos){
+            total_nframes = meterec->seek.nframes_target - nframes ;
+            pthread_mutex_lock( &meterec->seek.mutex );
+            meterec->seek.buffer_pos_new_nframe = 0;
+            pthread_mutex_unlock( &meterec->seek.mutex );
+          }
+    
         /* update buffer pointer */
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
         
@@ -1484,12 +1495,12 @@ int main(int argc, char *argv[])
 
     	case KEY_LEFT:
           if (!meterec->record_sts && meterec->playback_sts )
-		    meterec->seek.target_requested = seek(-5);
+		    meterec->seek.disk_target = seek(-5);
           break;
 
     	case KEY_RIGHT:
           if (!meterec->record_sts && meterec->playback_sts )
-            meterec->seek.target_requested = seek(5);
+            meterec->seek.disk_target = seek(5);
           break;
 	  }
 	     
@@ -1548,7 +1559,17 @@ int main(int argc, char *argv[])
 	/* seek to index */
 	if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
       if (!meterec->record_sts && meterec->playback_sts )
-		meterec->seek.target_requested = meterec->seek.index[key - KEY_F0];
+		pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_target = meterec->seek.index[key - KEY_F(1)];
+        sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_target );
+		pthread_mutex_unlock( &meterec->seek.mutex );
+    }
+    
+	if ( key == KEY_HOME ) {
+      if (!meterec->record_sts && meterec->playback_sts )
+		pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_target = 0;
+		pthread_mutex_unlock( &meterec->seek.mutex );
     }
     
     refresh();

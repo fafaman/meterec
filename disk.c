@@ -180,8 +180,8 @@ int reader_thread(void *d)
     while ( meterec->playback_cmd==START )  {
   
     /* seek audio back and forth upon user request */
-    seek = meterec->seek.target_requested;
-    if (meterec->seek.target_reached != seek) {
+    seek = meterec->seek.disk_target;
+    if (seek != (jack_nframes_t)(-1)) {
       
       fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
      
@@ -199,10 +199,13 @@ int reader_thread(void *d)
       opos = 0;
       
       /* clear processed request */
-      meterec->seek.target_reached = seek;
+      pthread_mutex_lock( &meterec->seek.mutex );
+      meterec->seek.disk_target = -1;
+      pthread_mutex_unlock( &meterec->seek.mutex );
       
       /* store position of new buffer start */
       new_buffer_pos = meterec->read_disk_buffer_thread_pos;
+      new_buffer_pos = (new_buffer_pos - 1) & (DISK_SIZE - 1);
     
     /* lets fill local buffer only if previously emptied*/
     } else if (opos == 0) {
@@ -262,8 +265,11 @@ int reader_thread(void *d)
     meterec->read_disk_buffer_thread_pos = i;
     
     if (new_buffer_pos) {
-      meterec->seek.buffer_pos_requested = (new_buffer_pos - 1) & (DISK_SIZE - 1);
-      meterec->seek.total_nframes_requested = seek ;
+      pthread_mutex_lock( &meterec->seek.mutex );
+      meterec->seek.buffer_pos_target = new_buffer_pos;
+      meterec->seek.buffer_pos_new_nframe = new_buffer_pos;
+      meterec->seek.nframes_target = seek ;
+      pthread_mutex_unlock( &meterec->seek.mutex );
       new_buffer_pos = 0;
     }
             

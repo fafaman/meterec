@@ -37,6 +37,9 @@
 /* size of disk buffers */
 #define BUF_SIZE 4096
 
+/*number of seek indexes*/
+#define MAX_INDEX 12
+
 /* commands */
 #define STOP 0
 #define START 1
@@ -157,16 +160,16 @@ struct port_s
 
 struct seek_s 
 {
-  jack_nframes_t target_requested;
-  jack_nframes_t target_reached;
-  
-  unsigned int buffer_pos_requested;
-  unsigned int buffer_pos_reached;
+  pthread_mutex_t mutex ; //= PTHREAD_MUTEX_INITIALIZER;
 
-  jack_nframes_t total_nframes_requested;
-  jack_nframes_t total_nframes_reached;
+  jack_nframes_t disk_target;
   
-  jack_nframes_t index[12];
+  unsigned int buffer_pos_target;
+
+  unsigned int buffer_pos_new_nframe ;
+  jack_nframes_t nframes_target;
+  
+  jack_nframes_t index[MAX_INDEX];
   
 };
 
