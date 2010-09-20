@@ -77,6 +77,33 @@ void exit_on_error(char * reason) {
   
 }
 
+int time_scan(struct time_s * time, char * string) {
+  int u;
+  sscanf(string, "%u:%u:%u.%u%n",&time->h, &time->m, &time->s, &time->ds, &u);
+  return u;
+}
+
+void time_sprint(struct time_s * time, char * string) {
+  sprintf(string, "%u:%02u:%02u.%02u",time->h, time->m, time->s, time->ds);
+}
+  
+void time_hms(struct time_s * time, unsigned int rate) {
+  time->h = (unsigned int) ( time->nframes / rate ) / 3600;
+  time->m = (unsigned int) ((time->nframes / rate ) / 60 ) % 60;
+  time->s = (unsigned int) ( time->nframes / rate ) % 60;
+  time->ds =(unsigned int) ((100*time->nframes) / rate ) % 100;
+}
+
+void time_nframes(struct time_s * time, unsigned int rate) {
+  time->nframes = 
+		  (jack_nframes_t) (
+		  time->h  * rate * 3600 +
+		  time->m  * rate * 60 +
+		  time->s  * rate +
+		  time->ds * rate / 100 
+		  ) ;
+}
+
 /*
   db: the signal stength in db
   width: the size of the meter
@@ -831,7 +858,9 @@ void session_tail (FILE * fd_conf)
 void save_session(char * file)
 {
   FILE *fd_conf;
-  unsigned int take, port;
+  unsigned int take, port, index;
+  struct time_s time;
+  char * time_str = "000:00:00.00";
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
@@ -860,7 +889,16 @@ void save_session(char * file)
   }
   
   session_tail(fd_conf);
-    
+  
+  fprintf(fd_conf,"\n");
+  
+  for (index=0; index<MAX_INDEX; index++) {
+	  time.nframes = meterec->seek.index[index] ;
+	  time_hms(&time, jack_get_sample_rate(meterec->client) );
+	  time_sprint(&time, time_str);
+	  fprintf(fd_conf,">%s>%02d\n", time_str, index);
+  }
+  
   fclose(fd_conf);
 
 }
@@ -997,23 +1035,6 @@ unsigned int seek(int seek_sec) {
 ** DISPLAYs
 */
 
-void compute_time(struct time_s * time, unsigned int rate) {
-  time->h = (unsigned int) ( time->nframes / rate ) / 3600;
-  time->m = (unsigned int) ((time->nframes / rate ) / 60 ) % 60;
-  time->s = (unsigned int) ( time->nframes / rate ) % 60;
-  time->ds =(unsigned int) ((100*time->nframes) / rate ) % 100;
-}
-
-void compute_nframes(struct time_s * time, unsigned int rate) {
-  time->nframes = 
-		  (jack_nframes_t) (
-		  time->h  * rate * 3600 +
-		  time->m  * rate * 60 +
-		  time->s  * rate +
-		  time->ds * rate / 100 
-		  ) ;
-}
-
 void display_status(void) {
   
   float load;
@@ -1025,7 +1046,7 @@ void display_status(void) {
   load = jack_cpu_load(meterec->client);
   
   time.nframes = total_nframes ;
-  compute_time(&time, rate);
+  time_hms(&time, rate);
   
   if (load>max_load) 
     max_load = load;
