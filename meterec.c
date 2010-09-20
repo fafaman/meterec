@@ -858,10 +858,8 @@ void session_tail (FILE * fd_conf)
 void save_session(char * file)
 {
   FILE *fd_conf;
-  unsigned int take, port, index;
-  struct time_s time;
-  char * time_str = "000:00:00.00";
-
+  unsigned int take, port;
+  
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
     exit_on_error("Cannot open session file for writing.");
@@ -890,15 +888,6 @@ void save_session(char * file)
   
   session_tail(fd_conf);
   
-  fprintf(fd_conf,"\n");
-  
-  for (index=0; index<MAX_INDEX; index++) {
-	  time.nframes = meterec->seek.index[index] ;
-	  time_hms(&time, jack_get_sample_rate(meterec->client) );
-	  time_sprint(&time, time_str);
-	  fprintf(fd_conf,">%s>%02d\n", time_str, index);
-  }
-  
   fclose(fd_conf);
 
 }
@@ -907,7 +896,12 @@ void save_setup(char *file)
 {
 
   FILE *fd_conf;
-  unsigned int take, port;
+  unsigned int take, port, index;
+  struct time_s time;
+  char time_str[13] ;
+  jack_nframes_t rate;
+  
+  rate = jack_get_sample_rate(meterec->client);
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
@@ -946,6 +940,18 @@ void save_setup(char *file)
   }
     
   session_tail(fd_conf);
+  
+  for (index=0; index<MAX_INDEX; index++) {
+	  time.nframes = meterec->seek.index[index] ;
+	  if ( time.nframes == -1 ) {
+	      fprintf(fd_conf,">          >%02d\n", index+1);
+	  } 
+	  else {
+		  time_hms(&time, rate);
+          time_sprint(&time, time_str);
+	      fprintf(fd_conf,">%s>%02d\n", time_str, index+1);
+	  }
+  }
   
   fclose(fd_conf);
   
@@ -1009,6 +1015,8 @@ void stop() {
     }
 
   }
+  
+  save_setup(meterec->setup_file);
 
 }
 
