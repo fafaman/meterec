@@ -162,9 +162,9 @@ void read_peak(float bias)
   
 }
 
-void compute_takes_to_playback() {
+unsigned int compute_takes_to_playback() {
 
-  unsigned int take, port;
+  unsigned int take, port, changes=0;
 
   for ( port = 0; port < meterec->n_ports; port++ ) {
     
@@ -179,10 +179,14 @@ void compute_takes_to_playback() {
       if (meterec->takes[take].port_has_track[port])
         break;
         
+    if (meterec->ports[port].playback_take != take)
+      changes++;
+
     meterec->ports[port].playback_take = take;
     
-  }  
-
+  }
+  
+  return changes;
 }
 
 void compute_tracks_to_record() {
@@ -814,7 +818,7 @@ void load_session(char * file)
       meterec->takes[take].port_has_track[port] = 1 ;
       meterec->takes[take].ntrack++;
       
-      meterec->ports[port].playback_take = take ;      
+      meterec->ports[port].playback_take = take ;
     
     }
 
