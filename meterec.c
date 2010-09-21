@@ -698,12 +698,27 @@ void parse_port_con(FILE *fd_conf, unsigned int port)
   
 }
 
+void parse_time_index(FILE *fd_conf, unsigned int index)
+{
+  struct time_s time;
+  jack_nframes_t rate;
+  unsigned int u;
+  
+  fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ds);
+  
+  rate = jack_get_sample_rate(meterec->client);
+  time_nframes(&time, rate);
+  
+  meterec->seek.index[index] = time.nframes;
+  
+}
+
 void load_setup(char *file)
 {
 
   FILE *fd_conf;
   char buf[2];
-  unsigned int take=1, port=0;
+  unsigned int take=1, port=0, index=0;
   
   buf[1] = 0;
   
@@ -757,6 +772,9 @@ void load_setup(char *file)
       meterec->ports[port].record = OVR;
       meterec->n_tracks++;
       take=1;
+    } else if (*buf == '>' ) {
+      parse_time_index(fd_conf, index);
+      index++;	
     } else {
       take++;
     }
