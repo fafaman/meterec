@@ -99,6 +99,87 @@ int writer_thread(void *d)
     return 0;
 }
 
+void read_disk_close_fd(struct meterec_s *meterec) {
+
+  unsigned int take;
+
+  /* close all fd's */
+  for (take=1; take<meterec->n_takes+1; take++) 
+	if (meterec->takes[take].take_fd) {
+      sf_close(meterec->takes[take].take_fd);
+      free(meterec->takes[take].buf);
+      meterec->takes[take].buf = NULL;
+      meterec->takes[take].take_fd = NULL;
+	}
+
+}
+  
+void read_disk_open_fd(struct meterec_s *meterec, unsigned int seek) {
+
+  unsigned int take, port, i;
+
+  /* open all files needed for this session */
+  for (port=0; port<meterec->n_ports; port++) {
+
+    take = meterec->ports[port].playback_take;
+
+    /* do not open a file for a port that wants to playback take 0 */
+    if (!take ) {
+
+      fprintf(meterec->fd_log,"Reader thread: Port %d does not have a take associated\n", port+1);
+
+      /* rather fill buffer with 0's */
+      for (i=0; i<DISK_SIZE; i++) 
+        meterec->ports[port].read_disk_buffer[i] = 0.0f ;
+
+      continue;
+    }
+
+    /* do not open a file for a port that wants to be recoded in REC mode */
+    if (meterec->ports[port].record==REC && meterec->record_cmd==START) {
+
+      fprintf(meterec->fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a playback take associated\n", port+1);
+
+      /* rather fill buffer with 0's */
+      for (i=0; i<DISK_SIZE; i++) 
+        meterec->ports[port].read_disk_buffer[i] = 0.0f ;
+
+      continue;
+
+    }
+
+    fprintf(meterec->fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
+
+    /* only open a take file that is not defined yet  */  
+    if (meterec->takes[take].take_fd == NULL) {
+      meterec->takes[take].take_fd = sf_open(meterec->takes[take].take_file, SFM_READ, &meterec->takes[take].info);
+
+      /* check file is (was) opened properly */
+      if (meterec->takes[take].take_fd == NULL) {
+        meterec->playback_sts = OFF;
+        fprintf(meterec->fd_log,"Reader thread: Cannot open file '%s' for reading\n", meterec->takes[take].take_file);
+		exit_on_error("Reader thread: Cannot open file for reading");
+      }
+
+      fprintf(meterec->fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
+
+      /* allocate buffer space for this take */
+      fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
+      meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
+
+      /* seek to destination if needed */
+	  if (seek)
+	    sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
+	  
+    } 
+    else {
+      fprintf(meterec->fd_log,"Reader thread: File and buffer already setup.\n");
+    }
+
+  }
+
+}
+  
 int reader_thread(void *d)
 {
     unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay, new_buffer_pos;
@@ -116,62 +197,9 @@ int reader_thread(void *d)
     /* empty buffer ( reposition thread position in order to refill where process will first read) */
     meterec->read_disk_buffer_thread_pos = (meterec->read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
 
-    /* open all files needed for this session */
-    for (port=0; port<meterec->n_ports; port++) {
- 
-      take = meterec->ports[port].playback_take;
-      
-      /* do not open a file for a port that wants to playback take 0 */
-      if (!take ) {
-      
-        fprintf(meterec->fd_log,"Reader thread: Port %d does not have a take associated\n", port+1);
-
-        /* rather fill buffer with 0's */
-        for (i=0; i<DISK_SIZE; i++) 
-          meterec->ports[port].read_disk_buffer[i] = 0.0f ;
-          
-        continue;
-      }
-      
-      /* do not open a file for a port that wants to be recoded in REC mode */
-      if (meterec->ports[port].record==REC && meterec->record_cmd==START) {
-      
-        fprintf(meterec->fd_log,"Reader thread: Port %d beeing recorded in REC mode will not have a playback take associated\n", port+1);
-
-        /* rather fill buffer with 0's */
-        for (i=0; i<DISK_SIZE; i++) 
-          meterec->ports[port].read_disk_buffer[i] = 0.0f ;
-          
-        continue;
-        
-      }
-      
-      fprintf(meterec->fd_log,"Reader thread: Port %d has take %d associated\n", port+1, take );
-      
-      /* only open a take file that is not defined yet  */  
-      if (meterec->takes[take].take_fd == NULL) {
-        meterec->takes[take].take_fd = sf_open(meterec->takes[take].take_file, SFM_READ, &meterec->takes[take].info);
-      
-        /* check file is (was) opened properly */
-        if (meterec->takes[take].take_fd == NULL) {
-          meterec->playback_sts = OFF;
-          fprintf(meterec->fd_log,"Reader thread: Cannot open file '%s' for reading\n", meterec->takes[take].take_file);
-		  exit_on_error("Reader thread: Cannot open file for reading");
-        }
-        
-        fprintf(meterec->fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
-        
-        /* allocate buffer space for this take */
-        fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
-        meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
-
-      } 
-      else {
-        fprintf(meterec->fd_log,"Reader thread: File and buffer already setup.\n");
-      }
-      
-    }
-    
+    /* open all files needed for this playback */
+    read_disk_open_fd(meterec, 0);
+	
     fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
     
     /* Start reading disk to fill the RT ringbuffer */
@@ -208,7 +236,8 @@ int reader_thread(void *d)
       new_buffer_pos = (new_buffer_pos - 1) & (DISK_SIZE - 1);
     
     /* lets fill local buffer only if previously emptied*/
-    } else if (opos == 0) {
+    } 
+	else if (opos == 0) {
 
       /* load the local buffer */
       for(take=1; take<meterec->n_takes+1; take++) {
@@ -283,15 +312,9 @@ int reader_thread(void *d)
       
     }
     
-    /* close all fd's */
-    for (take=1; take<meterec->n_takes+1; take++) 
-      if (meterec->takes[take].take_fd) {
-        sf_close(meterec->takes[take].take_fd);
-        free(meterec->takes[take].buf);
-        meterec->takes[take].buf = NULL;
-        meterec->takes[take].take_fd = NULL;
-      }
-
+	/* close all fd's */
+    read_disk_close_fd(meterec);
+	
     fprintf(meterec->fd_log,"Reader thread: done.\n");
 
     meterec->playback_sts = OFF;

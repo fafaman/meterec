@@ -43,15 +43,18 @@ void stop(void);
 
 WINDOW * mainwin;
 
+int edit_mode = 0;
+int x_pos = 0, y_pos = 0;
+  int running = 1;
 
-static unsigned long  total_nframes = 0 ;
+static unsigned long  playhead = 0 ;
 
 char *scale ;
 char *line ;
 char *session = "meterec";
 char *jackname = "meterec" ;
 
-pthread_t wr_dt, rd_dt ;
+pthread_t wr_dt, rd_dt, kb_dt ;
 
 struct meterec_s * meterec ;
 
@@ -438,7 +441,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         /* check if there is a new position */
         if (meterec->seek.buffer_pos_new_nframe) 
           if (meterec->seek.buffer_pos_new_nframe == read_pos){
-            total_nframes = meterec->seek.nframes_target - nframes ;
+            playhead = meterec->seek.nframes_target - nframes ;
             pthread_mutex_lock( &meterec->seek.mutex );
             meterec->seek.buffer_pos_new_nframe = 0;
             pthread_mutex_unlock( &meterec->seek.mutex );
@@ -512,7 +515,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     meterec->read_disk_buffer_process_pos = (meterec->read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
   
     /* update frame/time counter */
-    total_nframes +=  nframes ;
+    playhead +=  nframes ;
     
     if (record_sts_local==ONGOING) {
 
@@ -529,7 +532,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   
   } else {
   
-    total_nframes = 0 ;
+    playhead = 0 ;
   
   }
   
@@ -1023,6 +1026,7 @@ void stop() {
     while(meterec->record_cmd || meterec->record_sts) {
       fsleep( 0.05f );
     }
+    pthread_join(wr_dt, NULL);
 
     /* get ready for the next take */
     meterec->n_takes ++;
@@ -1035,6 +1039,7 @@ void stop() {
     while(meterec->playback_cmd || meterec->playback_sts) {
       fsleep( 0.05f );
     }
+    pthread_join(rd_dt, NULL);
 
   }
   
@@ -1047,7 +1052,7 @@ unsigned int seek(int seek_sec) {
   jack_nframes_t nframes;
   jack_nframes_t sample_rate;
   
-  nframes = total_nframes;
+  nframes = playhead;
   sample_rate = jack_get_sample_rate(meterec->client);
   
   fprintf(meterec->fd_log,"seek: at %d needs to seek %d (sr=%d)\n",nframes,seek_sec * sample_rate,sample_rate );
@@ -1075,7 +1080,7 @@ void display_status(void) {
   rate = jack_get_sample_rate(meterec->client);
   load = jack_cpu_load(meterec->client);
   
-  time.nframes = total_nframes ;
+  time.nframes = playhead ;
   time_hms(&time, rate);
   
   if (load>max_load) 
@@ -1251,9 +1256,192 @@ void display_meter( int width, int decay_len )
 
 
 /******************************************************************************
-** EDITION
+** KEYBOARD
 */
 
+int keyboard_thread(void *d)
+{
+
+  unsigned int port, take;
+  int key = 0;
+
+  noecho();
+  cbreak();
+  nodelay(stdscr, FALSE);
+  keypad(stdscr, TRUE);
+  
+  while (1) {
+
+    key = wgetch(stdscr);
+
+    if (edit_mode) {
+      
+    switch (key) {
+    
+      /* 
+      ** Move cursor 
+      */
+      case KEY_UP :
+        if ( y_pos > 0 )
+          y_pos--;
+        break;
+        
+      case KEY_DOWN :
+        if ( y_pos < meterec->n_ports - 1 )
+          y_pos++;
+        break;
+      
+      case KEY_LEFT :
+        if ( x_pos > 1 )
+          x_pos--;
+        break;
+      
+      case KEY_RIGHT :
+        if ( x_pos < meterec->n_takes )
+          x_pos++;
+        break;
+      
+      /* 
+      ** Change Locks 
+      */
+      case 'L' : /* clear all other locks for that port if no lock yet */
+        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( take=0 ; take < meterec->n_takes+1 ; take++) 
+            meterec->takes[take].port_has_lock[y_pos] = 0 ;
+        break;
+		
+      case 'l' : /* toggle lock at this position */
+        meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
+        break;
+
+      case 'A' : /* clear all other locks if no lock yet at this position */
+        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < meterec->n_ports ; port++)
+            for ( take=0 ; take < meterec->n_takes+1 ; take++)  
+              meterec->takes[take].port_has_lock[port] = 0 ;
+        break;
+
+      case 'a' : /* toggle lock for all ports depending on this position */
+        if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->takes[x_pos].port_has_lock[port] = 0;
+        else 
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->takes[x_pos].port_has_lock[port] = 1;
+        break;
+      
+
+      }
+      
+      if (meterec->record_sts==OFF) {
+      
+        switch (key) {
+        /* Change record mode */
+        case 'r' : 
+          if ( meterec->ports[y_pos].record == REC )
+            meterec->ports[y_pos].record = OFF;
+          else
+            meterec->ports[y_pos].record = REC;
+          break;
+
+        case 'd' : 
+          if ( meterec->ports[y_pos].record == DUB )
+            meterec->ports[y_pos].record = OFF;
+          else
+            meterec->ports[y_pos].record = DUB;
+          break;
+
+        case 'o' : 
+          if ( meterec->ports[y_pos].record == OVR )
+            meterec->ports[y_pos].record = OFF;
+          else
+            meterec->ports[y_pos].record = OVR;
+          break;
+
+        }
+
+      }
+
+    } else {
+
+    switch (key) {
+      /* reset absolute maximum markers */
+      case 'm':
+        for ( port=0 ; port < meterec->n_ports ; port++) 
+          meterec->ports[port].max_in = 0;
+      break;
+
+      case KEY_LEFT:
+          if (!meterec->record_sts && meterec->playback_sts )
+        meterec->seek.disk_target = seek(-5);
+          break;
+
+      case KEY_RIGHT:
+          if (!meterec->record_sts && meterec->playback_sts )
+            meterec->seek.disk_target = seek(5);
+          break;
+    }
+  }
+
+
+    /*
+    ** KEYs handled in all modes
+    */
+    
+    switch (key) {
+    
+      case 9: /* TAB */
+        edit_mode = !edit_mode ;
+        break;
+    
+      case 10: /* RETURN */
+        if (meterec->playback_sts == ONGOING)
+          stop();
+        else if (meterec->playback_sts == OFF) {
+          start_record();    
+          start_playback();
+        }
+        break;
+        
+      case ' ':
+        if (meterec->playback_sts == ONGOING)
+          stop();
+        else if (meterec->playback_sts == OFF)
+          start_playback();
+        break;
+	
+	  /* exit */
+      case 'Q':
+      case 'q':
+      running = 0;
+    	break;
+
+    }
+	
+	/* set index using SHIFT */
+  if ( KEY_F(13) <= key && key <= KEY_F(24) ) {
+    meterec->seek.index[key - KEY_F(13)] = playhead ;
+  }
+
+  /* seek to index */
+  if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
+      if (!meterec->record_sts && meterec->playback_sts )
+    pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_target = meterec->seek.index[key - KEY_F(1)];
+        sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_target );
+    pthread_mutex_unlock( &meterec->seek.mutex );
+    }
+    
+  if ( key == KEY_HOME ) {
+      if (!meterec->record_sts && meterec->playback_sts )
+    pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_target = 0;
+    pthread_mutex_unlock( &meterec->seek.mutex );
+    }
+  }
+  
+  return 0;
+}
 
 /******************************************************************************
 ** CORE
@@ -1291,14 +1479,9 @@ int main(int argc, char *argv[])
 {
   int console_width = 0; 
   jack_status_t status;
-  int running = 1;
   float ref_lev = 0;
   int rate = 24;
   int opt;
-  int key = 0;
-  int edit_mode = 0;
-  int x_pos = 0, y_pos = 0;
-  unsigned int port, take;
   int decay_len;
   float bias = 1.0f;
 
@@ -1376,9 +1559,6 @@ int main(int argc, char *argv[])
   init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
   init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 
-  noecho();  
-  keypad(stdscr, TRUE);
-  timeout(0); 
   
   if (!console_width)
     console_width = getmaxx(mainwin);
@@ -1416,6 +1596,8 @@ int main(int argc, char *argv[])
 
   load_session(meterec->session_file);
   
+  pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
+
   /* Start threads doing disk accesses */
   if (meterec->record_cmd==START) {
   
@@ -1445,180 +1627,19 @@ int main(int argc, char *argv[])
 
     display_buffer(console_width - 2);
     
-    key = wgetch(stdscr);
-
-    if (edit_mode) {
-      
-    switch (key) {
-    
-      /* 
-      ** Move cursor 
-      */
-      case KEY_UP :
-        if ( y_pos > 0 )
-          y_pos--;
-        break;
-        
-      case KEY_DOWN :
-        if ( y_pos < meterec->n_ports - 1 )
-          y_pos++;
-        break;
-      
-      case KEY_LEFT :
-        if ( x_pos > 1 )
-          x_pos--;
-        break;
-      
-      case KEY_RIGHT :
-        if ( x_pos < meterec->n_takes )
-          x_pos++;
-        break;
-      
-      /* 
-      ** Change Locks 
-      */
-      case 'L' : /* clear all other locks for that port if no lock yet */
-        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
-          for ( take=0 ; take < meterec->n_takes+1 ; take++) 
-            meterec->takes[take].port_has_lock[y_pos] = 0 ;
-
-      case 'l' : /* toggle lock at this position */
-        meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
-        break;
-
-      case 'A' : /* clear all other locks if no lock yet at this position */
-        if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
-          for ( port=0 ; port < meterec->n_ports ; port++)
-            for ( take=0 ; take < meterec->n_takes+1 ; take++)  
-              meterec->takes[take].port_has_lock[port] = 0 ;
-
-      case 'a' : /* toggle lock for all ports depending on this position */
-        if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
-          for ( port=0 ; port < meterec->n_ports ; port++) 
-            meterec->takes[x_pos].port_has_lock[port] = 0;
-        else 
-          for ( port=0 ; port < meterec->n_ports ; port++) 
-            meterec->takes[x_pos].port_has_lock[port] = 1;
-        break;
-      
-
-      }
-      
-      if (meterec->record_sts==OFF) {
-      
-        switch (key) {
-        /* Change record mode */
-        case 'r' : 
-          if ( meterec->ports[y_pos].record == REC )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = REC;
-          break;
-
-        case 'd' : 
-          if ( meterec->ports[y_pos].record == DUB )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = DUB;
-          break;
-
-        case 'o' : 
-          if ( meterec->ports[y_pos].record == OVR )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = OVR;
-          break;
-
-        }
-        
-      }
-      
+    if (edit_mode)
       display_session(meterec, y_pos, x_pos);
-    
-    } else {
-
-      switch (key) {
-    	/* reset absolute maximum markers */
-    	case 'm':
-	      for ( port=0 ; port < meterec->n_ports ; port++) 
-        	meterec->ports[port].max_in = 0;
-		  break;
-
-    	case KEY_LEFT:
-          if (!meterec->record_sts && meterec->playback_sts )
-		    meterec->seek.disk_target = seek(-5);
-          break;
-
-    	case KEY_RIGHT:
-          if (!meterec->record_sts && meterec->playback_sts )
-            meterec->seek.disk_target = seek(5);
-          break;
-	  }
-	     
+    else
       display_meter(console_width - 2 , decay_len);
-    }
-
-
-    /*
-    ** KEYs handled in all modes
-    */
-    
-    switch (key) {
-    
-      case 9: /* TAB */
-        edit_mode = !edit_mode ;
-        break;
-    
-      case 10: /* RETURN */
-        if (meterec->playback_sts == ONGOING)
-          stop();
-        else if (meterec->playback_sts == OFF) {
-          start_record();    
-          start_playback();
-        }
-        break;
-        
-      case ' ':
-        if (meterec->playback_sts == ONGOING)
-          stop();
-        else if (meterec->playback_sts == OFF) 
-          start_playback();
-        break;
-	
-	  /* exit */	  
-      case 'Q':         
-      case 'q':         
-    	cleanup(0); 
-    	break;
-
-    }
-	
-	/* set index using SHIFT */
-	if ( KEY_F(13) <= key && key <= KEY_F(24) ) {
-		meterec->seek.index[key - KEY_F(13)] = total_nframes ;
-	}
-	
-	/* seek to index */
-	if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
-      if (!meterec->record_sts && meterec->playback_sts )
-		pthread_mutex_lock( &meterec->seek.mutex );
-        meterec->seek.disk_target = meterec->seek.index[key - KEY_F(1)];
-        sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_target );
-		pthread_mutex_unlock( &meterec->seek.mutex );
-    }
-    
-	if ( key == KEY_HOME ) {
-      if (!meterec->record_sts && meterec->playback_sts )
-		pthread_mutex_lock( &meterec->seek.mutex );
-        meterec->seek.disk_target = 0;
-		pthread_mutex_unlock( &meterec->seek.mutex );
-    }
     
     refresh();
     
     fsleep( 1.0f/rate );
     
   }
+  
+  cleanup(0);
+  pthread_join(kb_dt, NULL);
   
   return 0;
 }
