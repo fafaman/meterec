@@ -114,7 +114,7 @@ void read_disk_close_fd(struct meterec_s *meterec) {
 
 }
   
-void read_disk_open_fd(struct meterec_s *meterec, unsigned int seek) {
+void read_disk_open_fd(struct meterec_s *meterec) {
 
   unsigned int take, port, i;
 
@@ -167,10 +167,6 @@ void read_disk_open_fd(struct meterec_s *meterec, unsigned int seek) {
       fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
       meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
 
-      /* seek to destination if needed */
-	  if (seek)
-	    sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
-	  
     } 
     else {
       fprintf(meterec->fd_log,"Reader thread: File and buffer already setup.\n");
@@ -198,7 +194,7 @@ int reader_thread(void *d)
     meterec->read_disk_buffer_thread_pos = (meterec->read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
 
     /* open all files needed for this playback */
-    read_disk_open_fd(meterec, 0);
+    read_disk_open_fd(meterec);
 	
     fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
     
@@ -211,7 +207,14 @@ int reader_thread(void *d)
     seek = meterec->seek.disk_target;
     if (seek != (jack_nframes_t)(-1)) {
       
-      fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
+      if (meterec->seek.files_reopen) {
+        fprintf(meterec->fd_log,"Reader thread: Re-opening all playback files\n");
+	    read_disk_close_fd(meterec);
+		compute_takes_to_playback(meterec);
+	    read_disk_open_fd(meterec);
+	  }
+		
+	  fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
      
       for(take=1; take<meterec->n_takes+1; take++) {
 

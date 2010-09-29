@@ -160,13 +160,16 @@ struct port_s
 
 struct seek_s 
 {
-  pthread_mutex_t mutex ; //= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t mutex ;
 
   jack_nframes_t disk_target;
+  
+  int files_reopen; 
   
   unsigned int buffer_pos_target;
 
   unsigned int buffer_pos_new_nframe ;
+  
   jack_nframes_t nframes_target;
   
   jack_nframes_t index[MAX_INDEX];
@@ -211,3 +214,4 @@ struct meterec_s
 };
 
 void exit_on_error(char * reason);
+void compute_takes_to_playback(struct meterec_s *meterec);

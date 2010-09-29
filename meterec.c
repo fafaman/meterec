@@ -165,9 +165,31 @@ void read_peak(float bias)
   
 }
 
-unsigned int compute_takes_to_playback() {
+void compute_takes_to_playback(struct meterec_s *meterec) {
 
-  unsigned int take, port, changes=0;
+  unsigned int take, port;
+
+  for ( port = 0; port < meterec->n_ports; port++ ) {
+    
+    for ( take = meterec->n_takes + 1; take > 0; take-- )
+      if (meterec->takes[take].port_has_lock[port])
+        break;
+    
+    if (!take)
+      take = meterec->n_takes + 1;
+      
+    for ( ; take > 0; take-- )
+      if (meterec->takes[take].port_has_track[port])
+        break;
+        
+    meterec->ports[port].playback_take = take;
+    
+  }
+}
+
+unsigned int changed_takes_to_playback(struct meterec_s *meterec) {
+
+  unsigned int take, port;
 
   for ( port = 0; port < meterec->n_ports; port++ ) {
     
@@ -183,13 +205,11 @@ unsigned int compute_takes_to_playback() {
         break;
         
     if (meterec->ports[port].playback_take != take)
-      changes++;
+      return 1;
 
-    meterec->ports[port].playback_take = take;
-    
   }
   
-  return changes;
+  return 0;
 }
 
 void compute_tracks_to_record() {
@@ -321,6 +341,7 @@ void post_option_init(struct meterec_s *meterec, char *session) {
      meterec->seek.index[index] = -1;
 
   meterec->seek.disk_target = -1;
+  meterec->seek.files_reopen = 0;
 
   meterec->seek.buffer_pos_target = 0;
   
@@ -438,7 +459,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         /* Empty read disk buffer */
         out[i] = meterec->ports[port].read_disk_buffer[read_pos];
         
-        /* check if there is a new position */
+        /* re-align playhead value if we moved thru the buffer */
         if (meterec->seek.buffer_pos_new_nframe) 
           if (meterec->seek.buffer_pos_new_nframe == read_pos){
             playhead = meterec->seek.nframes_target - nframes ;
@@ -988,7 +1009,7 @@ void save_setup(char *file)
 
 void start_playback() {
 
-  compute_takes_to_playback();
+  compute_takes_to_playback(meterec);
 
   save_setup(meterec->setup_file);
 
@@ -1308,10 +1329,22 @@ int keyboard_thread(void *d)
         if ( !meterec->takes[x_pos].port_has_lock[y_pos] ) 
           for ( take=0 ; take < meterec->n_takes+1 ; take++) 
             meterec->takes[take].port_has_lock[y_pos] = 0 ;
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_target = playhead;
+          meterec->seek.files_reopen = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
         break;
 		
       case 'l' : /* toggle lock at this position */
         meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_target = playhead;
+          meterec->seek.files_reopen = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
         break;
 
       case 'A' : /* clear all other locks if no lock yet at this position */
@@ -1319,6 +1352,12 @@ int keyboard_thread(void *d)
           for ( port=0 ; port < meterec->n_ports ; port++)
             for ( take=0 ; take < meterec->n_takes+1 ; take++)  
               meterec->takes[take].port_has_lock[port] = 0 ;
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_target = playhead;
+          meterec->seek.files_reopen = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
         break;
 
       case 'a' : /* toggle lock for all ports depending on this position */
@@ -1328,6 +1367,12 @@ int keyboard_thread(void *d)
         else 
           for ( port=0 ; port < meterec->n_ports ; port++) 
             meterec->takes[x_pos].port_has_lock[port] = 1;
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_target = playhead;
+          meterec->seek.files_reopen = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
         break;
       
 
