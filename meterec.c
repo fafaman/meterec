@@ -427,9 +427,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   
   /* check if there is a new buffer position to go to*/
   if (meterec->seek.buffer_pos_target) {
+
+    pthread_mutex_lock( &meterec->seek.mutex );
+
+    /* if we seek because of a file re-open, compensate for what played since re-open request */
+    if ( meterec->seek.files_reopen ) {
+        meterec->seek.buffer_pos_target += (playhead - meterec->seek.nframes_target);
+        meterec->seek.buffer_pos_target &= (DISK_SIZE - 1);
+        meterec->seek.files_reopen = 0;
+    } 
+
     meterec->read_disk_buffer_process_pos = meterec->seek.buffer_pos_target;
     
-    pthread_mutex_lock( &meterec->seek.mutex );
     meterec->seek.buffer_pos_target = 0;
     pthread_mutex_unlock( &meterec->seek.mutex );
     
