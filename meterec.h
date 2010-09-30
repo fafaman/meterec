@@ -162,17 +162,15 @@ struct seek_s
 {
   pthread_mutex_t mutex ;
 
-  jack_nframes_t disk_target;
+  jack_nframes_t index[MAX_INDEX];
   
+  /* request from keyboard thread to disk thread */
+  jack_nframes_t disk_playhead_target;
   int files_reopen; 
   
-  unsigned int buffer_pos_target;
-
-  unsigned int buffer_pos_new_nframe ;
-  
-  jack_nframes_t nframes_target;
-  
-  jack_nframes_t index[MAX_INDEX];
+  /* request of disk thread to jack process */
+  unsigned int jack_buffer_target;
+  jack_nframes_t playhead_target;
   
 };
 

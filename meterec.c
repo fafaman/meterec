@@ -340,13 +340,12 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   for (index=0; index<MAX_INDEX; index++)
      meterec->seek.index[index] = -1;
 
-  meterec->seek.disk_target = -1;
+  meterec->seek.disk_playhead_target = -1;
   meterec->seek.files_reopen = 0;
 
-  meterec->seek.buffer_pos_target = 0;
-  
-  meterec->seek.buffer_pos_new_nframe = 0;
-  meterec->seek.nframes_target = -1;
+  meterec->seek.jack_buffer_target = 0;
+
+  meterec->seek.playhead_target = -1;
   
 }
 
@@ -426,24 +425,30 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   record_sts_local = meterec->record_sts;
   
   /* check if there is a new buffer position to go to*/
-  if (meterec->seek.buffer_pos_target) {
+  if (meterec->seek.jack_buffer_target) {
 
     pthread_mutex_lock( &meterec->seek.mutex );
 
+    meterec->read_disk_buffer_process_pos = meterec->seek.jack_buffer_target;
+
     /* if we seek because of a file re-open, compensate for what played since re-open request */
     if ( meterec->seek.files_reopen ) {
-        meterec->seek.buffer_pos_target += (playhead - meterec->seek.nframes_target);
-        meterec->seek.buffer_pos_target &= (DISK_SIZE - 1);
-        meterec->seek.files_reopen = 0;
+      meterec->read_disk_buffer_process_pos += (playhead - meterec->seek.playhead_target);
+      meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
+      meterec->seek.files_reopen = 0;
     } 
+    else {
+      /* re-align playhead value if we moved due to a simple seek */
+      playhead = meterec->seek.playhead_target;
+    }
 
-    meterec->read_disk_buffer_process_pos = meterec->seek.buffer_pos_target;
+    meterec->seek.playhead_target = -1;
+    meterec->seek.jack_buffer_target = 0;
     
-    meterec->seek.buffer_pos_target = 0;
     pthread_mutex_unlock( &meterec->seek.mutex );
     
   }
-      
+
   /* get the audio samples, and find the peak sample */
   for (port = 0; port < meterec->n_ports; port++) {
 
@@ -468,15 +473,6 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
         /* Empty read disk buffer */
         out[i] = meterec->ports[port].read_disk_buffer[read_pos];
         
-        /* re-align playhead value if we moved thru the buffer */
-        if (meterec->seek.buffer_pos_new_nframe) 
-          if (meterec->seek.buffer_pos_new_nframe == read_pos){
-            playhead = meterec->seek.nframes_target - nframes ;
-            pthread_mutex_lock( &meterec->seek.mutex );
-            meterec->seek.buffer_pos_new_nframe = 0;
-            pthread_mutex_unlock( &meterec->seek.mutex );
-          }
-    
         /* update buffer pointer */
         read_pos = (read_pos + 1) & (DISK_SIZE - 1);
         
@@ -545,7 +541,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     meterec->read_disk_buffer_process_pos = (meterec->read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
   
     /* update frame/time counter */
-    playhead +=  nframes ;
+    playhead += nframes ;
     
     if (record_sts_local==ONGOING) {
 
@@ -1342,7 +1338,7 @@ int keyboard_thread(void *d)
             meterec->takes[take].port_has_lock[y_pos] = 0 ;
         if (changed_takes_to_playback(meterec)) {
           pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_target = playhead;
+          meterec->seek.disk_playhead_target = playhead;
           meterec->seek.files_reopen = 1;
           pthread_mutex_unlock( &meterec->seek.mutex );
         }
@@ -1352,7 +1348,7 @@ int keyboard_thread(void *d)
         meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
         if (changed_takes_to_playback(meterec)) {
           pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_target = playhead;
+          meterec->seek.disk_playhead_target = playhead;
           meterec->seek.files_reopen = 1;
           pthread_mutex_unlock( &meterec->seek.mutex );
         }
@@ -1365,7 +1361,7 @@ int keyboard_thread(void *d)
               meterec->takes[take].port_has_lock[port] = 0 ;
         if (changed_takes_to_playback(meterec)) {
           pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_target = playhead;
+          meterec->seek.disk_playhead_target = playhead;
           meterec->seek.files_reopen = 1;
           pthread_mutex_unlock( &meterec->seek.mutex );
         }
@@ -1380,7 +1376,7 @@ int keyboard_thread(void *d)
             meterec->takes[x_pos].port_has_lock[port] = 1;
         if (changed_takes_to_playback(meterec)) {
           pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_target = playhead;
+          meterec->seek.disk_playhead_target = playhead;
           meterec->seek.files_reopen = 1;
           pthread_mutex_unlock( &meterec->seek.mutex );
         }
@@ -1429,12 +1425,12 @@ int keyboard_thread(void *d)
 
       case KEY_LEFT:
           if (!meterec->record_sts && meterec->playback_sts )
-        meterec->seek.disk_target = seek(-5);
+        meterec->seek.disk_playhead_target = seek(-5);
           break;
 
       case KEY_RIGHT:
           if (!meterec->record_sts && meterec->playback_sts )
-            meterec->seek.disk_target = seek(5);
+            meterec->seek.disk_playhead_target = seek(5);
           break;
     }
   }
@@ -1481,19 +1477,22 @@ int keyboard_thread(void *d)
 
   /* seek to index */
   if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
-      if (!meterec->record_sts && meterec->playback_sts )
-    pthread_mutex_lock( &meterec->seek.mutex );
-        meterec->seek.disk_target = meterec->seek.index[key - KEY_F(1)];
-        sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_target );
-    pthread_mutex_unlock( &meterec->seek.mutex );
+    if (!meterec->record_sts && meterec->playback_sts ) {
+      pthread_mutex_lock( &meterec->seek.mutex );
+      meterec->seek.disk_playhead_target = meterec->seek.index[key - KEY_F(1)];
+      sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_playhead_target );
+      pthread_mutex_unlock( &meterec->seek.mutex );
     }
-    
+  }
+
   if ( key == KEY_HOME ) {
-      if (!meterec->record_sts && meterec->playback_sts )
-    pthread_mutex_lock( &meterec->seek.mutex );
-        meterec->seek.disk_target = 0;
-    pthread_mutex_unlock( &meterec->seek.mutex );
+    if (!meterec->record_sts && meterec->playback_sts ) {
+      pthread_mutex_lock( &meterec->seek.mutex );
+      meterec->seek.disk_playhead_target = 0;
+      pthread_mutex_unlock( &meterec->seek.mutex );
     }
+  }
+
   }
   
   return 0;
