@@ -180,7 +180,7 @@ int reader_thread(void *d)
 {
     unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay, new_buffer_pos;
 	struct meterec_s *meterec ;
-    jack_nframes_t seek;
+    jack_nframes_t seek, new_playhead_target = -1;
 
 	meterec = (struct meterec_s *)d ;
     
@@ -205,7 +205,11 @@ int reader_thread(void *d)
   
     /* seek audio back and forth upon user request */
     seek = meterec->seek.disk_playhead_target;
-    if (seek != (jack_nframes_t)(-1)) {
+    if (seek != -1) {
+    
+      /* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
+//      meterec->read_disk_buffer_thread_pos = meterec->read_disk_buffer_process_pos + (2 * BUF_SIZE);
+//      meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
       
       if (meterec->seek.files_reopen) {
         fprintf(meterec->fd_log,"Reader thread: Re-opening all playback files\n");
@@ -236,11 +240,16 @@ int reader_thread(void *d)
       
       /* store position of new buffer start */
       new_buffer_pos = meterec->read_disk_buffer_thread_pos;
-      new_buffer_pos = (new_buffer_pos - 1) & (DISK_SIZE - 1);
+      new_buffer_pos -= 1;
+      new_buffer_pos &= (DISK_SIZE - 1);
+      
+      /* store playhead value matching above buffer position */
+      new_playhead_target = seek;
     
     /* lets fill local buffer only if previously emptied*/
     } 
-	else if (opos == 0) {
+	
+    if (opos == 0) {
 
       /* load the local buffer */
       for(take=1; take<meterec->n_takes+1; take++) {
@@ -294,16 +303,17 @@ int reader_thread(void *d)
       
     }
       
-    meterec->read_disk_buffer_thread_pos = i;
-    
-    if (new_buffer_pos) {
+    if (new_buffer_pos && (meterec->read_disk_buffer_thread_pos != i)) {
       pthread_mutex_lock( &meterec->seek.mutex );
       meterec->seek.jack_buffer_target = new_buffer_pos;
-      meterec->seek.playhead_target = seek ;
+      meterec->seek.playhead_target = new_playhead_target ;
       pthread_mutex_unlock( &meterec->seek.mutex );
       new_buffer_pos = 0;
+      new_playhead_target = -1;
     }
             
+    meterec->read_disk_buffer_thread_pos = i;
+    
     if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
       meterec->playback_sts=ONGOING;
     

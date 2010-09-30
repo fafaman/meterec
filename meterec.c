@@ -87,14 +87,14 @@ int time_scan(struct time_s * time, char * string) {
 }
 
 void time_sprint(struct time_s * time, char * string) {
-  sprintf(string, "%u:%02u:%02u.%02u",time->h, time->m, time->s, time->ds);
+  sprintf(string, "%u:%02u:%02u.%03u",time->h, time->m, time->s, time->ds);
 }
   
 void time_hms(struct time_s * time, unsigned int rate) {
   time->h = (unsigned int) ( time->nframes / rate ) / 3600;
   time->m = (unsigned int) ((time->nframes / rate ) / 60 ) % 60;
   time->s = (unsigned int) ( time->nframes / rate ) % 60;
-  time->ds =(unsigned int) ((100*time->nframes) / rate ) % 100;
+  time->ds =(unsigned int) (1000 * time->nframes / rate ) % 1000;
 }
 
 void time_nframes(struct time_s * time, unsigned int rate) {
@@ -103,7 +103,7 @@ void time_nframes(struct time_s * time, unsigned int rate) {
 		  time->h  * rate * 3600 +
 		  time->m  * rate * 60 +
 		  time->s  * rate +
-		  time->ds * rate / 100 
+		  time->ds * rate / 1000
 		  ) ;
 }
 
@@ -433,8 +433,8 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
 
     /* if we seek because of a file re-open, compensate for what played since re-open request */
     if ( meterec->seek.files_reopen ) {
-      meterec->read_disk_buffer_process_pos += (playhead - meterec->seek.playhead_target);
-      meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
+//      meterec->read_disk_buffer_process_pos += (playhead - meterec->seek.playhead_target);
+//      meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
       meterec->seek.files_reopen = 0;
     } 
     else {
@@ -739,11 +739,15 @@ void parse_time_index(FILE *fd_conf, unsigned int index)
   
   u = fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ds);
   
-  if ( u==4) { 
+  if (u==4) { 
     rate = jack_get_sample_rate(meterec->client);
     time_nframes(&time, rate);
   
     meterec->seek.index[index] = time.nframes;
+  }
+  else {
+    /* consume this line */
+    fscanf(fd_conf, "%*s");
   }
   
 }
@@ -951,7 +955,7 @@ void save_setup(char *file)
   FILE *fd_conf;
   unsigned int take, port, index;
   struct time_s time;
-  char time_str[13] ;
+  char time_str[14] ;
   jack_nframes_t rate;
   
   rate = jack_get_sample_rate(meterec->client);
@@ -997,7 +1001,7 @@ void save_setup(char *file)
   for (index=0; index<MAX_INDEX; index++) {
 	  time.nframes = meterec->seek.index[index] ;
 	  if ( time.nframes == -1 ) {
-	      fprintf(fd_conf,">          >%02d\n", index+1);
+	      fprintf(fd_conf,">           >%02d\n", index+1);
 	  } 
 	  else {
 		  time_hms(&time, rate);
@@ -1114,7 +1118,7 @@ void display_status(void) {
   if (load>max_load) 
     max_load = load;
   
-  printw("%dHz %d:%02d:%02d.%02d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ds, load , max_load);
+  printw("%dHz %d:%02d:%02d.%03d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ds, load , max_load);
   
   printw("[> ");
   
