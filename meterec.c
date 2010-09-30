@@ -741,12 +741,14 @@ void parse_time_index(FILE *fd_conf, unsigned int index)
   jack_nframes_t rate;
   unsigned int u;
   
-  fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ds);
+  u = fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ds);
   
-  rate = jack_get_sample_rate(meterec->client);
-  time_nframes(&time, rate);
+  if ( u==4) { 
+    rate = jack_get_sample_rate(meterec->client);
+    time_nframes(&time, rate);
   
-  meterec->seek.index[index] = time.nframes;
+    meterec->seek.index[index] = time.nframes;
+  }
   
 }
 
