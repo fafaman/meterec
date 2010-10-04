@@ -191,7 +191,8 @@ int reader_thread(void *d)
 	thread_delay = set_thread_delay(meterec->client);
 
     /* empty buffer ( reposition thread position in order to refill where process will first read) */
-    meterec->read_disk_buffer_thread_pos = (meterec->read_disk_buffer_process_pos + 1) & (DISK_SIZE - 1);
+    meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);
+    meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
 
     /* open all files needed for this playback */
     read_disk_open_fd(meterec);
@@ -199,7 +200,7 @@ int reader_thread(void *d)
     fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
     
     /* Start reading disk to fill the RT ringbuffer */
-    new_buffer_pos = 0;
+    new_buffer_pos = -1;
     opos = 0;
     while ( meterec->playback_cmd==START )  {
   
@@ -239,7 +240,7 @@ int reader_thread(void *d)
       pthread_mutex_unlock( &meterec->seek.mutex );
       
       /* store position of new buffer start */
-      new_buffer_pos = meterec->read_disk_buffer_thread_pos;
+      new_buffer_pos  = meterec->read_disk_buffer_thread_pos;
       new_buffer_pos -= 1;
       new_buffer_pos &= (DISK_SIZE - 1);
       
@@ -303,12 +304,12 @@ int reader_thread(void *d)
       
     }
       
-    if (new_buffer_pos && (meterec->read_disk_buffer_thread_pos != i)) {
+    if ((new_buffer_pos!=-1) && (meterec->read_disk_buffer_thread_pos != i)) {
       pthread_mutex_lock( &meterec->seek.mutex );
       meterec->seek.jack_buffer_target = new_buffer_pos;
       meterec->seek.playhead_target = new_playhead_target ;
       pthread_mutex_unlock( &meterec->seek.mutex );
-      new_buffer_pos = 0;
+      new_buffer_pos = -1;
       new_playhead_target = -1;
     }
             
@@ -322,16 +323,16 @@ int reader_thread(void *d)
       
     usleep(thread_delay);
       
-    }
+  }
     
-	/* close all fd's */
-    read_disk_close_fd(meterec);
+  /* close all fd's */
+  read_disk_close_fd(meterec);
 	
-    fprintf(meterec->fd_log,"Reader thread: done.\n");
+  fprintf(meterec->fd_log,"Reader thread: done.\n");
 
-    meterec->playback_sts = OFF;
+  meterec->playback_sts = OFF;
 
-    return 0;
+  return 0;
 }
 
 float read_disk_buffer_level(struct meterec_s *meterec) {

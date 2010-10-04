@@ -339,12 +339,10 @@ void post_option_init(struct meterec_s *meterec, char *session) {
      meterec->seek.index[index] = -1;
 
   meterec->seek.disk_playhead_target = -1;
-  meterec->seek.files_reopen = 0;
-
-  meterec->seek.jack_buffer_target = 0;
-
+  meterec->seek.jack_buffer_target = -1;
   meterec->seek.playhead_target = -1;
 
+  meterec->seek.files_reopen = 0;
   meterec->seek.keyboard_lock = 0;
   
 }
@@ -425,7 +423,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   record_sts_local = meterec->record_sts;
   
   /* check if there is a new buffer position to go to*/
-  if (meterec->seek.jack_buffer_target) {
+  if (meterec->seek.jack_buffer_target != -1) {
 
     pthread_mutex_lock( &meterec->seek.mutex );
 
@@ -444,7 +442,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     }
 
     meterec->seek.playhead_target = -1;
-    meterec->seek.jack_buffer_target = 0;
+    meterec->seek.jack_buffer_target = -1;
     
     pthread_mutex_unlock( &meterec->seek.mutex );
     
@@ -1333,37 +1331,36 @@ int keyboard_thread(void *d)
         if ( x_pos < meterec->n_takes )
           x_pos++;
         break;
-      
-      /* 
-      ** Change Locks 
-      */
+    }
+
+    /* 
+    ** Change Locks 
+    */
+    if (!meterec->seek.keyboard_lock) {
+
+    switch (key) {
       case 'L' : /* clear all other locks for that port & process with toggle */
-        if (!meterec->seek.keyboard_lock)
         for ( take=0 ; take < meterec->n_takes+1 ; take++) 
           meterec->takes[take].port_has_lock[y_pos] = 0 ;
           
       case 'l' : /* toggle lock at this position */
-        if (!meterec->seek.keyboard_lock)
         meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
-        
-        if (!meterec->seek.keyboard_lock)
-          if (changed_takes_to_playback(meterec)) {
-            pthread_mutex_lock( &meterec->seek.mutex );
-            meterec->seek.disk_playhead_target = playhead;
-            meterec->seek.files_reopen = 1;
-            meterec->seek.keyboard_lock = 1;
-            pthread_mutex_unlock( &meterec->seek.mutex );
-          }
-        break;
+
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_playhead_target = playhead;
+          meterec->seek.files_reopen = 1;
+          meterec->seek.keyboard_lock = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
+       break;
 
       case 'A' : /* clear all other locks & process with toggle */
-        if (!meterec->seek.keyboard_lock)
         for ( port=0 ; port < meterec->n_ports ; port++)
           for ( take=0 ; take < meterec->n_takes+1 ; take++)  
             meterec->takes[take].port_has_lock[port] = 0 ;
         
       case 'a' : /* toggle lock for all ports depending on this position */
-        if (!meterec->seek.keyboard_lock)
         if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
           for ( port=0 ; port < meterec->n_ports ; port++) 
             meterec->takes[x_pos].port_has_lock[port] = 0;
@@ -1371,21 +1368,20 @@ int keyboard_thread(void *d)
           for ( port=0 ; port < meterec->n_ports ; port++) 
             meterec->takes[x_pos].port_has_lock[port] = 1;
             
-        if (!meterec->seek.keyboard_lock)
-          if (changed_takes_to_playback(meterec)) {
-            pthread_mutex_lock( &meterec->seek.mutex );
-            meterec->seek.disk_playhead_target = playhead;
-            meterec->seek.files_reopen = 1;
-            meterec->seek.keyboard_lock = 1;
-            pthread_mutex_unlock( &meterec->seek.mutex );
-          }
+        if (changed_takes_to_playback(meterec)) {
+          pthread_mutex_lock( &meterec->seek.mutex );
+          meterec->seek.disk_playhead_target = playhead;
+          meterec->seek.files_reopen = 1;
+          meterec->seek.keyboard_lock = 1;
+          pthread_mutex_unlock( &meterec->seek.mutex );
+        }
         break;
-            
       }
+    }
       
-      if (meterec->record_sts==OFF) {
+    if (meterec->record_sts==OFF) {
       
-        switch (key) {
+      switch (key) {
         /* Change record mode */
         case 'r' : 
           if ( meterec->ports[y_pos].record == REC )
@@ -1467,32 +1463,30 @@ int keyboard_thread(void *d)
     	break;
 
     }
-	
-	/* set index using SHIFT */
-  if ( KEY_F(13) <= key && key <= KEY_F(24) ) {
-    meterec->seek.index[key - KEY_F(13)] = playhead ;
-  }
 
-  /* seek to index */
-  if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
+    /* set index using SHIFT */
+    if ( KEY_F(13) <= key && key <= KEY_F(24) ) 
+      meterec->seek.index[key - KEY_F(13)] = playhead ;
+
+    /* seek to index */
     if (!meterec->record_sts && meterec->playback_sts ) {
-      pthread_mutex_lock( &meterec->seek.mutex );
-      meterec->seek.disk_playhead_target = meterec->seek.index[key - KEY_F(1)];
-      sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_playhead_target );
-      pthread_mutex_unlock( &meterec->seek.mutex );
-    }
-  }
 
-  if ( key == KEY_HOME ) {
-    if (!meterec->record_sts && meterec->playback_sts ) {
-      pthread_mutex_lock( &meterec->seek.mutex );
-      meterec->seek.disk_playhead_target = 0;
-      pthread_mutex_unlock( &meterec->seek.mutex );
-    }
-  }
+      if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
+        pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_playhead_target = meterec->seek.index[key - KEY_F(1)];
+        sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_playhead_target );
+        pthread_mutex_unlock( &meterec->seek.mutex );
+      }
 
-  }
-  
+      if ( key == KEY_HOME ) {
+        pthread_mutex_lock( &meterec->seek.mutex );
+        meterec->seek.disk_playhead_target = 0;
+        pthread_mutex_unlock( &meterec->seek.mutex );
+      }
+    }
+
+  } // while
+
   return 0;
 }
 
