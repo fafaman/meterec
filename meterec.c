@@ -80,30 +80,28 @@ void exit_on_error(char * reason) {
   
 }
 
-int time_scan(struct time_s * time, char * string) {
-  int u;
-  sscanf(string, "%u:%u:%u.%u%n",&time->h, &time->m, &time->s, &time->ds, &u);
-  return u;
-}
-
 void time_sprint(struct time_s * time, char * string) {
-  sprintf(string, "%u:%02u:%02u.%03u",time->h, time->m, time->s, time->ds);
+  sprintf(string, "%u:%02u:%02u.%03u",time->h, time->m, time->s, time->ms);
 }
   
-void time_hms(struct time_s * time, unsigned int rate) {
-  time->h = (unsigned int) ( time->nframes / rate ) / 3600;
-  time->m = (unsigned int) ((time->nframes / rate ) / 60 ) % 60;
-  time->s = (unsigned int) ( time->nframes / rate ) % 60;
-  time->ds =(unsigned int) (1000 * time->nframes / rate ) % 1000;
+void time_hms(struct time_s * time) {
+
+  unsigned int rate = time->rate;
+  
+  time->h = (unsigned int) ( time->frm / rate ) / 3600;
+  time->m = (unsigned int) ((time->frm / rate ) / 60 ) % 60;
+  time->s = (unsigned int) ( time->frm / rate ) % 60;
+  rate /= 1000;
+  time->ms =(unsigned int) ( time->frm / rate ) % 1000;
 }
 
-void time_nframes(struct time_s * time, unsigned int rate) {
-  time->nframes = 
-		  (jack_nframes_t) (
-		  time->h  * rate * 3600 +
-		  time->m  * rate * 60 +
-		  time->s  * rate +
-		  time->ds * rate / 1000
+void time_frm(struct time_s * time) {
+  time->frm = 
+		  (unsigned int) (
+		  time->h  * time->rate * 3600 +
+		  time->m  * time->rate * 60 +
+		  time->s  * time->rate +
+		  time->ms * time->rate / 1000
 		  ) ;
 }
 
@@ -737,13 +735,13 @@ void parse_time_index(FILE *fd_conf, unsigned int index)
   jack_nframes_t rate;
   unsigned int u;
   
-  u = fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ds);
+  u = fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ms);
   
   if (u==4) { 
-    rate = jack_get_sample_rate(meterec->client);
-    time_nframes(&time, rate);
+    time.rate = jack_get_sample_rate(meterec->client);
+    time_frm(&time);
   
-    meterec->seek.index[index] = time.nframes;
+    meterec->seek.index[index] = time.frm;
   }
   else {
     /* consume this line */
@@ -956,9 +954,8 @@ void save_setup(char *file)
   unsigned int take, port, index;
   struct time_s time;
   char time_str[14] ;
-  jack_nframes_t rate;
   
-  rate = jack_get_sample_rate(meterec->client);
+  time.rate = jack_get_sample_rate(meterec->client);
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
     fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
@@ -999,12 +996,12 @@ void save_setup(char *file)
   session_tail(fd_conf);
   
   for (index=0; index<MAX_INDEX; index++) {
-	  time.nframes = meterec->seek.index[index] ;
-	  if ( time.nframes == -1 ) {
+	  time.frm = meterec->seek.index[index] ;
+	  if ( time.frm == -1 ) {
 	      fprintf(fd_conf,">           >%02d\n", index+1);
 	  } 
 	  else {
-		  time_hms(&time, rate);
+		  time_hms(&time);
           time_sprint(&time, time_str);
 	      fprintf(fd_conf,">%s>%02d\n", time_str, index+1);
 	  }
@@ -1112,13 +1109,14 @@ void display_status(void) {
   rate = jack_get_sample_rate(meterec->client);
   load = jack_cpu_load(meterec->client);
   
-  time.nframes = playhead ;
-  time_hms(&time, rate);
+  time.frm = playhead ;
+  time.rate = rate ;
+  time_hms(&time);
   
   if (load>max_load) 
     max_load = load;
   
-  printw("%dHz %d:%02d:%02d.%03d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ds, load , max_load);
+  printw("%dHz %d:%02d:%02d.%03d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ms, load , max_load);
   
   printw("[> ");
   
