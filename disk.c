@@ -208,8 +208,8 @@ int reader_thread(void *d)
     if (seek != -1) {
     
       /* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
-//      meterec->read_disk_buffer_thread_pos = meterec->read_disk_buffer_process_pos + (2 * BUF_SIZE);
-//      meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
+      meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - BUF_SIZE - 1;
+      meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
       
       if (meterec->seek.files_reopen) {
         fprintf(meterec->fd_log,"Reader thread: Re-opening all playback files\n");

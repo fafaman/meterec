@@ -172,6 +172,9 @@ struct seek_s
   unsigned int jack_buffer_target;
   jack_nframes_t playhead_target;
   
+  /* do not allow severeal pending seek requests */
+  unsigned int keyboard_lock;
+  
 };
 
 struct meterec_s
