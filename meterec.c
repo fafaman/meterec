@@ -1239,6 +1239,12 @@ void display_meter( int width, int decay_len )
         color_set(YELLOW, NULL);
     else 
       color_set(GREEN, NULL);
+	
+    if (y_pos == port) 
+       attron(A_REVERSE);
+    else 
+       attroff(A_REVERSE);
+	
     
     printw("%02d",port+1);
     
@@ -1279,6 +1285,7 @@ void display_meter( int width, int decay_len )
 
   }
   
+  attroff(A_REVERSE);
   color_set(DEFAULT, NULL);
   printw("%s\n", line);
   printw("%s\n", scale);
@@ -1312,16 +1319,6 @@ int keyboard_thread(void *d)
       /* 
       ** Move cursor 
       */
-      case KEY_UP :
-        if ( y_pos > 0 )
-          y_pos--;
-        break;
-        
-      case KEY_DOWN :
-        if ( y_pos < meterec->n_ports - 1 )
-          y_pos++;
-        break;
-      
       case KEY_LEFT :
         if ( x_pos > 1 )
           x_pos--;
@@ -1379,34 +1376,6 @@ int keyboard_thread(void *d)
       }
     }
       
-    if (meterec->record_sts==OFF) {
-      
-      switch (key) {
-        /* Change record mode */
-        case 'r' : 
-          if ( meterec->ports[y_pos].record == REC )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = REC;
-          break;
-
-        case 'd' : 
-          if ( meterec->ports[y_pos].record == DUB )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = DUB;
-          break;
-
-        case 'o' : 
-          if ( meterec->ports[y_pos].record == OVR )
-            meterec->ports[y_pos].record = OFF;
-          else
-            meterec->ports[y_pos].record = OVR;
-          break;
-
-        }
-
-      }
 
     } else {
 
@@ -1434,8 +1403,47 @@ int keyboard_thread(void *d)
     ** KEYs handled in all modes
     */
     
+  if (meterec->record_sts==OFF) {
+
+    switch (key) {
+      /* Change record mode */
+      case 'r' : 
+        if ( meterec->ports[y_pos].record == REC )
+          meterec->ports[y_pos].record = OFF;
+        else
+          meterec->ports[y_pos].record = REC;
+        break;
+
+      case 'd' : 
+        if ( meterec->ports[y_pos].record == DUB )
+          meterec->ports[y_pos].record = OFF;
+        else
+          meterec->ports[y_pos].record = DUB;
+        break;
+
+      case 'o' : 
+        if ( meterec->ports[y_pos].record == OVR )
+          meterec->ports[y_pos].record = OFF;
+        else
+          meterec->ports[y_pos].record = OVR;
+        break;
+
+      }
+
+    }
+	  
     switch (key) {
     
+      case KEY_UP :
+        if ( y_pos > 0 )
+          y_pos--;
+        break;
+        
+      case KEY_DOWN :
+        if ( y_pos < meterec->n_ports - 1 )
+          y_pos++;
+        break;
+      
       case 9: /* TAB */
         edit_mode = !edit_mode ;
         break;
