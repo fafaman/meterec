@@ -246,6 +246,7 @@ void init_ports(struct meterec_s *meterec)
     meterec->ports[port].output = NULL;
     
     meterec->ports[port].portmap = NULL;
+    meterec->ports[port].name = NULL;
     
     meterec->ports[port].write_disk_buffer = NULL;
     meterec->ports[port].read_disk_buffer = NULL;
@@ -469,12 +470,19 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
 
       for (i = 0; i < nframes; i++) {
       
-        /* Empty read disk buffer */
-        out[i] = meterec->ports[port].read_disk_buffer[read_pos];
-        
-        /* update buffer pointer */
-        read_pos = (read_pos + 1) & (DISK_SIZE - 1);
-        
+        if (meterec->ports[port].mute) {
+
+		  /* be silent */
+		  out[i] = 0;
+
+		} else {
+		  /* Empty read disk buffer */
+          out[i] = meterec->ports[port].read_disk_buffer[read_pos];
+
+          /* update buffer pointer */
+          read_pos = (read_pos + 1) & (DISK_SIZE - 1);
+		}
+		
         /* compute peak of input (recordable) data*/
         s = fabs(in[i] * 1.0f) ;
         if (s > meterec->ports[port].peak_in) {
@@ -604,6 +612,8 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
 {
   jack_port_t *jack_port;
   int jack_flags;
+  unsigned int len;
+  char *tmp = NULL;
 
   /* connect input port*/
   
@@ -612,8 +622,21 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   
   // Check if port exists
   if (jack_port == NULL) {
-    fprintf(meterec->fd_log, "Can't find port '%s'\n", port_name);
-    exit_on_error("Cannot find port");
+    fprintf(meterec->fd_log, "Can't find port '%s' assuming this is part of port name.\n", port_name);
+    
+	if ( meterec->ports[port].name ) {
+	  tmp = (char *) malloc( meterec->ports[port].name + 1 );
+	  strcpy(tmp, meterec->ports[port].name);
+	  free(meterec->ports[port].name);
+	  meterec->ports[port].name = (char *) malloc( strlen(port_name) + 1 + strlen(tmp) + 1);
+	  sprintf(meterec->ports[port].name, "%s %s",tmp, port_name);
+	  free(tmp);
+	} else {
+	  meterec->ports[port].name = (char *) malloc( strlen(port_name) + 1 );
+	  strcpy(meterec->ports[port].name, port_name);
+	}
+	
+	return;
   }
 
   /* check port flags */
@@ -793,29 +816,45 @@ void load_setup(char *file)
       port++;
     }
     
-    if (*buf == '=') {
-      take=1;
-    }
-    else if (*buf == 'R' || *buf == 'r') {
-      meterec->ports[port].record = REC;
-      meterec->n_tracks++;
-      take=1;
-    }
-    else if (*buf == 'D' || *buf == 'd') {
-      meterec->ports[port].record = DUB;
-      meterec->n_tracks++;
-      take=1;
-    }
-    else if (*buf == 'O' || *buf == 'o') {
-      meterec->ports[port].record = OVR;
-      meterec->n_tracks++;
-      take=1;
-    } else if (*buf == '>' ) {
-      parse_time_index(fd_conf, index);
-      index++;	
-    } else {
-      take++;
-    }
+    switch (*buf) {
+	  case '~' :
+	    meterec->ports[port].mute = 1;
+	  case '=' :
+        take=1;
+	    break;
+
+	  case 'r' :
+	    meterec->ports[port].mute = 1;
+	  case 'R' :
+        meterec->ports[port].record = REC;
+        meterec->n_tracks++;
+        take=1;
+	    break;
+	
+	  case 'd' :
+	    meterec->ports[port].mute = 1;
+	  case 'D' :
+        meterec->ports[port].record = DUB;
+        meterec->n_tracks++;
+        take=1;
+	    break;
+	
+	  case 'o' :
+	    meterec->ports[port].mute = 1;
+	  case 'O' :
+        meterec->ports[port].record = OVR;
+        meterec->n_tracks++;
+        take=1;
+	    break;
+	
+	  case '>' :
+        parse_time_index(fd_conf, index);
+        index++;
+	    break;
+		
+	  default :
+	    take++;
+	}
         
   }
 
@@ -966,13 +1005,25 @@ void save_setup(char *file)
   for (port=0; port<meterec->n_ports; port++) {
   
     if (meterec->ports[port].record==REC)
-      fprintf(fd_conf,"R");
+      if (meterec->ports[port].mute)
+        fprintf(fd_conf,"r");
+	  else 
+        fprintf(fd_conf,"R");
     else if (meterec->ports[port].record==DUB)
-      fprintf(fd_conf,"D");
+      if (meterec->ports[port].mute)
+        fprintf(fd_conf,"d");
+	  else 
+        fprintf(fd_conf,"D");
     else if (meterec->ports[port].record==OVR)
-      fprintf(fd_conf,"O");
+      if (meterec->ports[port].mute)
+        fprintf(fd_conf,"o");
+	  else 
+        fprintf(fd_conf,"O");
     else
-      fprintf(fd_conf,"=");
+      if (meterec->ports[port].mute)
+        fprintf(fd_conf,"~");
+	  else 
+        fprintf(fd_conf,"=");
       
     for (take=1; take<meterec->n_takes+1; take++) {
       
@@ -1260,8 +1311,8 @@ void display_meter( int width, int decay_len )
     } else if (meterec->ports[port].dktime_in++ > decay_len) {
       meterec->ports[port].dkpeak_in = size_in;
     }
-
-    for (i=0; i<meterec->ports[port].max_in || i<size_out; i++) {
+	
+    for ( i=0; i<meterec->ports[port].max_in || i<size_out; i++) {
 
       if (i < size_in-1) {
         printw("#");
@@ -1280,6 +1331,10 @@ void display_meter( int width, int decay_len )
       }
       
     }
+	
+    if (y_pos == port) 
+	  for ( ; i<width; i++) 
+	    printw(" ");
     
     printw("\n");
 
@@ -1289,6 +1344,30 @@ void display_meter( int width, int decay_len )
   color_set(DEFAULT, NULL);
   printw("%s\n", line);
   printw("%s\n", scale);
+  
+  printw("  Port %2d ", y_pos+1);
+  if (meterec->ports[y_pos].record==REC)
+     printw("[REC]");
+  else if (meterec->ports[y_pos].record==OVR)
+     printw("[OVR]");
+  else if (meterec->ports[y_pos].record==DUB)
+     printw("[DUB]");
+  else 
+     printw("[   ]");
+     
+  if (meterec->ports[y_pos].mute)
+     printw("[MUTED]");
+  else 
+     printw("[     ]");
+
+  if ( meterec->ports[y_pos].playback_take ) 
+    printw(" PLAYING take %d", meterec->ports[y_pos].playback_take);
+  else 
+    printw(" PLAYING empty take 0");
+  
+  if (meterec->ports[y_pos].name)
+    printw(" | %s", meterec->ports[y_pos].name);
+   
 
 }
 
@@ -1381,7 +1460,7 @@ int keyboard_thread(void *d)
 
     switch (key) {
       /* reset absolute maximum markers */
-      case 'm':
+      case 'v':
         for ( port=0 ; port < meterec->n_ports ; port++) 
           meterec->ports[port].max_in = 0;
       break;
@@ -1434,6 +1513,27 @@ int keyboard_thread(void *d)
 	  
     switch (key) {
     
+      case 'M' : /* (un)mute all ports */
+        if ( meterec->ports[y_pos].mute ) 
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->ports[port].mute = 0;
+        else 
+          for ( port=0 ; port < meterec->n_ports ; port++) 
+            meterec->ports[port].mute = 1;
+		break;
+
+      case 'm' : /* (un)mute port */
+        meterec->ports[y_pos].mute = !meterec->ports[y_pos].mute;
+		break;
+
+      case 's' : /* mute all but this port */
+      case 'S' : 
+        for ( port=0 ; port < meterec->n_ports ; port++) 
+          meterec->ports[port].mute = 1;
+		meterec->ports[y_pos].mute = 0;
+		break;
+
+			
       case KEY_UP :
         if ( y_pos > 0 )
           y_pos--;
@@ -1517,16 +1617,21 @@ static int usage( const char * progname )
   fprintf(stderr, "Command keys:\n");
   fprintf(stderr, "       <SPACE> start playback; stop\n");
   fprintf(stderr, "       <ENTER> start record; stop\n");
-  fprintf(stderr, "       m       reset maximum level vu-meter markers\n");
+  fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
   fprintf(stderr, "       q       quit\n");
-  fprintf(stderr, "       <TAB>   edit mode\n");
-  fprintf(stderr, "       l       toggle lock for that position\n");
-  fprintf(stderr, "       a       toggle lock for all ports for that take\n");
-  fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
-  fprintf(stderr, "       A       clear all locks, toggle lock for all ports for that take\n");
+  fprintf(stderr, "       m       mute that port playback\n");
+  fprintf(stderr, "       M       mute all ports playback\n");
+  fprintf(stderr, "       s       mute all but that port playback (solo)\n");
   fprintf(stderr, "       r       toggle REC record mode for that port - record without listening playback\n");
   fprintf(stderr, "       d       toggle DUB record mode for that port - record listening playback\n");
   fprintf(stderr, "       o       toggle OVR record mode for that port - record listening and mixing playback\n");
+  fprintf(stderr, "       <TAB>   edit mode\n");
+  fprintf(stderr, "       l       toggle lock for that position\n");
+  fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
+  fprintf(stderr, "       a       toggle lock for all ports for that take\n");
+  fprintf(stderr, "       A       clear all locks, toggle lock for all ports for that take\n");
+  fprintf(stderr, "<SHIFT>F1-F12  set time index\n");
+  fprintf(stderr, "       F1-F12  Jump to time index\n");
   exit(1);
 }
 

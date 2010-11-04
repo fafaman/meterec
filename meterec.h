@@ -136,6 +136,7 @@ struct port_s
   jack_port_t *output;
   
   char *portmap;
+  char *name;
   
   float *write_disk_buffer;
   float *read_disk_buffer;
@@ -152,6 +153,7 @@ struct port_s
   int dktime_in;
   
   int record;
+  int mute;
 
   unsigned int playback_take;
 
