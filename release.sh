@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RELEASE=0.6
+RELEASE=0.7
 
 echo Relasing meterec-$RELEASE
 echo =====================
@@ -11,7 +11,13 @@ mv meterec-dev meterec-$RELEASE
 
 gtar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/meterec.c \
+meterec-$RELEASE/meterec.h \
+meterec-$RELEASE/display.c \
+meterec-$RELEASE/display.h \
+meterec-$RELEASE/disk.c \
+meterec-$RELEASE/disk.h \
 meterec-$RELEASE/meterec-init-conf \
+meterec-$RELEASE/meterec-pass-thru \
 meterec-$RELEASE/README \
 meterec-$RELEASE/NEWS \
 meterec-$RELEASE/TODO \
