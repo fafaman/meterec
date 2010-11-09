@@ -142,13 +142,14 @@ struct port_s
   float *read_disk_buffer;
   
   float peak_in;
+  float max_in;
   float peak_out;
 
   float db_in;
+  float db_max_in;
   float db_out;
   
-  int max_in;
-
+  int dkmax_in;
   int dkpeak_in;
   int dktime_in;
   

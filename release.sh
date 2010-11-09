@@ -9,7 +9,7 @@ pushd ../
 
 mv meterec-dev meterec-$RELEASE
 
-gtar -zcvf meterec-$RELEASE.tgz \
+tar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/meterec.c \
 meterec-$RELEASE/meterec.h \
 meterec-$RELEASE/display.c \

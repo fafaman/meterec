@@ -3,6 +3,58 @@
 #include <curses.h>
 #include "meterec.h"
 
+void display_port_info(struct port_s *port_p) {
+
+  if (port_p->record==REC)
+     printw("[REC]");
+  else if (port_p->record==OVR)
+     printw("[OVR]");
+  else if (port_p->record==DUB)
+     printw("[DUB]");
+  else 
+     printw("[   ]");
+     
+  if (port_p->mute)
+     printw("[MUTED]");
+  else 
+     printw("[     ]");
+
+    if ( port_p->playback_take ) 
+    printw(" PLAYING take %d", port_p->playback_take);
+  else 
+    printw(" PLAYING empty take 0");
+  
+  if (port_p->name)
+    printw(" | %s", port_p->name);
+
+  printw(" | %.1fdB", port_p->db_in);
+  printw(" (%.1fdB)", port_p->db_max_in);
+
+}
+
+void display_port_recmode(struct port_s *port_p) {
+  if ( port_p->record == REC )
+    if ( port_p->mute )
+      printw("r");
+    else
+      printw("R");
+  else if ( port_p->record == DUB )
+    if ( port_p->mute )
+      printw("d");
+    else
+      printw("D");
+  else if ( port_p->record == OVR )
+    if ( port_p->mute )
+      printw("o");
+    else
+      printw("O");
+  else 
+    if ( port_p->mute )
+      printw("~");
+    else
+      printw("=");
+}
+
 void display_session(struct meterec_s *meterec, int y_pos, int x_pos) 
 {
   unsigned int take, port;
@@ -10,31 +62,6 @@ void display_session(struct meterec_s *meterec, int y_pos, int x_pos)
   /* y - port */
   /* x - take */
 
-
-  printw("  Port %2d ", y_pos+1);
-  if (meterec->ports[y_pos].record==REC)
-     printw("[REC]");
-  else if (meterec->ports[y_pos].record==OVR)
-     printw("[OVR]");
-  else if (meterec->ports[y_pos].record==DUB)
-     printw("[DUB]");
-  else 
-     printw("[   ]");
-     
-  if (meterec->ports[y_pos].mute)
-     printw("[MUTED]");
-  else 
-     printw("[     ]");
-
-    if ( meterec->ports[y_pos].playback_take ) 
-    printw(" PLAYING take %d", meterec->ports[y_pos].playback_take);
-  else 
-    printw(" PLAYING empty take 0");
-  
-  if (meterec->ports[y_pos].name)
-    printw(" | %s", meterec->ports[y_pos].name);
-   
-  printw("\n");
   
   
   printw("  Take %2d ",x_pos);
@@ -42,7 +69,7 @@ void display_session(struct meterec_s *meterec, int y_pos, int x_pos)
   printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
   printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
   
-  printw("\n");
+  printw("\n\n");
 
   for (port=0; port<meterec->n_ports; port++) {
   
@@ -56,29 +83,10 @@ void display_session(struct meterec_s *meterec, int y_pos, int x_pos)
     else 
        attroff(A_REVERSE);
   
-    printw("%02d",port+1,meterec->ports[port].playback_take);
+    printw("%02d",port+1);
 
-    if ( meterec->ports[port].record == REC )
-      if ( meterec->ports[port].mute )
-        printw("r");
-      else
-        printw("R");
-    else if ( meterec->ports[port].record == DUB )
-      if ( meterec->ports[port].mute )
-        printw("d");
-      else
-        printw("D");
-    else if ( meterec->ports[port].record == OVR )
-      if ( meterec->ports[port].mute )
-        printw("o");
-      else
-        printw("O");
-    else 
-      if ( meterec->ports[port].mute )
-        printw("~");
-      else
-        printw("=");
-      
+    display_port_recmode(&meterec->ports[port]);
+
     for (take=1; take<meterec->n_takes+1; take++) {
     
       if ((y_pos == port) || (x_pos == take))
@@ -110,6 +118,10 @@ void display_session(struct meterec_s *meterec, int y_pos, int x_pos)
   
   attroff(A_REVERSE);
   color_set(DEFAULT, NULL);
+
+  printw("\n\n");
+  printw("  Port %2d ", y_pos+1);
+  display_port_info( &meterec->ports[y_pos] );
         
 }
 

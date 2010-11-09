@@ -152,7 +152,12 @@ void read_peak(float bias)
   unsigned int port;
         
   for (port = 0; port < meterec->n_ports; port++) {
-
+  
+    if (meterec->ports[port].peak_in > meterec->ports[port].max_in) {
+	  meterec->ports[port].max_in = meterec->ports[port].peak_in;
+	  meterec->ports[port].db_max_in = 20.0f * log10f( meterec->ports[port].max_in * bias ) ;
+    }
+	
     meterec->ports[port].db_in = 20.0f * log10f( meterec->ports[port].peak_in * bias ) ;
     meterec->ports[port].peak_in = 0.0f;
     
@@ -257,10 +262,13 @@ void init_ports(struct meterec_s *meterec)
     
     meterec->ports[port].peak_in = 0.0f;
     meterec->ports[port].db_in = 0.0f;
+
+	meterec->ports[port].max_in = 0.0f;
+    meterec->ports[port].db_max_in = 0.0f;
     
     meterec->ports[port].dkpeak_in = 0;
     meterec->ports[port].dktime_in = 0;
-    meterec->ports[port].max_in = 0;
+    meterec->ports[port].dkmax_in = 0;
     
     meterec->ports[port].playback_take = 0;
     
@@ -612,7 +620,6 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
 {
   jack_port_t *jack_port;
   int jack_flags;
-  unsigned int len;
   char *tmp = NULL;
 
   /* connect input port*/
@@ -625,7 +632,7 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
     fprintf(meterec->fd_log, "Can't find port '%s' assuming this is part of port name.\n", port_name);
     
 	if ( meterec->ports[port].name ) {
-	  tmp = (char *) malloc( meterec->ports[port].name + 1 );
+	  tmp = (char *) malloc( strlen(meterec->ports[port].name) + 1 );
 	  strcpy(tmp, meterec->ports[port].name);
 	  free(meterec->ports[port].name);
 	  meterec->ports[port].name = (char *) malloc( strlen(port_name) + 1 + strlen(tmp) + 1);
@@ -756,7 +763,6 @@ void parse_port_con(FILE *fd_conf, unsigned int port)
 void parse_time_index(FILE *fd_conf, unsigned int index)
 {
   struct time_s time;
-  jack_nframes_t rate;
   unsigned int u;
   
   u = fscanf(fd_conf, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ms);
@@ -920,7 +926,7 @@ void load_session(char * file)
 }
 
 
-void session_tail (FILE * fd_conf) 
+void session_tail(FILE * fd_conf) 
 {
   unsigned int ntakes, take, step=1, i;
   char *spaces;
@@ -1032,15 +1038,15 @@ void save_setup(char *file)
       else 
         if ( meterec->takes[take].port_has_track[port] ) 
           fprintf(fd_conf,"X");
-      else 
-        fprintf(fd_conf,"-");
+        else 
+          fprintf(fd_conf,"-");
         
     }
     
-    if (meterec->ports[port].record)
-      fprintf(fd_conf,"X");
-    else 
-      fprintf(fd_conf,"-");
+//    if (meterec->ports[port].record)
+//      fprintf(fd_conf,"X");
+//    else 
+//      fprintf(fd_conf,"-");
 
     fprintf(fd_conf,"|%02d%s\n",port+1,meterec->ports[port].portmap);
   }
@@ -1298,12 +1304,13 @@ void display_meter( int width, int decay_len )
 	
     
     printw("%02d",port+1);
-    
+    display_port_recmode(&meterec->ports[port]);
+
     size_in = iec_scale( meterec->ports[port].db_in, width );
     size_out = iec_scale( meterec->ports[port].db_out, width );
     
-    if (size_in > meterec->ports[port].max_in)
-      meterec->ports[port].max_in = size_in;
+    if (size_in > meterec->ports[port].dkmax_in)
+      meterec->ports[port].dkmax_in = size_in;
       
     if (size_in > meterec->ports[port].dkpeak_in) {
       meterec->ports[port].dkpeak_in = size_in;
@@ -1312,15 +1319,21 @@ void display_meter( int width, int decay_len )
       meterec->ports[port].dkpeak_in = size_in;
     }
 	
-    for ( i=0; i<meterec->ports[port].max_in || i<size_out; i++) {
+    for ( i=0; i<width; i++) {
 
-      if (i < size_in-1) {
+      if (i == width/5) 
+	    if (meterec->ports[port].name) {
+		  printw("%s",meterec->ports[port].name);
+		  i += strlen(meterec->ports[port].name);
+	  }
+	  
+	  if (i < size_in-1) {
         printw("#");
       }
       else if ( i==meterec->ports[port].dkpeak_in-1 ) {
         printw("I");
       }
-      else if ( i==meterec->ports[port].max_in-1 ) {
+      else if ( i==meterec->ports[port].dkmax_in-1 ) {
         printw(":");
       }
       else if ( i < size_out-1 ) {
@@ -1332,10 +1345,6 @@ void display_meter( int width, int decay_len )
       
     }
 	
-    if (y_pos == port) 
-	  for ( ; i<width; i++) 
-	    printw(" ");
-    
     printw("\n");
 
   }
@@ -1346,27 +1355,7 @@ void display_meter( int width, int decay_len )
   printw("%s\n", scale);
   
   printw("  Port %2d ", y_pos+1);
-  if (meterec->ports[y_pos].record==REC)
-     printw("[REC]");
-  else if (meterec->ports[y_pos].record==OVR)
-     printw("[OVR]");
-  else if (meterec->ports[y_pos].record==DUB)
-     printw("[DUB]");
-  else 
-     printw("[   ]");
-     
-  if (meterec->ports[y_pos].mute)
-     printw("[MUTED]");
-  else 
-     printw("[     ]");
-
-  if ( meterec->ports[y_pos].playback_take ) 
-    printw(" PLAYING take %d", meterec->ports[y_pos].playback_take);
-  else 
-    printw(" PLAYING empty take 0");
-  
-  if (meterec->ports[y_pos].name)
-    printw(" | %s", meterec->ports[y_pos].name);
+  display_port_info( &meterec->ports[y_pos] );
    
 
 }
@@ -1461,8 +1450,11 @@ int keyboard_thread(void *d)
     switch (key) {
       /* reset absolute maximum markers */
       case 'v':
-        for ( port=0 ; port < meterec->n_ports ; port++) 
+        for ( port=0 ; port < meterec->n_ports ; port++) {
+          meterec->ports[port].dkmax_in = 0;
           meterec->ports[port].max_in = 0;
+          meterec->ports[port].db_max_in = 20.0f * log10f(0) ;
+		}
       break;
 
       case KEY_LEFT:
@@ -1558,7 +1550,7 @@ int keyboard_thread(void *d)
         break;
         
       case ' ':
-        if (meterec->playback_sts == ONGOING)
+        if (meterec->playback_sts == ONGOING && meterec->record_sts == OFF)
           stop();
         else if (meterec->playback_sts == OFF)
           start_playback();
@@ -1729,7 +1721,7 @@ int main(int argc, char *argv[])
   decay_len = (int)(1.6f / (1.0f/rate));
   
   /* Init the scale */
-  init_display_scale(console_width - 2);
+  init_display_scale(console_width - 3);
 
   /* Register with Jack */
   if ((meterec->client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
@@ -1785,12 +1777,12 @@ int main(int argc, char *argv[])
 
     display_status();
 
-    display_buffer(console_width - 2);
+    display_buffer(console_width - 3);
     
     if (edit_mode)
       display_session(meterec, y_pos, x_pos);
     else
-      display_meter(console_width - 2 , decay_len);
+      display_meter(console_width - 3 , decay_len);
     
     refresh();
     
