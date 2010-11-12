@@ -43,7 +43,7 @@ void stop(void);
 
 WINDOW * mainwin;
 
-int edit_mode = 0;
+int edit_mode = 0, display_names = 1;
 int x_pos = 0, y_pos = 0;
   int running = 1;
 
@@ -1321,11 +1321,12 @@ void display_meter( int width, int decay_len )
 	
     for ( i=0; i<width; i++) {
 
-      if (i == width/5) 
-	    if (meterec->ports[port].name) {
-		  printw("%s",meterec->ports[port].name);
-		  i += strlen(meterec->ports[port].name);
-	  }
+      if (display_names)
+	    if (i == width/5) 
+	      if (meterec->ports[port].name) {
+		    printw("%s",meterec->ports[port].name);
+		    i += strlen(meterec->ports[port].name);
+	      }
 	  
 	  if (i < size_in-1) {
         printw("#");
@@ -1382,73 +1383,77 @@ int keyboard_thread(void *d)
 
     if (edit_mode) {
       
-    switch (key) {
-    
-      /* 
-      ** Move cursor 
-      */
-      case KEY_LEFT :
-        if ( x_pos > 1 )
-          x_pos--;
-        break;
-      
-      case KEY_RIGHT :
-        if ( x_pos < meterec->n_takes )
-          x_pos++;
-        break;
-    }
+      switch (key) {
 
-    /* 
-    ** Change Locks 
-    */
-    if (!meterec->seek.keyboard_lock) {
+    	/* 
+    	** Move cursor 
+    	*/
+    	case KEY_LEFT :
+          if ( x_pos > 1 )
+        	x_pos--;
+          break;
 
-    switch (key) {
-      case 'L' : /* clear all other locks for that port & process with toggle */
-        for ( take=0 ; take < meterec->n_takes+1 ; take++) 
-          meterec->takes[take].port_has_lock[y_pos] = 0 ;
-          
-      case 'l' : /* toggle lock at this position */
-        meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
-
-        if (changed_takes_to_playback(meterec)) {
-          pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_playhead_target = playhead;
-          meterec->seek.files_reopen = 1;
-          meterec->seek.keyboard_lock = 1;
-          pthread_mutex_unlock( &meterec->seek.mutex );
-        }
-       break;
-
-      case 'A' : /* clear all other locks & process with toggle */
-        for ( port=0 ; port < meterec->n_ports ; port++)
-          for ( take=0 ; take < meterec->n_takes+1 ; take++)  
-            meterec->takes[take].port_has_lock[port] = 0 ;
-        
-      case 'a' : /* toggle lock for all ports depending on this position */
-        if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
-          for ( port=0 ; port < meterec->n_ports ; port++) 
-            meterec->takes[x_pos].port_has_lock[port] = 0;
-        else 
-          for ( port=0 ; port < meterec->n_ports ; port++) 
-            meterec->takes[x_pos].port_has_lock[port] = 1;
-            
-        if (changed_takes_to_playback(meterec)) {
-          pthread_mutex_lock( &meterec->seek.mutex );
-          meterec->seek.disk_playhead_target = playhead;
-          meterec->seek.files_reopen = 1;
-          meterec->seek.keyboard_lock = 1;
-          pthread_mutex_unlock( &meterec->seek.mutex );
-        }
-        break;
+    	case KEY_RIGHT :
+          if ( x_pos < meterec->n_takes )
+        	x_pos++;
+          break;
       }
-    }
-      
+
+      /* 
+      ** Change Locks 
+      */
+      if (!meterec->seek.keyboard_lock) {
+
+      switch (key) {
+    	case 'L' : /* clear all other locks for that port & process with toggle */
+          for ( take=0 ; take < meterec->n_takes+1 ; take++) 
+        	meterec->takes[take].port_has_lock[y_pos] = 0 ;
+
+    	case 'l' : /* toggle lock at this position */
+          meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
+
+          if (changed_takes_to_playback(meterec)) {
+        	pthread_mutex_lock( &meterec->seek.mutex );
+        	meterec->seek.disk_playhead_target = playhead;
+        	meterec->seek.files_reopen = 1;
+        	meterec->seek.keyboard_lock = 1;
+        	pthread_mutex_unlock( &meterec->seek.mutex );
+          }
+    	  break;
+
+    	case 'A' : /* clear all other locks & process with toggle */
+          for ( port=0 ; port < meterec->n_ports ; port++)
+        	for ( take=0 ; take < meterec->n_takes+1 ; take++)  
+              meterec->takes[take].port_has_lock[port] = 0 ;
+
+    	case 'a' : /* toggle lock for all ports depending on this position */
+          if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
+        	for ( port=0 ; port < meterec->n_ports ; port++) 
+              meterec->takes[x_pos].port_has_lock[port] = 0;
+          else 
+        	for ( port=0 ; port < meterec->n_ports ; port++) 
+              meterec->takes[x_pos].port_has_lock[port] = 1;
+
+          if (changed_takes_to_playback(meterec)) {
+        	pthread_mutex_lock( &meterec->seek.mutex );
+        	meterec->seek.disk_playhead_target = playhead;
+        	meterec->seek.files_reopen = 1;
+        	meterec->seek.keyboard_lock = 1;
+        	pthread_mutex_unlock( &meterec->seek.mutex );
+          }
+          break;
+    	}
+
+      }
 
     } else {
 
     switch (key) {
       /* reset absolute maximum markers */
+	
+	  case 'n': 
+	    display_names = !display_names ;
+	    break;
       case 'v':
         for ( port=0 ; port < meterec->n_ports ; port++) {
           meterec->ports[port].dkmax_in = 0;
@@ -1467,12 +1472,12 @@ int keyboard_thread(void *d)
             meterec->seek.disk_playhead_target = seek(5);
           break;
     }
+	
   }
 
-
-    /*
-    ** KEYs handled in all modes
-    */
+  /*
+  ** KEYs handled in all modes
+  */
     
   if (meterec->record_sts==OFF) {
 
@@ -1505,7 +1510,7 @@ int keyboard_thread(void *d)
 	  
     switch (key) {
     
-      case 'M' : /* (un)mute all ports */
+      case 'M' : /* toggle mute on all ports */
         if ( meterec->ports[y_pos].mute ) 
           for ( port=0 ; port < meterec->n_ports ; port++) 
             meterec->ports[port].mute = 0;
@@ -1514,12 +1519,16 @@ int keyboard_thread(void *d)
             meterec->ports[port].mute = 1;
 		break;
 
-      case 'm' : /* (un)mute port */
+      case 'm' : /* toggle mute on this port */
         meterec->ports[y_pos].mute = !meterec->ports[y_pos].mute;
 		break;
 
+      case 'S' : /* unmute all ports */
+        for ( port=0 ; port < meterec->n_ports ; port++) 
+          meterec->ports[port].mute = 0;
+		break;
+	    
       case 's' : /* mute all but this port */
-      case 'S' : 
         for ( port=0 ; port < meterec->n_ports ; port++) 
           meterec->ports[port].mute = 1;
 		meterec->ports[y_pos].mute = 0;
