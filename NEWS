@@ -2,3 +2,28 @@ Mon Oct 12 18:28:54 CEST 2009 - Fabrice Lebas <fabrice.lebas@gmail.com>
 
   * Initial version
   * Package creation
+
+Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
+ 
+  NEW Release 0.7
+  * seek back and forth 5 seconds using arrow keys
+  * set time indexes using <SHIFT>-<Fn> keys
+  * jump to time index using <Fn> keys
+  * jump to time 0 using <HOME> key
+  * changed meter maximum reset key to be <v> (VU) instead of <m>
+  * (un)mute using <m> key
+  * (un)mute all ports usgin <M> key
+  * unmute all ports using <S> key
+  * mute all but selected port (solo) using <s> key
+  * change record mode (<r>, <d>, <o>) also in meter view
+  * display port status also in meter view
+  * display numeric signal level and maximum in port status
+  * changes in edit mode take effect without restarting
+  * port names can be defined in <session>.conf file
+  * display/hide port names in meter view using <n> key
+  * stop recoding is <RETURN> instead of <SPACE> or <RETURN>
+
+  BUGS
+  * in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
+
