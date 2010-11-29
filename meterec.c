@@ -62,19 +62,83 @@ struct meterec_s * meterec ;
 ** UTILs
 */
 
-void exit_on_error(char * reason) {
+void cleanup_jack(void) {
+	
+  const char **all_ports;
+  unsigned int i, port;
+  
+  for (port = 0; port < meterec->n_ports; port++) {
+  
+    if (meterec->ports[port].input != NULL ) {
 
-  fprintf(meterec->fd_log, "%s\n", reason);
-  
-  fclose(meterec->fd_log);
-  
+      all_ports = jack_port_get_all_connections(meterec->client, meterec->ports[port].input);
+
+      for (i=0; all_ports && all_ports[i]; i++) {
+        fprintf(meterec->fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].input), all_ports[i] );
+        jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].input));
+      }
+    }
+    
+    if (meterec->ports[port].output != NULL ) {
+
+      all_ports = jack_port_get_all_connections(meterec->client, meterec->ports[port].output);
+
+      for (i=0; all_ports && all_ports[i]; i++) {
+        fprintf(meterec->fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].output), all_ports[i] );
+        jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].output));
+      }
+    }
+        
+  }
+
+  /* Leave the jack graph */
+  jack_client_close(meterec->client);
+	
+  fprintf(meterec->fd_log, "Closed jack client connection.\n");
+}
+
+void cleanup_curse(void) {
+	
   delwin(mainwin);
 
   endwin();
 
   refresh();
   
-  printf("%s\n", reason);
+  fprintf(meterec->fd_log, "Stopped ncurses interface.\n");
+}
+
+/* Close down JACK when exiting */
+static void cleanup(int sig)
+{
+
+  stop();
+  
+  cleanup_jack();
+  
+  cleanup_curse();
+    
+  fclose(meterec->fd_log);
+
+  (void) signal(SIGINT, SIG_DFL);
+  
+  exit(0);
+  
+}
+
+void exit_on_error(char * reason) {
+
+  stop();
+  
+  fprintf(meterec->fd_log, "Error: %s\n", reason);
+
+  cleanup_jack();
+  
+  cleanup_curse();
+
+  fclose(meterec->fd_log);
+    
+  printf("Error: %s\n", reason);
   
   exit(1);
   
@@ -673,57 +737,6 @@ static void connect_any_port(jack_client_t *client, char *port_name, unsigned in
   
 }
 
-/* Close down JACK when exiting */
-static void cleanup(int sig)
-{
-  const char **all_ports;
-  unsigned int i, port;
-
-  stop();
-  
-  delwin(mainwin);
-
-  endwin();
-
-  refresh();
-
-  fprintf(meterec->fd_log, "Stopped ncurses interface.\n");
-
-  for (port = 0; port < meterec->n_ports; port++) {
-  
-    if (meterec->ports[port].input != NULL ) {
-
-      all_ports = jack_port_get_all_connections(meterec->client, meterec->ports[port].input);
-
-      for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(meterec->fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].input), all_ports[i] );
-        jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].input));
-      }
-    }
-    
-    if (meterec->ports[port].output != NULL ) {
-
-      all_ports = jack_port_get_all_connections(meterec->client, meterec->ports[port].output);
-
-      for (i=0; all_ports && all_ports[i]; i++) {
-        fprintf(meterec->fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].output), all_ports[i] );
-        jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].output));
-      }
-    }
-        
-  }
-
-  /* Leave the jack graph */
-  jack_client_close(meterec->client);
-    
-  fclose(meterec->fd_log);
-
-  (void) signal(SIGINT, SIG_DFL);
-  
-  exit(0);
-  
-}
-
 
 
 /******************************************************************************
@@ -790,7 +803,7 @@ void load_setup(char *file)
   buf[1] = 0;
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
-    fprintf(meterec->fd_log,"ERROR: could not open '%s' for reading\n", file);
+    fprintf(meterec->fd_log,"could not open '%s' for reading\n", file);
     exit_on_error("Cannot open setup file for reading.");
   }
   
@@ -880,7 +893,7 @@ void load_session(char * file)
   buf[1] = 0;
   
   if ( (fd_conf = fopen(file,"r")) == NULL ) {
-    fprintf(meterec->fd_log,"ERROR: could not open '%s' for reading\n", file);
+    fprintf(meterec->fd_log,"could not open '%s' for reading\n", file);
      exit_on_error("Cannot open session file for reading.");
  }
 
@@ -919,7 +932,7 @@ void load_session(char * file)
   fclose(fd_conf);
   
   if (port>meterec->n_ports) {
-    fprintf(meterec->fd_log,"ERROR: '%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,meterec->n_ports);
+    fprintf(meterec->fd_log,"'%s' contains more ports (%d) than defined in .conf file (%d)\n", file,port,meterec->n_ports);
     exit_on_error("Session and setup not consistent");
   }
   
@@ -962,7 +975,7 @@ void save_session(char * file)
   unsigned int take, port;
   
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
-    fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
+    fprintf(meterec->fd_log,"could not open '%s' for writing\n", file);
     exit_on_error("Cannot open session file for writing.");
   }
   
@@ -1004,7 +1017,7 @@ void save_setup(char *file)
   time.rate = jack_get_sample_rate(meterec->client);
 
   if ( (fd_conf = fopen(file,"w")) == NULL ) {
-    fprintf(meterec->fd_log,"ERROR: could not open '%s' for writing\n", file);
+    fprintf(meterec->fd_log,"could not open '%s' for writing\n", file);
     exit_on_error("Cannot open setup file for writing.");
   }
   
@@ -1688,7 +1701,7 @@ int main(int argc, char *argv[])
   post_option_init(meterec, session);
   
   if ( (meterec->fd_log = fopen(meterec->log_file,"w")) == NULL ) {
-    fprintf(stderr,"ERROR: could not open '%s' for writing\n", meterec->log_file);
+    fprintf(stderr,"Error: could not open '%s' for writing\n", meterec->log_file);
     exit(1);
   }
   
