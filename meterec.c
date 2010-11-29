@@ -1425,7 +1425,8 @@ int keyboard_thread(void *d)
     	case 'l' : /* toggle lock at this position */
           meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
 
-          if (changed_takes_to_playback(meterec)) {
+          if (changed_takes_to_playback(meterec) 
+              && (meterec->playback_sts != OFF)) {
         	pthread_mutex_lock( &meterec->seek.mutex );
         	meterec->seek.disk_playhead_target = playhead;
         	meterec->seek.files_reopen = 1;
@@ -1447,7 +1448,8 @@ int keyboard_thread(void *d)
         	for ( port=0 ; port < meterec->n_ports ; port++) 
               meterec->takes[x_pos].port_has_lock[port] = 1;
 
-          if (changed_takes_to_playback(meterec)) {
+          if (changed_takes_to_playback(meterec)
+              && (meterec->playback_sts != OFF)) {
         	pthread_mutex_lock( &meterec->seek.mutex );
         	meterec->seek.disk_playhead_target = playhead;
         	meterec->seek.files_reopen = 1;
@@ -1496,6 +1498,7 @@ int keyboard_thread(void *d)
 
     switch (key) {
       /* Change record mode */
+      case 'R' : 
       case 'r' : 
         if ( meterec->ports[y_pos].record == REC )
           meterec->ports[y_pos].record = OFF;
@@ -1503,6 +1506,7 @@ int keyboard_thread(void *d)
           meterec->ports[y_pos].record = REC;
         break;
 
+      case 'D' : 
       case 'd' : 
         if ( meterec->ports[y_pos].record == DUB )
           meterec->ports[y_pos].record = OFF;
@@ -1510,6 +1514,7 @@ int keyboard_thread(void *d)
           meterec->ports[y_pos].record = DUB;
         break;
 
+      case 'O' : 
       case 'o' : 
         if ( meterec->ports[y_pos].record == OVR )
           meterec->ports[y_pos].record = OFF;
