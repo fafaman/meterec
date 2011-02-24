@@ -152,7 +152,11 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 
     /* only open a take file that is not defined yet  */  
     if (meterec->takes[take].take_fd == NULL) {
-      meterec->takes[take].take_fd = sf_open(meterec->takes[take].take_file, SFM_READ, &meterec->takes[take].info);
+      meterec->takes[take].take_fd = sf_open(
+      				meterec->takes[take].take_file, 
+				SFM_READ, 
+				&meterec->takes[take].info
+				);
 
       /* check file is (was) opened properly */
       if (meterec->takes[take].take_fd == NULL) {
@@ -164,7 +168,11 @@ void read_disk_open_fd(struct meterec_s *meterec) {
       fprintf(meterec->fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
 
       /* allocate buffer space for this take */
-      fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", meterec->takes[take].ntrack, BUF_SIZE, take);
+      fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", 
+      				meterec->takes[take].ntrack, 
+				BUF_SIZE, 
+				take);
+
       meterec->takes[take].buf = calloc(BUF_SIZE*meterec->takes[take].ntrack, sizeof(float));
 
     } 
@@ -175,14 +183,80 @@ void read_disk_open_fd(struct meterec_s *meterec) {
   }
 
 }
-  
+
+unsigned int fill_buffer(unsigned int *opos , struct meterec_s *meterec) {
+
+    unsigned int i,  port, take, track, ntrack=0, fill;
+    
+    
+    if (*opos == 0) {
+
+      /* load the local buffer */
+      for(take=1; take<meterec->n_takes+1; take++) {
+
+        /* check if take is used */
+        if (meterec->takes[take].take_fd == NULL)
+          continue;
+
+        /* get the number of tracks in this take */
+        ntrack = meterec->takes[take].ntrack;
+
+        fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, (BUF_SIZE * ntrack) ); 
+
+        /* complete buffer with 0's if reached end of file */
+        for ( ; fill<(BUF_SIZE * ntrack); fill++) 
+          meterec->takes[take].buf[fill] = 0.0f;
+        
+      } 
+
+    }
+    
+    /* walk in the local buffer and copy it to each port buffers (demux)*/
+    for (i  = meterec->read_disk_buffer_thread_pos; 
+         i != meterec->read_disk_buffer_process_pos && *opos < BUF_SIZE;
+         i  = (i + 1) & (DISK_SIZE - 1), (*opos)++ ) {
+         
+      for(take=1; take<meterec->n_takes+1; take++) {
+
+        
+        /* check if take is used */
+        if (meterec->takes[take].take_fd == NULL)
+          continue;
+          
+        ntrack = meterec->takes[take].ntrack;
+
+        /* for each track belonging to this take */
+        for (track=0; track<ntrack; track++) {
+
+          /* find what port is mapped to this track */
+          port = meterec->takes[take].track_port_map[track] ;
+
+          /* check if this port needs data from this take */
+          if (meterec->ports[port].playback_take == take)
+            /* Only fill buffer if in playback, dub or overdub */
+            if (meterec->ports[port].record != REC || !meterec->record_sts)
+            meterec->ports[port].read_disk_buffer[i] = meterec->takes[take].buf[*opos * ntrack + track] ;
+            
+        }
+        
+      }
+      
+    }
+      
+    if (*opos == BUF_SIZE) 
+      *opos = 0;
+
+  return i;
+}
+
+
 int reader_thread(void *d)
 {
-    unsigned int i, ntrack=0, track, port, take, opos, fill, thread_delay, new_buffer_pos;
+    unsigned int i, take, opos, thread_delay, new_buffer_pos, ntrack, fill, track, port;
 	struct meterec_s *meterec ;
     jack_nframes_t seek, new_playhead_target = -1;
 
-	meterec = (struct meterec_s *)d ;
+    meterec = (struct meterec_s *)d ;
     
     meterec->playback_sts = STARTING ;
     
@@ -199,9 +273,15 @@ int reader_thread(void *d)
 	
     fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
     
+    /* prefill buffer at once */
+    opos = 0;
+    while (meterec->read_disk_buffer_thread_pos != meterec->read_disk_buffer_process_pos) {
+        i = fill_buffer(&opos, meterec);
+        meterec->read_disk_buffer_thread_pos = i;
+    }
+
     /* Start reading disk to fill the RT ringbuffer */
     new_buffer_pos = -1;
-    opos = 0;
     while ( meterec->playback_cmd==START )  {
   
     /* seek audio back and forth upon user request */
@@ -250,60 +330,8 @@ int reader_thread(void *d)
     /* lets fill local buffer only if previously emptied*/
     } 
 	
-    if (opos == 0) {
+    i = fill_buffer(&opos, meterec);
 
-      /* load the local buffer */
-      for(take=1; take<meterec->n_takes+1; take++) {
-
-        /* check if take is used */
-        if (meterec->takes[take].take_fd == NULL)
-          continue;
-
-        /* get the number of tracks in this take */
-        ntrack = meterec->takes[take].ntrack;
-
-        fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, (BUF_SIZE * ntrack) ); 
-
-        /* complete buffer with 0's if reached end of file */
-        for ( ; fill<(BUF_SIZE * ntrack); fill++) 
-          meterec->takes[take].buf[fill] = 0.0f;
-        
-      } 
-
-    }
-    
-    /* walk in the local buffer and copy it to each port buffers (demux)*/
-    for (i  = meterec->read_disk_buffer_thread_pos; 
-         i != meterec->read_disk_buffer_process_pos && opos < BUF_SIZE;
-         i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
-         
-      for(take=1; take<meterec->n_takes+1; take++) {
-
-        
-        /* check if take is used */
-        if (meterec->takes[take].take_fd == NULL)
-          continue;
-          
-        ntrack = meterec->takes[take].ntrack;
-
-        /* for each track belonging to this take */
-        for (track=0; track<ntrack; track++) {
-
-          /* find what port is mapped to this track */
-          port = meterec->takes[take].track_port_map[track] ;
-
-          /* check if this port needs data from this take */
-          if (meterec->ports[port].playback_take == take)
-            /* Only fill buffer if in playback, dub or overdub */
-            if (meterec->ports[port].record != REC || !meterec->record_sts)
-            meterec->ports[port].read_disk_buffer[i] = meterec->takes[take].buf[opos * ntrack + track] ;
-            
-        }
-        
-      }
-      
-    }
-      
     if ((new_buffer_pos!=-1) && (meterec->read_disk_buffer_thread_pos != i)) {
       pthread_mutex_lock( &meterec->seek.mutex );
       meterec->seek.jack_buffer_target = new_buffer_pos;
@@ -318,9 +346,6 @@ int reader_thread(void *d)
     if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
       meterec->playback_sts=ONGOING;
     
-    if (opos == BUF_SIZE) 
-      opos = 0;
-      
     usleep(thread_delay);
       
   }
