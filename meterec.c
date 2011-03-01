@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <dirent.h>
 #include <math.h>
 #include <string.h>
 #include <sys/types.h>
@@ -388,6 +389,39 @@ void pre_option_init(struct meterec_s *meterec) {
   meterec->read_disk_buffer_overflow = 0;
 }
 
+int find_take_name(char *session, unsigned int take, char * name) {
+
+  struct dirent *entry;
+  DIR *dp;
+  char *current = ".";
+  
+  char *pattern;
+  pattern = (char *) malloc( strlen(session) + strlen("_0000.") + 1 );
+  sprintf(pattern,"%s_%04d.",session,take);
+
+  dp = opendir(current);
+ 
+  if (dp == NULL) {
+    perror("opendir");
+    return -1;
+  }
+ 
+  while(entry = readdir(dp))
+    if (strncmp(entry->d_name, pattern, strlen(pattern)) == 0) {
+      closedir(dp);
+      free(pattern);
+      free(name);
+      name = (char *) malloc( strlen(entry->d_name) );
+      strcpy(name, entry->d_name);
+      return 1;
+    }
+    
+  closedir(dp);
+  free(pattern);
+  return 0;
+
+}
+
 void post_option_init(struct meterec_s *meterec, char *session) {
 
   unsigned int take, index ;
@@ -401,9 +435,12 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
   sprintf(meterec->log_file,"%s.log",session);
   
-  for (take=0; take<MAX_TAKES; take++) {
-    meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.w64") + 1 );
-    sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
+  for (take=1; take<MAX_TAKES; take++) {
+    meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.???") + 1 );
+    if ( find_take_name(session, take, meterec->takes[take].take_file) ) 
+      printf("Found existing file '%s' for take %d\n",meterec->takes[take].take_file, take);
+    else 
+      sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
   }
   
   pthread_mutex_init(&meterec->seek.mutex, NULL);
