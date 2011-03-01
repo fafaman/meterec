@@ -205,6 +205,9 @@ struct meterec_s
   jack_nframes_t jack_buffsize;
   
   struct seek_s seek;
+  
+  unsigned int rec_format;
+  char rec_extention[4];
 
   unsigned int write_disk_buffer_thread_pos;
   unsigned int write_disk_buffer_process_pos;

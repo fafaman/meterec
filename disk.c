@@ -20,23 +20,23 @@ int writer_thread(void *d)
     SF_INFO info;
     float buf[BUF_SIZE * MAX_PORTS];
     char *take_file ;
-	struct meterec_s *meterec ;
+    struct meterec_s *meterec ;
 
-	meterec = (struct meterec_s *)d ;
+    meterec = (struct meterec_s *)d ;
 
     meterec->record_sts = STARTING ;
-	
+
     fprintf(meterec->fd_log, "Writer thread: Started.\n");
-	
-	thread_delay = set_thread_delay(meterec->client);
+
+    thread_delay = set_thread_delay(meterec->client);
 
     /* Open the output file */
-    info.format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
+    info.format = meterec->rec_format;
     info.channels = meterec->n_tracks;
     info.samplerate = jack_get_sample_rate(meterec->client);
     
 
-	take_file = meterec->takes[meterec->n_takes + 1].take_file;
+    take_file = meterec->takes[meterec->n_takes + 1].take_file;
     
     if (!sf_format_check(&info)) {
       fprintf(meterec->fd_log, "Writer thread: Cannot open take file '%s' for writing (%d, %d, %d)\n",take_file,info.format, info.channels, info.samplerate);
@@ -105,15 +105,15 @@ void read_disk_close_fd(struct meterec_s *meterec) {
 
   /* close all fd's */
   for (take=1; take<meterec->n_takes+1; take++) 
-	if (meterec->takes[take].take_fd) {
+    if (meterec->takes[take].take_fd) {
       sf_close(meterec->takes[take].take_fd);
       free(meterec->takes[take].buf);
       meterec->takes[take].buf = NULL;
       meterec->takes[take].take_fd = NULL;
-	}
+    }
 
 }
-  
+
 void read_disk_open_fd(struct meterec_s *meterec) {
 
   unsigned int take, port, i;
@@ -262,7 +262,7 @@ int reader_thread(void *d)
     
     fprintf(meterec->fd_log, "Reader thread: started.\n");
 
-	thread_delay = set_thread_delay(meterec->client);
+    thread_delay = set_thread_delay(meterec->client);
 
     /* empty buffer ( reposition thread position in order to refill where process will first read) */
     meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);
@@ -270,7 +270,7 @@ int reader_thread(void *d)
 
     /* open all files needed for this playback */
     read_disk_open_fd(meterec);
-	
+
     fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
     
     /* prefill buffer at once */
@@ -283,32 +283,29 @@ int reader_thread(void *d)
     /* Start reading disk to fill the RT ringbuffer */
     new_buffer_pos = -1;
     while ( meterec->playback_cmd==START )  {
-  
+
     /* seek audio back and forth upon user request */
     seek = meterec->seek.disk_playhead_target;
     if (seek != -1) {
-    
+
       /* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
       meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - BUF_SIZE - 1;
       meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
       
       if (meterec->seek.files_reopen) {
         fprintf(meterec->fd_log,"Reader thread: Re-opening all playback files\n");
-	    read_disk_close_fd(meterec);
-		compute_takes_to_playback(meterec);
-	    read_disk_open_fd(meterec);
-	  }
-		
-	  fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
-     
-      for(take=1; take<meterec->n_takes+1; take++) {
+        read_disk_close_fd(meterec);
+        compute_takes_to_playback(meterec);
+        read_disk_open_fd(meterec);
+      }
 
+      fprintf(meterec->fd_log,"Reader thread: Seek %d\n", seek);
+
+      for(take=1; take<meterec->n_takes+1; take++) {
         /* check if track is used */
         if (meterec->takes[take].take_fd == NULL)
           continue;
-
         sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
-      
       }
       
       /* allow to copy fresh buffer */
@@ -329,7 +326,7 @@ int reader_thread(void *d)
     
     /* lets fill local buffer only if previously emptied*/
     } 
-	
+
     i = fill_buffer(&opos, meterec);
 
     if ((new_buffer_pos!=-1) && (meterec->read_disk_buffer_thread_pos != i)) {
@@ -340,19 +337,19 @@ int reader_thread(void *d)
       new_buffer_pos = -1;
       new_playhead_target = -1;
     }
-            
+
     meterec->read_disk_buffer_thread_pos = i;
-    
+
     if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
       meterec->playback_sts=ONGOING;
-    
+
     usleep(thread_delay);
-      
+
   }
-    
+
   /* close all fd's */
   read_disk_close_fd(meterec);
-	
+
   fprintf(meterec->fd_log,"Reader thread: done.\n");
 
   meterec->playback_sts = OFF;
@@ -372,6 +369,6 @@ unsigned int set_thread_delay(jack_client_t *client) {
 
     /* How long should we wait to read 10 times faster than data goes away */
     return 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
-	
-}	
+
+}
 

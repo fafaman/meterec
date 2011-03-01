@@ -435,12 +435,24 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
   sprintf(meterec->log_file,"%s.log",session);
   
+  
+//  meterec->rec_format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
+//  meterec->rec_extention = "w64" ; 
+  
+//    meterec->rec_format = SF_FORMAT_OGG | SF_FORMAT_VORBIS ;
+//    sprintf(meterec->rec_extention,"ogg");
+
+  meterec->rec_format = SF_FORMAT_WAV | SF_FORMAT_PCM_24 ;
+  sprintf(meterec->rec_extention,"wav");
+  
+
+  /* this needs to be moved at config file reading time and file creation time */
   for (take=1; take<MAX_TAKES; take++) {
     meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.???") + 1 );
     if ( find_take_name(session, take, meterec->takes[take].take_file) ) 
       printf("Found existing file '%s' for take %d\n",meterec->takes[take].take_file, take);
     else 
-      sprintf(meterec->takes[take].take_file,"%s_%04d.w64",session,take);
+      sprintf(meterec->takes[take].take_file,"%s_%04d.%s",session,take, meterec->rec_extention);
   }
   
   pthread_mutex_init(&meterec->seek.mutex, NULL);
