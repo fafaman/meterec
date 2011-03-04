@@ -54,6 +54,11 @@ char *scale ;
 char *line ;
 char *session = "meterec";
 char *jackname = "meterec" ;
+#if defined(HAVE_W64)
+char *output_ext = "w64" ;
+#else
+char *output_ext = "wav" ;
+#endif
 
 pthread_t wr_dt, rd_dt, kb_dt ;
 
@@ -406,7 +411,7 @@ int find_take_name(char *session, unsigned int take, char * name) {
     return -1;
   }
  
-  while(entry = readdir(dp))
+  while((entry = readdir(dp)))
     if (strncmp(entry->d_name, pattern, strlen(pattern)) == 0) {
       closedir(dp);
       free(pattern);
@@ -435,16 +440,29 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
   sprintf(meterec->log_file,"%s.log",session);
   
-  
-//  meterec->rec_format = SF_FORMAT_W64 | SF_FORMAT_PCM_24 ; 
-//  meterec->rec_extention = "w64" ; 
-  
-//    meterec->rec_format = SF_FORMAT_OGG | SF_FORMAT_VORBIS ;
-//    sprintf(meterec->rec_extention,"ogg");
+  meterec->output_ext = (char *) malloc( strlen(output_ext) + 1 );
+  sprintf(meterec->output_ext,"%s",output_ext);
 
-  meterec->rec_format = SF_FORMAT_WAV | SF_FORMAT_PCM_24 ;
-  sprintf(meterec->rec_extention,"wav");
-  
+  if (strcmp(output_ext, "wav") == 0) {
+    meterec->output_fmt = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+  }
+#if defined(HAVE_W64)
+    else if (strcmp(output_ext, "w64") == 0) {
+    meterec->output_fmt = SF_FORMAT_W64 | SF_FORMAT_PCM_24;
+  }
+#endif
+#if defined(HAVE_VORBIS)
+  else if (strcmp(output_ext, "ogg") == 0) {
+    meterec->output_fmt = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+  }
+  else if (strcmp(output_ext, "oga") == 0) {
+    meterec->output_fmt = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+  }
+#endif
+  else {
+    printf("Sorry, '%s' output record format is not supported.\n",output_ext);
+    exit(1);
+  }
 
   /* this needs to be moved at config file reading time and file creation time */
   for (take=1; take<MAX_TAKES; take++) {
@@ -452,7 +470,7 @@ void post_option_init(struct meterec_s *meterec, char *session) {
     if ( find_take_name(session, take, meterec->takes[take].take_file) ) 
       printf("Found existing file '%s' for take %d\n",meterec->takes[take].take_file, take);
     else 
-      sprintf(meterec->takes[take].take_file,"%s_%04d.%s",session,take, meterec->rec_extention);
+      sprintf(meterec->takes[take].take_file,"%s_%04d.%s",session,take, meterec->output_ext);
   }
   
   pthread_mutex_init(&meterec->seek.mutex, NULL);
@@ -800,7 +818,7 @@ void parse_port_con(FILE *fd_conf, unsigned int port)
   char port_name[100];
   unsigned int i, u;
   
-  fscanf(fd_conf,"%s%[^\r\n]%*[\r\n ]",label, line);
+  i = fscanf(fd_conf,"%s%[^\r\n]%*[\r\n ]",label, line);
   
   meterec->ports[port].portmap = (char *) malloc( strlen(line)+1 );
   strcpy(meterec->ports[port].portmap, line);
@@ -837,7 +855,7 @@ void parse_time_index(FILE *fd_conf, unsigned int index)
   }
   else {
     /* consume this line */
-    fscanf(fd_conf, "%*s");
+    u = fscanf(fd_conf, "%*s");
   }
   
 }
@@ -1673,13 +1691,14 @@ int keyboard_thread(void *d)
 /* Display how to use this program */
 static int usage( const char * progname )
 {
-  fprintf(stderr, "meterec version %s\n\n", VERSION);
-  fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]\n\n", progname);
+  fprintf(stderr, "version %s\n\n", VERSION);
+  fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-t]\n\n", progname);
   fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
   fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
   fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
   fprintf(stderr, "       -s      is session name [%s]\n",session);
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
+  fprintf(stderr, "       -o      is the record output format (w64, wav) [%s]\n",output_ext);
   fprintf(stderr, "       -t      record a new take at start\n");
   fprintf(stderr, "\n\n");
   fprintf(stderr, "Command keys:\n");
@@ -1721,7 +1740,7 @@ int main(int argc, char *argv[])
    
   pre_option_init(meterec);
 
-    while ((opt = getopt(argc, argv, "w:f:s:j:thv")) != -1) {
+    while ((opt = getopt(argc, argv, "w:f:s:j:o:thv")) != -1) {
     switch (opt) {
       case 'r':
         ref_lev = atof(optarg);
@@ -1738,6 +1757,9 @@ int main(int argc, char *argv[])
         break;
       case 'j':
         jackname = optarg ;
+        break;
+      case 'o':
+        output_ext = optarg ;
         break;
       case 't':
         meterec->record_cmd = START;
@@ -1765,8 +1787,8 @@ int main(int argc, char *argv[])
   fprintf(meterec->fd_log,"Console Width: %d\n", console_width);
   fprintf(meterec->fd_log,"Session name: %s\n", session);
   fprintf(meterec->fd_log,"Jack client name: %s\n", jackname);
-  if (meterec->record_cmd)
-    fprintf(meterec->fd_log,"Recording new take.\n");
+  fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
+  fprintf(meterec->fd_log,"%secording new take at startup.\n",meterec->record_cmd?"R":"Not r");
 
   fprintf(meterec->fd_log,"---- Starting ----\n");
   

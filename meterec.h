@@ -206,8 +206,8 @@ struct meterec_s
   
   struct seek_s seek;
   
-  unsigned int rec_format;
-  char rec_extention[4];
+  unsigned int output_fmt;
+  char *output_ext;
 
   unsigned int write_disk_buffer_thread_pos;
   unsigned int write_disk_buffer_process_pos;

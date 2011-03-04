@@ -31,7 +31,7 @@ int writer_thread(void *d)
     thread_delay = set_thread_delay(meterec->client);
 
     /* Open the output file */
-    info.format = meterec->rec_format;
+    info.format = meterec->output_fmt;
     info.channels = meterec->n_tracks;
     info.samplerate = jack_get_sample_rate(meterec->client);
     
@@ -252,7 +252,7 @@ unsigned int fill_buffer(unsigned int *opos , struct meterec_s *meterec) {
 
 int reader_thread(void *d)
 {
-    unsigned int i, take, opos, thread_delay, new_buffer_pos, ntrack, fill, track, port;
+    unsigned int i, take, opos, thread_delay, new_buffer_pos;
 	struct meterec_s *meterec ;
     jack_nframes_t seek, new_playhead_target = -1;
 
