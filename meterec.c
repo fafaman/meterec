@@ -458,6 +458,9 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   else if (strcmp(output_ext, "oga") == 0) {
     meterec->output_fmt = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
   }
+  else if (strcmp(output_ext, "flac") == 0) {
+    meterec->output_fmt = SF_FORMAT_FLAC | SF_FORMAT_PCM_24;
+  }
 #endif
   else {
     printf("Sorry, '%s' output record format is not supported.\n",output_ext);
@@ -466,7 +469,7 @@ void post_option_init(struct meterec_s *meterec, char *session) {
 
   /* this needs to be moved at config file reading time and file creation time */
   for (take=1; take<MAX_TAKES; take++) {
-    meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.???") + 1 );
+    meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.????") + 1 );
     if ( find_take_name(session, take, meterec->takes[take].take_file) ) 
       printf("Found existing file '%s' for take %d\n",meterec->takes[take].take_file, take);
     else 

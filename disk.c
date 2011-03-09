@@ -56,10 +56,9 @@ int writer_thread(void *d)
     
     /* Start writing the RT ringbuffer to disk */
     meterec->record_sts = ONGOING ;
+    opos = 0;
     while (meterec->record_sts) {
     
-      opos = 0;
-
       for (i  = meterec->write_disk_buffer_thread_pos; 
            i != meterec->write_disk_buffer_process_pos && opos < BUF_SIZE;
            i  = (i + 1) & (DISK_SIZE - 1), opos++ ) {
@@ -74,15 +73,19 @@ int writer_thread(void *d)
         
       }
       
-      sf_writef_float(out, buf, opos);
+      if (opos == BUF_SIZE) {
+        sf_writef_float(out, buf, opos);
+	opos = 0;
+      }
 
       meterec->write_disk_buffer_thread_pos = i;
       
       /* run until empty buffer after a stop requets */
       if (meterec->record_sts == STOPING)
-        if ( meterec->write_disk_buffer_thread_pos == meterec->write_disk_buffer_process_pos )
-          break;
-      
+        if ( meterec->write_disk_buffer_thread_pos == meterec->write_disk_buffer_process_pos ) {
+          sf_writef_float(out, buf, opos);
+	  break;
+        }
       if (meterec->record_cmd == STOP)
         meterec->record_sts = STOPING ;
          
