@@ -93,6 +93,7 @@ int writer_thread(void *d)
       
     }
     
+    sf_write_sync(out);
     sf_close(out);
 
     fprintf(meterec->fd_log,"Writer thread: done.\n");
