@@ -41,18 +41,15 @@
 #include "conf.h"
 
 
-void stop(void);
 
 WINDOW * mainwin;
 
 int edit_mode = 0, display_names = 1;
 int x_pos = 0, y_pos = 0;
-  int running = 1;
+int running = 1;
 
-static unsigned long  playhead = 0 ;
+static unsigned long playhead = 0 ;
 
-char *scale ;
-char *line ;
 char *session = "meterec";
 char *jackname = "meterec" ;
 #if defined(HAVE_W64)
@@ -174,34 +171,6 @@ void time_frm(struct time_s * time) {
 		  time->s  * time->rate +
 		  time->ms * time->rate / 1000
 		  ) ;
-}
-
-/*
-  db: the signal stength in db
-  width: the size of the meter
-*/
-static int iec_scale(float db, int size) {
-  float def = 0.0f; /* Meter deflection %age */
-  
-  if (db < -70.0f) {
-    def = 0.0f;
-  } else if (db < -60.0f) {
-    def = (db + 70.0f) * 0.25f;
-  } else if (db < -50.0f) {
-    def = (db + 60.0f) * 0.5f + 2.5f;
-  } else if (db < -40.0f) {
-    def = (db + 50.0f) * 0.75f + 7.5f;
-  } else if (db < -30.0f) {
-    def = (db + 40.0f) * 1.5f + 15.0f;
-  } else if (db < -20.0f) {
-    def = (db + 30.0f) * 2.0f + 30.0f;
-  } else if (db < 0.0f) {
-    def = (db + 20.0f) * 2.5f + 50.0f;
-  } else {
-    def = 100.0f;
-  }
-  
-  return (int)( (def / 100.0f) * ((float) size) );
 }
 
 
@@ -493,56 +462,6 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   meterec->seek.keyboard_lock = 0;
   
 }
-
-void init_display_scale( int width )
-{
-
-  int i=0;
-  const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
-  
-  char * scale0 ;
-  char * line0 ;
-  
-  scale0 = (char *) malloc( width+1+2 );
-  line0  = (char *) malloc( width+1+2 );
-
-  scale = (char *) malloc( width+1+2 );
-  line  = (char *) malloc( width+1+2 );
-
-  // Initialise the scale
-  for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='_'; }
-  scale0[width] = 0;
-  line0[width] = 0;
-
-
-  // 'draw' on each of the db marks
-  for(i=0; i < 12; i++) {
-    char mark[5];
-    int pos = iec_scale( marks[i], width )-1;
-    int spos, slen;
-
-    // Create string of the db value
-    snprintf(mark, 4, "%d", marks[i]);
-
-    // Position the label string
-    slen = strlen(mark);
-    spos = pos-(slen/2);
-    if (spos<0) spos=0;
-    if (spos+strlen(mark)>width) spos=width-slen;
-    memcpy( scale0+spos, mark, slen );
-
-    // Position little marker
-    line0[pos] = '|';
-  }
-
-  sprintf(scale,"  %s",scale0);
-  sprintf(line,"  %s",line0);
-
-  free(scale0);
-  free(line0);
-  
-}
-
 
 
 
@@ -898,209 +817,6 @@ unsigned int seek(int seek_sec) {
 ** DISPLAYs
 */
 
-void display_status(void) {
-  
-  float load;
-  static float  max_load=0.0f;
-  jack_nframes_t rate;
-  struct time_s time;
-  
-  rate = jack_get_sample_rate(meterec->client);
-  load = jack_cpu_load(meterec->client);
-  
-  time.frm = playhead ;
-  time.rate = rate ;
-  time_hms(&time);
-  
-  if (load>max_load) 
-    max_load = load;
-  
-  printw("%dHz %d:%02d:%02d.%03d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ms, load , max_load);
-  
-  printw("[> ");
-  
-  if (meterec->playback_sts==OFF) 
-    printw("%-8s","OFF");
-  if (meterec->playback_sts==STARTING) 
-    printw("%-8s","STARTING");
-  if (meterec->playback_sts==ONGOING) 
-    printw("%-8s","ONGOING");
-  if (meterec->playback_sts==PAUSED) 
-    printw("%-8s","PAUSED");
-
-  printw("]");
-
-
-  if (meterec->record_sts) 
-    color_set(RED, NULL);
-  
-  printw("[O ");
-
-  if (meterec->record_sts==OFF) 
-    printw("%-8s","OFF");
-  if (meterec->record_sts==STARTING) 
-    printw("%-8s","STARTING");
-  if (meterec->record_sts==ONGOING) 
-    printw("%-8s","ONGOING");
-
-  printw("]");
-  
-  if (meterec->record_sts==ONGOING) {
-    attron(A_BOLD);
-    printw(" Take %d",meterec->n_takes+1);
-    attroff(A_BOLD); 
-  }
-    
-  
-  if (meterec->write_disk_buffer_overflow)
-    printw(" OVERFLOWS(%d)",meterec->write_disk_buffer_overflow);
-
-  color_set(DEFAULT, NULL);
-
-  printw("\n");
-  
-}
-
-void display_buffer(int width) {
-
-  int wrlevel, wrsize, rdsize, i;
-  static int peak_wrsize=0, peak_rdsize=0;
-  static char *pedale = "|";
-  
-  rdsize = width * read_disk_buffer_level(meterec);
-  
-  if (rdsize > peak_rdsize && meterec->playback_sts == ONGOING) 
-    peak_rdsize = rdsize;
-  
-  printw("  ");
-  for (i=0; i<width-3; i++) {
-    if (i == peak_rdsize-1)
-      printw(":");
-    else if (i > rdsize-1)
-      printw("+");
-    else 
-      printw(" ");
-  }
-  printw("%sRD\n", pedale);
-
-
-  if (meterec->record_sts==ONGOING && meterec->playback_sts == ONGOING) {
-    printw("WR%s", pedale);
-  } else {
-    printw("WR-");
-  }
-
-  wrlevel = (meterec->write_disk_buffer_process_pos - meterec->write_disk_buffer_thread_pos) & (DISK_SIZE-1);
-  wrsize = (width * wrlevel) / DISK_SIZE;
-
-  if (wrsize > peak_wrsize) 
-    peak_wrsize = wrsize;
-
-  for (i=0; i<peak_wrsize; i++) {
-    if (i < wrsize-1)
-      printw("+");
-    else if (i == peak_wrsize-1)
-      printw(":");
-    else 
-      printw(" ");
-  }
-  printw("\n");
-
-    
-  if (meterec->playback_sts==ONGOING) {
-    if      (*pedale=='/')
-      pedale = "-";
-    else if (*pedale=='-')
-      pedale = "\\";
-    else if (*pedale=='\\')
-      pedale = "|";
-    else if (*pedale=='|')
-      pedale = "/";
- }
-
-}
-
-void display_meter( int width, int decay_len )
-{
-  int size_out, size_in, i;
-  unsigned int port ;
-  
-  printw("%s\n", scale);
-  printw("%s\n", line);
-  
-  for ( port=0 ; port < meterec->n_ports ; port++) {
-        
-    if ( meterec->ports[port].record ) 
-      if (meterec->record_sts == ONGOING)
-        color_set(RED, NULL);
-      else 
-        color_set(YELLOW, NULL);
-    else 
-      color_set(GREEN, NULL);
-	
-    if (y_pos == port) 
-       attron(A_REVERSE);
-    else 
-       attroff(A_REVERSE);
-	
-    
-    printw("%02d",port+1);
-    display_port_recmode(&meterec->ports[port]);
-
-    size_in = iec_scale( meterec->ports[port].db_in, width );
-    size_out = iec_scale( meterec->ports[port].db_out, width );
-    
-    if (size_in > meterec->ports[port].dkmax_in)
-      meterec->ports[port].dkmax_in = size_in;
-      
-    if (size_in > meterec->ports[port].dkpeak_in) {
-      meterec->ports[port].dkpeak_in = size_in;
-      meterec->ports[port].dktime_in = 0;
-    } else if (meterec->ports[port].dktime_in++ > decay_len) {
-      meterec->ports[port].dkpeak_in = size_in;
-    }
-	
-    for ( i=0; i<width; i++) {
-
-      if (display_names)
-	    if (i == width/5) 
-	      if (meterec->ports[port].name) {
-		    printw("%s",meterec->ports[port].name);
-		    i += strlen(meterec->ports[port].name);
-	      }
-	  
-	  if (i < size_in-1) {
-        printw("#");
-      }
-      else if ( i==meterec->ports[port].dkpeak_in-1 ) {
-        printw("I");
-      }
-      else if ( i==meterec->ports[port].dkmax_in-1 ) {
-        printw(":");
-      }
-      else if ( i < size_out-1 ) {
-        printw("-");
-      }
-      else {
-        printw(" ");
-      }
-      
-    }
-	
-    printw("\n");
-
-  }
-  
-  attroff(A_REVERSE);
-  color_set(DEFAULT, NULL);
-  printw("%s\n", line);
-  printw("%s\n", scale);
-  
-  printw("  Port %2d ", y_pos+1);
-  display_port_info( &meterec->ports[y_pos] );
-   
-
-}
 
 
 /******************************************************************************
@@ -1480,7 +1196,7 @@ int main(int argc, char *argv[])
   decay_len = (int)(1.6f / (1.0f/rate));
   
   /* Init the scale */
-  init_display_scale(console_width - 3);
+  init_display_scale(console_width);
 
   /* Register with Jack */
   if ((meterec->client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
@@ -1535,14 +1251,14 @@ int main(int argc, char *argv[])
   
     clear();
 
-    display_status();
+    display_status(meterec, playhead);
 
-    display_buffer(console_width - 3);
+    display_buffer(meterec, console_width);
     
     if (edit_mode)
       display_session(meterec, y_pos, x_pos);
     else
-      display_meter(console_width - 3 , decay_len);
+      display_meter(meterec, y_pos, display_names, console_width, decay_len);
     
     refresh();
     

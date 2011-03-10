@@ -220,6 +220,7 @@ struct meterec_s
 
 };
 
+void stop(void);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void connect_any_port(jack_client_t *client, char *port_name, unsigned int port);
