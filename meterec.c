@@ -208,51 +208,48 @@ void read_peak(float bias)
   
 }
 
-void compute_takes_to_playback(struct meterec_s *meterec) {
+/******************************************************************************
+** Takes and ports
+*/
 
-  unsigned int take, port;
-
-  for ( port = 0; port < meterec->n_ports; port++ ) {
+unsigned int take_to_playback(struct meterec_s *meterec, unsigned int port) {
+	
+	unsigned int take;
+	
+	for ( take = meterec->n_takes + 1; take > 0; take-- )
+		if (meterec->takes[take].port_has_lock[port])
+		break;
     
-    for ( take = meterec->n_takes + 1; take > 0; take-- )
-      if (meterec->takes[take].port_has_lock[port])
-        break;
-    
-    if (!take)
-      take = meterec->n_takes + 1;
+	if (!take)
+		take = meterec->n_takes + 1;
       
-    for ( ; take > 0; take-- )
-      if (meterec->takes[take].port_has_track[port])
-        break;
-        
-    meterec->ports[port].playback_take = take;
+	for ( ; take > 0; take-- )
+		if (meterec->takes[take].port_has_track[port])
+			break;
     
-  }
+	return take;
+	
 }
 
-unsigned int changed_takes_to_playback(struct meterec_s *meterec) {
+void compute_takes_to_playback(struct meterec_s *meterec) {
 
-  unsigned int take, port;
+	unsigned int port;
 
-  for ( port = 0; port < meterec->n_ports; port++ ) {
-    
-    for ( take = meterec->n_takes + 1; take > 0; take-- )
-      if (meterec->takes[take].port_has_lock[port])
-        break;
-    
-    if (!take)
-      take = meterec->n_takes + 1;
-      
-    for ( ; take > 0; take-- )
-      if (meterec->takes[take].port_has_track[port])
-        break;
-        
-    if (meterec->ports[port].playback_take != take)
-      return 1;
+	for ( port = 0; port < meterec->n_ports; port++ ) 
+		meterec->ports[port].playback_take = take_to_playback(meterec, port);
 
-  }
-  
-  return 0;
+}
+
+int changed_takes_to_playback(struct meterec_s *meterec) {
+
+	unsigned int port;
+
+	for ( port = 0; port < meterec->n_ports; port++ ) 
+		if (meterec->ports[port].playback_take != take_to_playback(meterec, port))
+			return 1;
+	
+	return 0;
+
 }
 
 void compute_tracks_to_record() {
@@ -814,12 +811,6 @@ unsigned int seek(int seek_sec) {
 
 
 /******************************************************************************
-** DISPLAYs
-*/
-
-
-
-/******************************************************************************
 ** KEYBOARD
 */
 
@@ -1075,14 +1066,15 @@ static int usage( const char * progname )
   fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
   fprintf(stderr, "       -s      is session name [%s]\n",session);
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
-  fprintf(stderr, "       -o      is the record output format (w64, wav) [%s]\n",output_ext);
+  fprintf(stderr, "       -o      is the record output format (w64, wav, flag, ogg) [%s]\n",output_ext);
   fprintf(stderr, "       -t      record a new take at start\n");
   fprintf(stderr, "\n\n");
   fprintf(stderr, "Command keys:\n");
+  fprintf(stderr, "       q       quit\n");
   fprintf(stderr, "       <SPACE> start playback; stop\n");
   fprintf(stderr, "       <ENTER> start record; stop\n");
   fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
-  fprintf(stderr, "       q       quit\n");
+  fprintf(stderr, "       n       toggle port names display\n");
   fprintf(stderr, "       m       mute that port playback\n");
   fprintf(stderr, "       M       mute all ports playback\n");
   fprintf(stderr, "       s       mute all but that port playback (solo)\n");
