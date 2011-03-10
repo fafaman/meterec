@@ -185,6 +185,7 @@ struct meterec_s
 
   char *session_file;
   char *setup_file;
+  char *conf_file;
   char *log_file;
 
   unsigned int record_sts;

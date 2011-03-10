@@ -20,8 +20,10 @@
 
 */
 
+void load_conf(struct meterec_s *meterec);
 void load_setup(struct meterec_s *meterec);
 void load_session(struct meterec_s *meterec);
 
+void save_conf(struct meterec_s *meterec);
 void save_session(struct meterec_s *meterec);
 void save_setup(struct meterec_s *meterec);

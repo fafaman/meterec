@@ -101,7 +101,7 @@ void display_session(struct meterec_s *meterec, int y_pos, int x_pos)
         attron(A_BOLD);
         
       if ( meterec->takes[take].port_has_lock[port] )
-        printw("L");
+        printw(meterec->takes[take].port_has_track[port]?"L":"l");
       else if ( meterec->ports[port].playback_take == take ) 
         printw("P");
       else if ( meterec->takes[take].port_has_track[port] ) 

@@ -438,6 +438,9 @@ void post_option_init(struct meterec_s *meterec, char *session) {
   meterec->setup_file = (char *) malloc( strlen(session) + strlen(".conf") + 1 );
   sprintf(meterec->setup_file,"%s.conf",session);
   
+  meterec->conf_file = (char *) malloc( strlen(session) + strlen(".mrec") + 1 );
+  sprintf(meterec->conf_file,"%s.mrec",session);
+  
   meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
   sprintf(meterec->log_file,"%s.log",session);
   
@@ -817,7 +820,7 @@ void start_playback() {
 
   compute_takes_to_playback(meterec);
 
-  save_setup(meterec);
+  save_conf(meterec);
 
   meterec->playback_cmd = START ;
   
@@ -831,8 +834,6 @@ void start_record() {
   
   if (meterec->n_tracks) {
   
-    save_session(meterec);
-
     meterec->record_cmd = START;
 
     pthread_create(&wr_dt, NULL, (void *)&writer_thread, (void *) meterec);
@@ -862,7 +863,7 @@ void stop() {
   if (meterec->playback_sts) {
     meterec->playback_cmd = STOP ;
 
-    fprintf(meterec->fd_log, "Waiting end of reading.\n");
+    fprintf(meterec->fd_log, "Waiting end of playback.\n");
     while(meterec->playback_cmd || meterec->playback_sts) {
       fsleep( 0.05f );
     }
@@ -870,7 +871,7 @@ void stop() {
 
   }
   
-  save_setup(meterec);
+  save_conf(meterec);
 
 }
 
@@ -1502,10 +1503,11 @@ int main(int argc, char *argv[])
     exit_on_error("Cannot activate client");
   }
 
+  load_conf(meterec);
+/*
   load_setup(meterec);
-
   load_session(meterec);
-  
+*/
   pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
 
   /* Start threads doing disk accesses */

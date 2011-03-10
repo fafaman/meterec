@@ -29,107 +29,6 @@
 
 #include "meterec.h"
 
-
-int load_conf(struct meterec_s *meterec) {
-	
-	FILE *fd_conf;
-	char *file; 
-	char buf[2];
-	unsigned int take=1, port=0, track=0, index=0;
-	
-	buf[1] = 0;
-	
-	
-	
-	if ( (fd_conf = fopen(meterec->setup_file,"r")) == NULL ) {
-		fprintf(meterec->fd_log,"could not open '%s' for reading\n", meterec->setup_file);
-		exit_on_error("Cannot open setup file for reading.");
-	}
-	
-	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->setup_file);
-	
-	while ( fread(buf, sizeof(char), 1, fd_conf) ) {
-		switch (*buf) {
-			case '~' :
-				meterec->ports[port].mute = 1;
-			case '=' :
-				take=1;
-				break;
-			
-			case 'r' :
-				meterec->ports[port].mute = 1;
-			case 'R' :
-				meterec->ports[port].record = REC;
-				meterec->n_tracks++;
-				take=1;
-				break;
-			
-			case 'd' :
-				meterec->ports[port].mute = 1;
-			case 'D' :
-				meterec->ports[port].record = DUB;
-				meterec->n_tracks++;
-				take=1;
-				break;
-			
-			case 'o' :
-				meterec->ports[port].mute = 1;
-			case 'O' :
-				meterec->ports[port].record = OVR;
-				meterec->n_tracks++;
-				take=1;
-				break;
-			
-			case '>' :
-				parse_time_index(meterec, fd_conf, index);
-				index++;
-				break;
-			
-			case 'l' :
-				meterec->takes[take].port_has_lock[port] = 1 ;
-				take++;
-				break;
-			case 'L' :
-				meterec->takes[take].port_has_lock[port] = 1 ;
-			case 'X' :
-				track = meterec->takes[take].ntrack ;
-				meterec->takes[take].track_port_map[track] = port ;
-				meterec->takes[take].port_has_track[port] = 1 ;
-				meterec->takes[take].ntrack++;
-				meterec->ports[port].playback_take = take ;
-			case '-' :
-				take++;
-				break;
-				
-			case '|' :
-			
-				// allocate memory for this port
-				meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-				
-				// create input ports
-				create_input_port ( meterec->client, port );
-				create_output_port ( meterec->client, port );
-				
-				// connect to other ports
-				parse_port_con(meterec, fd_conf, port);
-				
-				port++;
-				break;
-			
-			default :
-				break;
-		}
-	}
-	
-	fclose(fd_conf);
-	
-	meterec->n_ports = port ;
-	meterec->n_takes = take - 1;
-	
-	return 0
-}
-
 void parse_port_con(struct meterec_s *meterec, FILE *fd_conf, unsigned int port)
 {
 
@@ -463,3 +362,156 @@ void save_setup(struct meterec_s *meterec)
   fclose(fd_conf);
   
 }
+
+void save_conf(struct meterec_s *meterec) {
+	
+	char *file; 
+	FILE *fd_conf;
+	unsigned int take, port, index;
+	struct time_s time;
+	char time_str[14] ;
+	
+	file = meterec->conf_file;
+	
+	time.rate = jack_get_sample_rate(meterec->client);
+	
+	if ( (fd_conf = fopen(file,"w")) == NULL ) {
+		fprintf(meterec->fd_log,"could not open '%s' for writing\n", file );
+		exit_on_error("Cannot open configuration file for writing.");
+	}
+	
+	for (port=0; port<meterec->n_ports; port++) {
+		 
+		if (meterec->ports[port].record==REC)
+			fprintf(fd_conf,meterec->ports[port].mute?"r":"R");
+		else if (meterec->ports[port].record==DUB)
+			fprintf(fd_conf,meterec->ports[port].mute?"d":"D");
+		else if (meterec->ports[port].record==OVR)
+			fprintf(fd_conf,meterec->ports[port].mute?"o":"O");
+		else
+			fprintf(fd_conf,meterec->ports[port].mute?"~":"=");
+		
+		for (take=1; take<meterec->n_takes+1; take++) 
+			if ( meterec->takes[take].port_has_lock[port] )
+				fprintf(fd_conf, meterec->takes[take].port_has_track[port]?"L":"l" );
+			else 
+				fprintf(fd_conf, meterec->takes[take].port_has_track[port]?"X":"-" );
+		
+		fprintf(fd_conf,"|%02d%s\n",port+1,meterec->ports[port].portmap);
+	}
+	session_tail(meterec, fd_conf);
+	
+	for (index=0; index<MAX_INDEX; index++) {
+		time.frm = meterec->seek.index[index] ;
+		if ( time.frm == -1 ) 
+			fprintf(fd_conf,">           >%02d\n", index+1);
+		else {
+			time_hms(&time);
+			time_sprint(&time, time_str);
+			fprintf(fd_conf,">%s>%02d\n", time_str, index+1);
+		}
+	}
+	  
+	fclose(fd_conf);
+	  
+}
+
+void load_conf(struct meterec_s *meterec) {
+	
+	FILE *fd_conf;
+	char *file; 
+	char buf[2];
+	unsigned int take=1, port=0, track=0, index=0;
+	
+	buf[1] = 0;
+	
+	file = meterec->conf_file;
+	
+	if ( (fd_conf = fopen(file,"r")) == NULL ) {
+		fprintf(meterec->fd_log,"could not open '%s' for reading\n", file);
+		exit_on_error("Cannot open setup file for reading.");
+	}
+	
+	fprintf(meterec->fd_log,"Loading '%s'\n", file);
+	
+	while ( fread(buf, sizeof(char), 1, fd_conf) ) {
+		switch (*buf) {
+			case '~' :
+				meterec->ports[port].mute = 1;
+			case '=' :
+				take=1;
+				break;
+			
+			case 'r' :
+				meterec->ports[port].mute = 1;
+			case 'R' :
+				meterec->ports[port].record = REC;
+				meterec->n_tracks++;
+				take=1;
+				break;
+			
+			case 'd' :
+				meterec->ports[port].mute = 1;
+			case 'D' :
+				meterec->ports[port].record = DUB;
+				meterec->n_tracks++;
+				take=1;
+				break;
+			
+			case 'o' :
+				meterec->ports[port].mute = 1;
+			case 'O' :
+				meterec->ports[port].record = OVR;
+				meterec->n_tracks++;
+				take=1;
+				break;
+			
+			case '>' :
+				parse_time_index(meterec, fd_conf, index);
+				index++;
+				break;
+			
+			case 'l' :
+				meterec->takes[take].port_has_lock[port] = 1 ;
+				take++;
+				break;
+			case 'L' :
+				meterec->takes[take].port_has_lock[port] = 1 ;
+			case 'X' :
+				track = meterec->takes[take].ntrack ;
+				meterec->takes[take].track_port_map[track] = port ;
+				meterec->takes[take].port_has_track[port] = 1 ;
+				meterec->takes[take].ntrack++;
+				meterec->ports[port].playback_take = take ;
+			case '-' :
+				take++;
+				break;
+				
+			case '|' :
+			
+				// allocate memory for this port
+				meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+				
+				// create input ports
+				create_input_port ( meterec->client, port );
+				create_output_port ( meterec->client, port );
+				
+				// connect to other ports
+				parse_port_con(meterec, fd_conf, port);
+				
+				port++;
+				break;
+			
+			default :
+				break;
+		}
+	}
+	
+	fclose(fd_conf);
+	
+	meterec->n_ports = port ;
+	meterec->n_takes = take - 1;
+	
+}
+
