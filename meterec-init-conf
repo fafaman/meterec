@@ -3,14 +3,11 @@
 if [ -n "$1" ]
 then
 
-	CONF_FILE=$1.conf
-	SESS_FILE=.$1.sess
+	CONF_FILE=$1.mrec
 
 	rm -f $CONF_FILE;
-	rm -f $SESS_FILE;
 
 	touch $CONF_FILE;
-	touch $SESS_FILE;
 
 	echo Creating $CONF_FILE file mapping all jack system ports
 
