@@ -10,12 +10,8 @@ pushd ../
 mv meterec-dev meterec-$RELEASE
 
 tar -zcvf meterec-$RELEASE.tgz \
-meterec-$RELEASE/meterec.c \
-meterec-$RELEASE/meterec.h \
-meterec-$RELEASE/display.c \
-meterec-$RELEASE/display.h \
-meterec-$RELEASE/disk.c \
-meterec-$RELEASE/disk.h \
+meterec-$RELEASE/*.c \
+meterec-$RELEASE/*.h \
 meterec-$RELEASE/meterec-init-conf \
 meterec-$RELEASE/meterec-pass-thru \
 meterec-$RELEASE/README \

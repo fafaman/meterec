@@ -194,6 +194,8 @@ struct meterec_s
   unsigned int playback_sts;
   unsigned int playback_cmd;
 
+  int connect_ports;
+  
   unsigned int n_ports;
   struct port_s ports[MAX_PORTS];
   
@@ -214,7 +216,7 @@ struct meterec_s
   unsigned int write_disk_buffer_process_pos;
   unsigned int write_disk_buffer_overflow;
 
-  unsigned int read_disk_buffer_thread_pos; /* Hum... Would be better to rework thread loop... */
+  unsigned int read_disk_buffer_thread_pos;
   unsigned int read_disk_buffer_process_pos;
   unsigned int read_disk_buffer_overflow;
 

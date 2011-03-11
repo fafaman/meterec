@@ -342,12 +342,13 @@ void init_takes(struct meterec_s *meterec) {
 void pre_option_init(struct meterec_s *meterec) {
 
   meterec->n_tracks = 0;
+  meterec->connect_ports = 0;
   
   meterec->record_sts = OFF;
   meterec->record_cmd = STOP;
 
   meterec->playback_sts = OFF;
-  meterec->playback_cmd = START;
+  meterec->playback_cmd = STOP;
   
   meterec->client = NULL;
   meterec->fd_log = NULL;
@@ -699,7 +700,10 @@ void connect_any_port(jack_client_t *client, char *port_name, unsigned int port)
 	
 	return;
   }
-
+  
+  if (!meterec->connect_ports)
+    return;
+  
   /* check port flags */
   jack_flags = jack_port_flags(jack_port);
   
@@ -1060,7 +1064,7 @@ int keyboard_thread(void *d)
 static int usage( const char * progname )
 {
   fprintf(stderr, "version %s\n\n", VERSION);
-  fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-t]\n\n", progname);
+  fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-t][-p][-c]\n\n", progname);
   fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
   fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
   fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
@@ -1068,11 +1072,13 @@ static int usage( const char * progname )
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
   fprintf(stderr, "       -o      is the record output format (w64, wav, flag, ogg) [%s]\n",output_ext);
   fprintf(stderr, "       -t      record a new take at start\n");
+  fprintf(stderr, "       -p      playback at start\n");
+  fprintf(stderr, "       -c      connect to jack ports listed in .mrec file\n");
   fprintf(stderr, "\n\n");
   fprintf(stderr, "Command keys:\n");
   fprintf(stderr, "       q       quit\n");
-  fprintf(stderr, "       <SPACE> start playback; stop\n");
-  fprintf(stderr, "       <ENTER> start record; stop\n");
+  fprintf(stderr, "       <SPACE> start playback; stop playback\n");
+  fprintf(stderr, "       <ENTER> start record; stop all\n");
   fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
   fprintf(stderr, "       n       toggle port names display\n");
   fprintf(stderr, "       m       mute that port playback\n");
@@ -1081,13 +1087,13 @@ static int usage( const char * progname )
   fprintf(stderr, "       r       toggle REC record mode for that port - record without listening playback\n");
   fprintf(stderr, "       d       toggle DUB record mode for that port - record listening playback\n");
   fprintf(stderr, "       o       toggle OVR record mode for that port - record listening and mixing playback\n");
+  fprintf(stderr, "<SHIFT>F1-F12  set time index\n");
+  fprintf(stderr, "       F1-F12  Jump to time index\n");
   fprintf(stderr, "       <TAB>   edit mode\n");
   fprintf(stderr, "       l       toggle lock for that position\n");
   fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
   fprintf(stderr, "       a       toggle lock for all ports for that take\n");
   fprintf(stderr, "       A       clear all locks, toggle lock for all ports for that take\n");
-  fprintf(stderr, "<SHIFT>F1-F12  set time index\n");
-  fprintf(stderr, "       F1-F12  Jump to time index\n");
   exit(1);
 }
 
@@ -1109,7 +1115,7 @@ int main(int argc, char *argv[])
    
   pre_option_init(meterec);
 
-    while ((opt = getopt(argc, argv, "w:f:s:j:o:thv")) != -1) {
+    while ((opt = getopt(argc, argv, "w:f:s:j:o:ptchv")) != -1) {
     switch (opt) {
       case 'r':
         ref_lev = atof(optarg);
@@ -1132,6 +1138,11 @@ int main(int argc, char *argv[])
         break;
       case 't':
         meterec->record_cmd = START;
+      case 'p':
+        meterec->playback_cmd = START;
+        break;
+      case 'c':
+        meterec->connect_ports = 1;
         break;
       case 'h':
       case 'v':
@@ -1157,6 +1168,7 @@ int main(int argc, char *argv[])
   fprintf(meterec->fd_log,"Session name: %s\n", session);
   fprintf(meterec->fd_log,"Jack client name: %s\n", jackname);
   fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
+  fprintf(meterec->fd_log,"%slayback at startup.\n",meterec->playback_cmd?"P":"No p");
   fprintf(meterec->fd_log,"%secording new take at startup.\n",meterec->record_cmd?"R":"Not r");
 
   fprintf(meterec->fd_log,"---- Starting ----\n");
