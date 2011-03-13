@@ -45,7 +45,7 @@
 WINDOW * mainwin;
 
 int edit_mode = 0, display_names = 1;
-int x_pos = 0, y_pos = 0;
+unsigned int x_pos = 0, y_pos = 0;
 int running = 1;
 
 static unsigned long playhead = 0 ;
@@ -124,7 +124,7 @@ static void cleanup(int sig)
     
   fclose(meterec->fd_log);
 
-  (void) signal(SIGINT, SIG_DFL);
+  (void) signal(sig, SIG_DFL);
   
   exit(0);
   
@@ -468,6 +468,10 @@ void post_option_init(struct meterec_s *meterec, char *session) {
 */
 static int update_jack_buffsize(jack_nframes_t nframes, void *arg)
 {
+  struct meterec_s *meterec ;
+  
+  meterec = (struct meterec_s *)arg ;
+
   meterec->jack_buffsize = nframes;
   
   return 0;
@@ -481,13 +485,16 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
   unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
   unsigned int playback_sts_local, record_sts_local;
   float s;
+  struct meterec_s *meterec ;
+  
+  meterec = (struct meterec_s *)arg ;
   
   /* make sure statuses do not change during callback */
   playback_sts_local = meterec->playback_sts;
   record_sts_local = meterec->record_sts;
   
   /* check if there is a new buffer position to go to*/
-  if (meterec->seek.jack_buffer_target != -1) {
+  if (meterec->seek.jack_buffer_target != (unsigned int)(-1)) {
 
     pthread_mutex_lock( &meterec->seek.mutex );
 
@@ -818,11 +825,13 @@ unsigned int seek(int seek_sec) {
 ** KEYBOARD
 */
 
-int keyboard_thread(void *d)
+int keyboard_thread(void *arg)
 {
-
+  struct meterec_s *meterec ;
   unsigned int port, take;
   int key = 0;
+
+  meterec = (struct meterec_s *)arg ;
 
   noecho();
   cbreak();
@@ -1210,10 +1219,10 @@ int main(int argc, char *argv[])
   fprintf(meterec->fd_log,"Registered as '%s'.\n", jack_get_client_name( meterec->client ) );
 
   /* Register the signal process callback */
-  jack_set_process_callback(meterec->client, process_jack_data, 0);
+  jack_set_process_callback(meterec->client, process_jack_data, meterec);
 
   /* Register function to handle buffer size change */
-  jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, 0);
+  jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, meterec);
   
   /* get initial buffer size */
   meterec->jack_buffsize = jack_get_buffer_size(meterec->client);

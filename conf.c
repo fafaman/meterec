@@ -349,7 +349,7 @@ void save_setup(struct meterec_s *meterec)
   
   for (index=0; index<MAX_INDEX; index++) {
 	  time.frm = meterec->seek.index[index] ;
-	  if ( time.frm == -1 ) {
+	  if ( time.frm == (unsigned int)(-1) ) {
 	      fprintf(fd_conf,">           >%02d\n", index+1);
 	  } 
 	  else {
@@ -403,7 +403,7 @@ void save_conf(struct meterec_s *meterec) {
 	
 	for (index=0; index<MAX_INDEX; index++) {
 		time.frm = meterec->seek.index[index] ;
-		if ( time.frm == -1 ) 
+		if ( time.frm == (unsigned int)(-1) ) 
 			fprintf(fd_conf,">           >%02d\n", index+1);
 		else {
 			time_hms(&time);

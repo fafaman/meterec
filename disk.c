@@ -257,7 +257,7 @@ unsigned int fill_buffer(unsigned int *opos , struct meterec_s *meterec) {
 int reader_thread(void *d)
 {
     unsigned int i, take, opos, thread_delay, new_buffer_pos;
-	struct meterec_s *meterec ;
+    struct meterec_s *meterec ;
     jack_nframes_t seek, new_playhead_target = -1;
 
     meterec = (struct meterec_s *)d ;
@@ -290,7 +290,7 @@ int reader_thread(void *d)
 
     /* seek audio back and forth upon user request */
     seek = meterec->seek.disk_playhead_target;
-    if (seek != -1) {
+    if (seek != (unsigned int)(-1) ) {
 
       /* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
       meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - BUF_SIZE - 1;
@@ -333,7 +333,7 @@ int reader_thread(void *d)
 
     i = fill_buffer(&opos, meterec);
 
-    if ((new_buffer_pos!=-1) && (meterec->read_disk_buffer_thread_pos != i)) {
+    if ((new_buffer_pos!=(unsigned int)(-1)) && (meterec->read_disk_buffer_thread_pos != i)) {
       pthread_mutex_lock( &meterec->seek.mutex );
       meterec->seek.jack_buffer_target = new_buffer_pos;
       meterec->seek.playhead_target = new_playhead_target ;

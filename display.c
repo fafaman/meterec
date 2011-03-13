@@ -196,10 +196,10 @@ void display_meter(struct meterec_s *meterec, unsigned int y_pos, int display_na
 
 }
 
-void init_display_scale( int width )
+void init_display_scale( unsigned int width )
 {
 
-  int i=0;
+  unsigned int i=0;
   const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
   
   char * scale0 ;
@@ -376,7 +376,7 @@ void display_status(struct meterec_s *meterec, unsigned int playhead) {
   
 }
 
-void display_session(struct meterec_s *meterec, int y_pos, int x_pos) 
+void display_session(struct meterec_s *meterec, unsigned int y_pos, unsigned int x_pos) 
 {
   unsigned int take, port;
 
