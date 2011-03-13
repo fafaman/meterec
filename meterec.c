@@ -342,13 +342,13 @@ void init_takes(struct meterec_s *meterec) {
 void pre_option_init(struct meterec_s *meterec) {
 
   meterec->n_tracks = 0;
-  meterec->connect_ports = 0;
+  meterec->connect_ports = 1;
   
   meterec->record_sts = OFF;
   meterec->record_cmd = STOP;
 
   meterec->playback_sts = OFF;
-  meterec->playback_cmd = STOP;
+  meterec->playback_cmd = START;
   
   meterec->client = NULL;
   meterec->fd_log = NULL;
@@ -1081,8 +1081,8 @@ static int usage( const char * progname )
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
   fprintf(stderr, "       -o      is the record output format (w64, wav, flag, ogg) [%s]\n",output_ext);
   fprintf(stderr, "       -t      record a new take at start\n");
-  fprintf(stderr, "       -p      playback at start\n");
-  fprintf(stderr, "       -c      connect to jack ports listed in .mrec file\n");
+  fprintf(stderr, "       -p      no playback at start\n");
+  fprintf(stderr, "       -c      do not connect to jack ports listed in .mrec file\n");
   fprintf(stderr, "\n\n");
   fprintf(stderr, "Command keys:\n");
   fprintf(stderr, "       q       quit\n");
@@ -1148,10 +1148,10 @@ int main(int argc, char *argv[])
       case 't':
         meterec->record_cmd = START;
       case 'p':
-        meterec->playback_cmd = START;
+        meterec->playback_cmd = STOP;
         break;
       case 'c':
-        meterec->connect_ports = 1;
+        meterec->connect_ports = 0;
         break;
       case 'h':
       case 'v':
