@@ -252,7 +252,7 @@ int changed_takes_to_playback(struct meterec_s *meterec) {
 
 }
 
-void compute_tracks_to_record() {
+void compute_tracks_to_record(struct meterec_s *meterec) {
   
   unsigned int port;
   
@@ -757,7 +757,7 @@ void start_playback() {
 
 void start_record() {
 
-  compute_tracks_to_record();
+  compute_tracks_to_record(meterec);
   
   if (meterec->n_tracks) {
   
@@ -776,26 +776,24 @@ void stop() {
 
   if (meterec->record_sts) {
     meterec->record_cmd = STOP ;
-  
+    
     fprintf(meterec->fd_log, "Waiting end of recording.\n");
     while(meterec->record_cmd || meterec->record_sts) {
       fsleep( 0.05f );
     }
     pthread_join(wr_dt, NULL);
-
-    /* get ready for the next take */
-    meterec->n_takes ++;
+  
   }
   
   if (meterec->playback_sts) {
     meterec->playback_cmd = STOP ;
-
+    
     fprintf(meterec->fd_log, "Waiting end of playback.\n");
     while(meterec->playback_cmd || meterec->playback_sts) {
       fsleep( 0.05f );
     }
     pthread_join(rd_dt, NULL);
-
+  
   }
   
   save_conf(meterec);
@@ -1022,6 +1020,11 @@ int keyboard_thread(void *arg)
           start_record();    
           start_playback();
         }
+        break;
+      
+      case '1':
+        if (meterec->record_sts == ONGOING) 
+          meterec->record_cmd = RESTART;
         break;
         
       case ' ':

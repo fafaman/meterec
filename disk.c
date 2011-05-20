@@ -13,13 +13,50 @@
 ** THREADs
 */
 
+void write_disk_close_fd(struct meterec_s *meterec, SNDFILE *out) {
+
+    sf_write_sync(out);
+    sf_close(out);
+    
+    meterec->n_takes ++;
+}
+
+SNDFILE* write_disk_open_fd(struct meterec_s *meterec) {
+    
+    SF_INFO info;
+    SNDFILE *out;
+    char *take_file ;
+    
+    info.format = meterec->output_fmt;
+    info.channels = meterec->n_tracks;
+    info.samplerate = jack_get_sample_rate(meterec->client);
+    
+    take_file = meterec->takes[meterec->n_takes + 1].take_file;
+    
+    if (!sf_format_check(&info)) {
+      fprintf(meterec->fd_log, "Writer thread: Cannot open take file '%s' for writing (%d, %d, %d)\n",take_file,info.format, info.channels, info.samplerate);
+      meterec->record_sts = OFF;
+      exit_on_error("Writer thread: Output file format error\n" );
+      return (SNDFILE*)NULL;
+    }
+    
+    out = sf_open(take_file, SFM_WRITE, &info);
+    if (!out) {
+      fprintf(meterec->fd_log,"Writer thread: Cannot open '%s' file for writing",take_file);
+      meterec->record_sts = OFF;
+      return (SNDFILE*)NULL;
+    }
+    
+    fprintf(meterec->fd_log,"Writer thread: Opened %d track(s) file '%s' for writing.\n", meterec->n_tracks, take_file);
+    
+    return out;
+}
+
 int writer_thread(void *d)
 {
     unsigned int i, port, opos, track, thread_delay;
     SNDFILE *out;
-    SF_INFO info;
     float buf[BUF_SIZE * MAX_PORTS];
-    char *take_file ;
     struct meterec_s *meterec ;
 
     meterec = (struct meterec_s *)d ;
@@ -31,28 +68,10 @@ int writer_thread(void *d)
     thread_delay = set_thread_delay(meterec->client);
 
     /* Open the output file */
-    info.format = meterec->output_fmt;
-    info.channels = meterec->n_tracks;
-    info.samplerate = jack_get_sample_rate(meterec->client);
+    out = write_disk_open_fd(meterec);
     
-
-    take_file = meterec->takes[meterec->n_takes + 1].take_file;
-    
-    if (!sf_format_check(&info)) {
-      fprintf(meterec->fd_log, "Writer thread: Cannot open take file '%s' for writing (%d, %d, %d)\n",take_file,info.format, info.channels, info.samplerate);
-      meterec->record_sts = OFF;
-      exit_on_error("Writer thread: Output file format error\n" );
-      return 0;
-    }
-    
-    out = sf_open(take_file, SFM_WRITE, &info);
-    if (!out) {
-      fprintf(meterec->fd_log,"Writer thread: Cannot open '%s' file for writing",take_file);
-      meterec->record_sts = OFF;
-      return 0;
-    }
-    
-    fprintf(meterec->fd_log,"Writer thread: Opened %d track(s) file '%s' for writing.\n", meterec->n_tracks, take_file);
+    if (!out)
+        return 1;
     
     /* Start writing the RT ringbuffer to disk */
     meterec->record_sts = ONGOING ;
@@ -75,17 +94,26 @@ int writer_thread(void *d)
       
       if (opos == BUF_SIZE) {
         sf_writef_float(out, buf, opos);
-	opos = 0;
+        opos = 0;
       }
-
+      
       meterec->write_disk_buffer_thread_pos = i;
+      
+      if (meterec->record_cmd == RESTART ) {
+        write_disk_close_fd(meterec, out);
+        compute_tracks_to_record(meterec);
+        out = write_disk_open_fd(meterec);
+        /*this should be protected with a mutex or so...*/
+        meterec->record_cmd = START;
+      }
       
       /* run until empty buffer after a stop requets */
       if (meterec->record_sts == STOPING)
         if ( meterec->write_disk_buffer_thread_pos == meterec->write_disk_buffer_process_pos ) {
           sf_writef_float(out, buf, opos);
-	  break;
+          break;
         }
+    
       if (meterec->record_cmd == STOP)
         meterec->record_sts = STOPING ;
          
@@ -93,13 +121,12 @@ int writer_thread(void *d)
       
     }
     
-    sf_write_sync(out);
-    sf_close(out);
-
+    write_disk_close_fd(meterec, out);
+    
     fprintf(meterec->fd_log,"Writer thread: done.\n");
-
+    
     meterec->record_sts = OFF;
-
+    
     return 0;
 }
 
