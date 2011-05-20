@@ -839,6 +839,8 @@ int keyboard_thread(void *arg)
   while (1) {
 
     key = wgetch(stdscr);
+    
+    fprintf(meterec->fd_log, "Key pressed: %d '%c'\n",key,key);
 
     if (edit_mode) {
       
@@ -1022,7 +1024,7 @@ int keyboard_thread(void *arg)
         }
         break;
       
-      case '1':
+      case 127: /* BACKSPACE */
         if (meterec->record_sts == ONGOING) 
           meterec->record_cmd = RESTART;
         break;
@@ -1082,7 +1084,7 @@ static int usage( const char * progname )
   fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
   fprintf(stderr, "       -s      is session name [%s]\n",session);
   fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
-  fprintf(stderr, "       -o      is the record output format (w64, wav, flag, ogg) [%s]\n",output_ext);
+  fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
   fprintf(stderr, "       -t      record a new take at start\n");
   fprintf(stderr, "       -p      no playback at start\n");
   fprintf(stderr, "       -c      do not connect to jack ports listed in .mrec file\n");
@@ -1091,16 +1093,21 @@ static int usage( const char * progname )
   fprintf(stderr, "       q       quit\n");
   fprintf(stderr, "       <SPACE> start playback; stop playback\n");
   fprintf(stderr, "       <ENTER> start record; stop all\n");
+  fprintf(stderr, "       <BKSPS> create new take while record is ongoing\n");
   fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
   fprintf(stderr, "       n       toggle port names display\n");
   fprintf(stderr, "       m       mute that port playback\n");
   fprintf(stderr, "       M       mute all ports playback\n");
   fprintf(stderr, "       s       mute all but that port playback (solo)\n");
+  fprintf(stderr, "       S       unmute all ports playback\n");
   fprintf(stderr, "       r       toggle REC record mode for that port - record without listening playback\n");
   fprintf(stderr, "       d       toggle DUB record mode for that port - record listening playback\n");
   fprintf(stderr, "       o       toggle OVR record mode for that port - record listening and mixing playback\n");
   fprintf(stderr, "<SHIFT>F1-F12  set time index\n");
   fprintf(stderr, "       F1-F12  Jump to time index\n");
+  fprintf(stderr, "       =>      seek forward 5sec\n");
+  fprintf(stderr, "       <=      seek backward 5sec\n");
+  fprintf(stderr, "       <HOME>  be kind, rewind\n");
   fprintf(stderr, "       <TAB>   edit mode\n");
   fprintf(stderr, "       l       toggle lock for that position\n");
   fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
