@@ -480,6 +480,7 @@ static int update_jack_buffsize(jack_nframes_t nframes, void *arg)
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg)
 {
+  jack_default_audio_sample_t *mon;
   jack_default_audio_sample_t *in;
   jack_default_audio_sample_t *out;
   unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
@@ -519,6 +520,15 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     
   }
 
+  /* get the monitor port buffer*/
+  if (meterec->monitor != NULL) {
+    mon = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->monitor, nframes);
+
+    /* clean buffer */
+    for (i = 0; i < nframes; i++)
+      mon[i] = 0.0f;
+  }
+
   /* get the audio samples, and find the peak sample */
   for (port = 0; port < meterec->n_ports; port++) {
 
@@ -533,6 +543,12 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
     out = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->ports[port].output, nframes);
     in = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->ports[port].input, nframes);
 
+    /* copy monitored ports to the monitor port*/
+    if (meterec->monitor != NULL)
+      if (meterec->ports[port].monitor)
+        for (i = 0; i < nframes; i++)
+          mon[i] += in[i];
+
 
     if (playback_sts_local==ONGOING) {
     
@@ -542,17 +558,17 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
       
         if (meterec->ports[port].mute) {
 
-		  /* be silent */
-		  out[i] = 0;
+          /* be silent */
+          out[i] = 0.0f;
 
-		} else {
-		  /* Empty read disk buffer */
+        } else {
+          /* Empty read disk buffer */
           out[i] = meterec->ports[port].read_disk_buffer[read_pos];
 
           /* update buffer pointer */
           read_pos = (read_pos + 1) & (DISK_SIZE - 1);
-		}
-		
+       }
+
         /* compute peak of input (recordable) data*/
         s = fabs(in[i] * 1.0f) ;
         if (s > meterec->ports[port].peak_in) {
@@ -591,17 +607,17 @@ static int process_jack_data(jack_nframes_t nframes, void *arg)
       for (i = 0; i < nframes; i++) {
       
         out[i] = 0.0f ;
-      
+        
         /* compute peak */
         s = fabs(in[i] * 1.0f) ;
         if (s > meterec->ports[port].peak_in) {
           meterec->ports[port].peak_in = s;
         }
-        
-      } 
-       
+      
+      }
+    
     }
-        
+  
   }
 
 
@@ -671,6 +687,19 @@ void create_output_port(jack_client_t *client, unsigned int port) {
   fprintf(meterec->fd_log,"Creating output port '%s'.\n", port_name );
 
   if (!(meterec->ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
+    fprintf(meterec->fd_log, "Cannot register output port '%s'.\n",port_name);
+    exit_on_error("Cannot register output port");
+  }
+  
+}
+
+void create_monitor_port(jack_client_t *client) {
+  
+  char port_name[] = "monitor" ;
+
+  fprintf(meterec->fd_log,"Creating output port '%s'.\n", port_name );
+
+  if (!(meterec->monitor = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
     fprintf(meterec->fd_log, "Cannot register output port '%s'.\n",port_name);
     exit_on_error("Cannot register output port");
   }
@@ -973,7 +1002,7 @@ int keyboard_thread(void *arg)
       }
 
     }
-	  
+ 
     switch (key) {
     
       case 'M' : /* toggle mute on all ports */
@@ -983,32 +1012,39 @@ int keyboard_thread(void *arg)
         else 
           for ( port=0 ; port < meterec->n_ports ; port++) 
             meterec->ports[port].mute = 1;
-		break;
+      break;
 
       case 'm' : /* toggle mute on this port */
         meterec->ports[y_pos].mute = !meterec->ports[y_pos].mute;
-		break;
+      break;
 
       case 'S' : /* unmute all ports */
         for ( port=0 ; port < meterec->n_ports ; port++) 
           meterec->ports[port].mute = 0;
-		break;
-	    
+      break;
+
       case 's' : /* mute all but this port */
         for ( port=0 ; port < meterec->n_ports ; port++) 
           meterec->ports[port].mute = 1;
-		meterec->ports[y_pos].mute = 0;
-		break;
+        meterec->ports[y_pos].mute = 0;
+      break;
 
-			
       case KEY_UP :
-        if ( y_pos > 0 )
+        meterec->ports[y_pos].monitor = 0;
+        if ( y_pos == 0 )
+          y_pos = meterec->n_ports - 1;
+        else
           y_pos--;
+        meterec->ports[y_pos].monitor = 1;
         break;
         
       case KEY_DOWN :
-        if ( y_pos < meterec->n_ports - 1 )
+        meterec->ports[y_pos].monitor = 0;
+        if ( y_pos == meterec->n_ports - 1 )
+          y_pos = 0;
+        else 
           y_pos++;
+        meterec->ports[y_pos].monitor = 1;
         break;
       
       case 9: /* TAB */
@@ -1242,6 +1278,8 @@ int main(int argc, char *argv[])
     exit_on_error("Cannot activate client");
   }
 
+  create_monitor_port(meterec->client);
+  
   load_conf(meterec);
 /*
   load_setup(meterec);

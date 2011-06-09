@@ -155,6 +155,7 @@ struct port_s
   
   int record;
   int mute;
+  int monitor;
 
   unsigned int playback_take;
 
@@ -206,6 +207,8 @@ struct meterec_s
 
   jack_client_t *client;
   jack_nframes_t jack_buffsize;
+
+  jack_port_t *monitor;
   
   struct seek_s seek;
   
@@ -233,4 +236,5 @@ void time_hms(struct time_s * time);
 
 void create_input_port(jack_client_t *client, unsigned int port);
 void create_output_port(jack_client_t *client, unsigned int port);
-  
+void create_monitor_port(jack_client_t *client);
+
