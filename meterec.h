@@ -22,6 +22,9 @@
 
 
 
+/* maximum number of connections per port - no known limit, only extra memory used */
+#define MAX_CONS 24
+
 /* maximum number of ports - no known limit, only extra memory used */
 #define MAX_PORTS 24
 
@@ -135,7 +138,8 @@ struct port_s
   jack_port_t *input;
   jack_port_t *output;
   
-  char *portmap;
+  unsigned int portmap;
+  char *connections[MAX_CONS];
   char *name;
   
   float *write_disk_buffer;

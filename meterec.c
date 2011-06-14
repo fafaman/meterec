@@ -278,7 +278,7 @@ void compute_tracks_to_record(struct meterec_s *meterec) {
 
 void init_ports(struct meterec_s *meterec)
 {
-  unsigned int port;
+  unsigned int port, con;
   
   meterec->n_ports = 0;
 
@@ -287,7 +287,10 @@ void init_ports(struct meterec_s *meterec)
     meterec->ports[port].input = NULL;
     meterec->ports[port].output = NULL;
     
-    meterec->ports[port].portmap = NULL;
+    meterec->ports[port].portmap = 0;
+    for (con = 0; con < MAX_CONS; con++)
+      meterec->ports[port].connections[con] = NULL;
+    
     meterec->ports[port].name = NULL;
     
     meterec->ports[port].write_disk_buffer = NULL;
@@ -735,6 +738,11 @@ void connect_any_port(jack_client_t *client, char *port_name, unsigned int port)
 	}
 	
 	return;
+	
+  } else {
+	meterec->ports[port].connections[meterec->ports[port].portmap] = (char *) malloc( strlen(port_name) + 1 );
+	strcpy(meterec->ports[port].connections[meterec->ports[port].portmap], port_name);
+	meterec->ports[port].portmap += 1;
   }
   
   if (!meterec->connect_ports)
@@ -825,7 +833,7 @@ void stop() {
   
   }
   
-  save_conf(meterec);
+//  save_conf(meterec);
 
 }
 
@@ -1280,11 +1288,13 @@ int main(int argc, char *argv[])
 
   create_monitor_port(meterec->client);
   
-  load_conf(meterec);
-/*
   load_setup(meterec);
   load_session(meterec);
-*/
+  save_conf(meterec);
+  
+  //trial
+  load_conf(meterec);
+exit(0);
   pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
 
   /* Start threads doing disk accesses */

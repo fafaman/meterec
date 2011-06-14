@@ -11,11 +11,18 @@ then
 
 	echo Creating $CONF_FILE file mapping all jack system ports
 
+	INDEX=""
+	echo "ports=[">> $CONF_FILE
 	for CAPTURE in `jack_lsp system:capture | grep system`
 	do
+		if [ -n "$INDEX" ]
+		then
+			echo "," >> $CONF_FILE
+		fi
 		INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
-		echo R\|$INDEX $CAPTURE `jack_lsp system:playback $INDEX | grep system | head -1` >> $CONF_FILE
+		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=\"n\"\; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"track $INDEX\"\; \} >> $CONF_FILE
 	done
+	echo "];">> $CONF_FILE
 
 else 
   echo "Usage: meterec-init-conf <session-name>"

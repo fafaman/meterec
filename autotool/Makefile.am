@@ -1,8 +1,8 @@
 bin_PROGRAMS = meterec
 bin_SCRIPTS = meterec-init-conf meterec-pass-thru
 
-AM_CFLAGS = -g -Wall -Wextra @JACK_CFLAGS@ @SNDFILE_CFLAGS@
-AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@
+AM_CFLAGS = -g -Wall -Wextra @JACK_CFLAGS@ @SNDFILE_CFLAGS@ @LIBCONFIG_CFLAGS@
+AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@
 
 meterec_SOURCES = meterec.c display.c disk.c conf.c
-meterec_LDADD = @JACK_LIBS@ @SNDFILE_LIBS@
+meterec_LDADD = @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@
