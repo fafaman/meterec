@@ -398,6 +398,18 @@ int find_take_name(char *session, unsigned int take, char * name) {
 
 }
 
+int has_libconfig(char *mrec_config) {
+
+  FILE *fd_conf;
+    
+  if ( (fd_conf = fopen(mrec_config,"r")) == NULL )
+    return 0;
+  
+  fclose(fd_conf);
+  return 1;
+
+}
+
 void post_option_init(struct meterec_s *meterec, char *session) {
 
   unsigned int take, index ;
@@ -833,7 +845,7 @@ void stop() {
   
   }
   
-//  save_conf(meterec);
+  save_conf(meterec);
 
 }
 
@@ -872,7 +884,7 @@ int keyboard_thread(void *arg)
   cbreak();
   nodelay(stdscr, FALSE);
   keypad(stdscr, TRUE);
-  
+
   while (1) {
 
     key = wgetch(stdscr);
@@ -1069,6 +1081,7 @@ int keyboard_thread(void *arg)
         break;
       
       case 127: /* BACKSPACE */
+      case 263: /* BACKSPACE */
         if (meterec->record_sts == ONGOING) 
           meterec->record_cmd = RESTART;
         break;
@@ -1286,15 +1299,18 @@ int main(int argc, char *argv[])
     exit_on_error("Cannot activate client");
   }
 
+  if ( has_libconfig(meterec->conf_file) ) {
+    load_conf(meterec);
+  } else {
+    load_setup(meterec);
+    load_session(meterec);
+    save_conf(meterec);
+    fprintf(meterec->fd_log, "Converted old configuration to %s.\n", meterec->conf_file );
+    exit_on_error("Converted old configuration");
+  }
+    
   create_monitor_port(meterec->client);
   
-  load_setup(meterec);
-  load_session(meterec);
-  save_conf(meterec);
-  
-  //trial
-  load_conf(meterec);
-exit(0);
   pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
 
   /* Start threads doing disk accesses */
