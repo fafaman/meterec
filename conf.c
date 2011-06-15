@@ -30,6 +30,11 @@
  
 #include "meterec.h"
 
+
+/*
+** Legacy configuration files scheme ( .session.sess / session.conf )
+*/
+
 void parse_port_con(struct meterec_s *meterec, FILE *fd_conf, unsigned int port)
 {
 
@@ -167,50 +172,6 @@ void load_setup(struct meterec_s *meterec)
   
 }
 
-void parse_time(struct meterec_s *meterec, unsigned int index, const char *time_str) {
-
-  struct time_s time;
-  
-  if (sscanf(time_str, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ms) != 4)
-    return;
-     
-  time.rate = jack_get_sample_rate(meterec->client);
-  time_frm(&time);
-  
-  meterec->seek.index[index] = time.frm;
-  
-}
-
-
-unsigned int parse_takes(struct meterec_s *meterec, unsigned int port, const char *takes) {
-
-	unsigned int take = 1, track;
-	
-	while ( *takes ) {
-		switch (*takes) {
-			case '-' :
-				break;
-			case 'l' :
-				meterec->takes[take].port_has_lock[port] = 1 ;
-				break;
-			case 'L' :
-				meterec->takes[take].port_has_lock[port] = 1 ;
-			case 'X' :
-				track = meterec->takes[take].ntrack ;
-				meterec->takes[take].track_port_map[track] = port ;
-				meterec->takes[take].port_has_track[port] = 1 ;
-				meterec->takes[take].ntrack++;
-				meterec->ports[port].playback_take = take ;
-			default :
-				break;
-		}
-		
-		takes ++;
-		take ++;
-	}
-	return take;
-}
-
 void load_session(struct meterec_s *meterec)
 {
 
@@ -266,36 +227,10 @@ void load_session(struct meterec_s *meterec)
   
 }
 
+/*
+** New configuration file scheme ( session.mrec )
+*/
 
-void session_tail(struct meterec_s *meterec, FILE * fd_conf) 
-{
-  unsigned int ntakes, take, step=1, i;
-  char *spaces;
-  
-  ntakes = meterec->n_takes+1;
-
-  while (step < ntakes+1) {
-
-    spaces = (char *) malloc( step );
-    
-    for (i=0; i<step; i++) {
-      spaces[i]= ' ' ;
-    }
-    spaces[step-1]= '\0';
-    
-    for (take=0; take<ntakes+1; take=take+step) {
-      fprintf(fd_conf,"%d%s",(take/step)%10, spaces);
-    }
-    fprintf(fd_conf,"\n");
-    step = step * 10;
-    
-    free(spaces);
-    
-  }
-  
-  fprintf(fd_conf,"\n");
-
-}
 
 void save_conf(struct meterec_s *meterec) {
 	
@@ -373,7 +308,7 @@ void save_conf(struct meterec_s *meterec) {
 	  
 }
 
-int rec_to_mode(const char *record) {
+int parse_record(const char *record) {
 	if (strcmp(record, "---") == 0) 
 		return OFF;
 	if (strcmp(record, "rec") == 0) 
@@ -386,26 +321,69 @@ int rec_to_mode(const char *record) {
 	return OFF;	
 };
 
+void parse_time(struct meterec_s *meterec, unsigned int index, const char *time_str) {
+
+  struct time_s time;
+  
+  if (sscanf(time_str, "%u:%u:%u.%u%*s", &time.h, &time.m, &time.s, &time.ms) != 4)
+    return;
+     
+  time.rate = jack_get_sample_rate(meterec->client);
+  time_frm(&time);
+  
+  meterec->seek.index[index] = time.frm;
+  
+}
+
+
+unsigned int parse_takes(struct meterec_s *meterec, unsigned int port, const char *takes) {
+
+	unsigned int take = 1, track;
+	
+	while ( *takes ) {
+		switch (*takes) {
+			case '-' :
+				break;
+			case 'l' :
+				meterec->takes[take].port_has_lock[port] = 1 ;
+				break;
+			case 'L' :
+				meterec->takes[take].port_has_lock[port] = 1 ;
+			case 'X' :
+				track = meterec->takes[take].ntrack ;
+				meterec->takes[take].track_port_map[track] = port ;
+				meterec->takes[take].port_has_track[port] = 1 ;
+				meterec->takes[take].ntrack++;
+				meterec->ports[port].playback_take = take ;
+			default :
+				break;
+		}
+		
+		takes ++;
+		take ++;
+	}
+	return take;
+}
+
+
 void load_conf(struct meterec_s *meterec) {
 	
-	char *file;
-	char fn[4];
 	unsigned int port=0, con=0, index=0;
 	config_t cfg, *cf;
 	const config_setting_t *port_list, *port_group, *connection_list, *index_group ;
 	unsigned int port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
+	int mute=0;
+	char fn[4];
 				
-	file = meterec->conf_file;
-	
-	fprintf(meterec->fd_log,"Loading '%s'\n", file);
+	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
 	
 	cf = &cfg;
 	config_init(cf);
 
-	if ( config_read_file(cf, file) == CONFIG_FALSE ) {
-		fprintf(meterec->fd_log, "libconfig: error in '%s' %d - %s\n",
-			file,
+	if (!config_read_file(cf, meterec->conf_file)) {
+		fprintf(meterec->fd_log, "Error in '%s' %d - %s\n",
+			meterec->conf_file,
 			config_error_line(cf),
 			config_error_text(cf));
 		
@@ -416,10 +394,12 @@ void load_conf(struct meterec_s *meterec) {
 	
 	index_group = config_lookup(cf, "indexes");
 	
-	for (index=0; index<12; index++) {
-		sprintf(fn, "f%d", index+1);
-		if (config_setting_lookup_string(index_group, fn, &time))
-			parse_time(meterec, index, time);
+	if (index_group) {
+		for (index=0; index<12; index++) {
+			sprintf(fn, "f%d", index+1);
+			if (config_setting_lookup_string(index_group, fn, &time))
+				parse_time(meterec, index, time);
+		}
 	}
 	
 	port_list = config_lookup(cf, "ports");
@@ -429,7 +409,7 @@ void load_conf(struct meterec_s *meterec) {
 		port_group = config_setting_get_elem(port_list, port);
 		
 		if (port_group) {
-		
+			
 			// allocate memory for this port
 			meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 			meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
@@ -438,30 +418,32 @@ void load_conf(struct meterec_s *meterec) {
 			create_input_port ( meterec->client, port );
 			create_output_port ( meterec->client, port );
 						
-			config_setting_lookup_bool(port_group, "mute", &meterec->ports[port].mute);
-		
-			config_setting_lookup_string(port_group, "name", &name);
-			meterec->ports[port].name = (char *) malloc( strlen(name) + 1 ); 
-			strcpy(meterec->ports[port].name, name); 
+			if (config_setting_lookup_string(port_group, "takes", &takes))
+				meterec->n_takes = parse_takes(meterec, port, takes);
 			
-			config_setting_lookup_string(port_group, "record", &record);
-			meterec->ports[port].record = rec_to_mode(record);
-		
-			config_setting_lookup_string(port_group, "takes", &takes);
-			meterec->n_takes = parse_takes(meterec, port, takes);
-		
-			fprintf(meterec->fd_log,"Port %d %s %s %s\n", port, meterec->ports[port].mute?"muted":"unmuted", record, name);
-		
+			if (config_setting_lookup_bool(port_group, "mute", &mute))
+				meterec->ports[port].mute = mute;
+			
+			if (config_setting_lookup_string(port_group, "record", &record))
+				meterec->ports[port].record = parse_record(record);
+			
+			if (config_setting_lookup_string(port_group, "name", &name)) {
+				meterec->ports[port].name = (char *) malloc( strlen(name) + 1 ); 
+				strcpy(meterec->ports[port].name, name); 
+			}
+			
 			connection_list = config_setting_get_member(port_group, "connections");
 			connection_list_len = config_setting_length(connection_list); 
-		
+			
 			for (con=0; con<connection_list_len; con++) {
 				port_name = config_setting_get_string_elem(connection_list, con);
-				meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
-				strcpy(meterec->ports[port].connections[con], port_name);
 				
-				// connect to other ports
-				connect_any_port(meterec->client, (char *)port_name, port);
+				if (port_name)
+					meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
+					strcpy(meterec->ports[port].connections[con], port_name);
+					
+					// connect to other ports
+					connect_any_port(meterec->client, (char *)port_name, port);
 			}
 			meterec->ports[port].portmap = con;
 		}

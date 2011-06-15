@@ -1,31 +1,32 @@
 #!/bin/bash
 
-if [ -n "$1" ]
-then
-
+if [ -n "$1" ]; then
+	
 	CONF_FILE=$1.mrec
-
+	
 	rm -f $CONF_FILE;
-
 	touch $CONF_FILE;
-
+	
 	echo Creating $CONF_FILE file mapping all jack system ports
-
+	
 	INDEX=""
-	echo "ports=[">> $CONF_FILE
+	
+	echo "ports=(">> $CONF_FILE
 	for CAPTURE in `jack_lsp system:capture | grep system`
 	do
-		if [ -n "$INDEX" ]
-		then
+	
+		if [ -n "$INDEX" ]; then
 			echo "," >> $CONF_FILE
 		fi
+		
 		INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
-		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=\"n\"\; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"track $INDEX\"\; \} >> $CONF_FILE
+		
+		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=false; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"\"\; \} >> $CONF_FILE
+	
 	done
-	echo "];">> $CONF_FILE
-
-else 
-  echo "Usage: meterec-init-conf <session-name>"
+	echo ");">> $CONF_FILE
+	
+else
+	echo "Usage: meterec-init-conf <session-name>"
 	exit 1
-
 fi

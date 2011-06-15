@@ -296,6 +296,7 @@ void init_ports(struct meterec_s *meterec)
     meterec->ports[port].write_disk_buffer = NULL;
     meterec->ports[port].read_disk_buffer = NULL;
     meterec->ports[port].record = OFF;
+    meterec->ports[port].mute = OFF;
     
     meterec->ports[port].peak_out = 0.0f;
     meterec->ports[port].db_out = 0.0f;
