@@ -22,7 +22,7 @@
 
 
 
-/* maximum number of connections per port - no known limit, only extra memory used */
+/* maximum number of connections per port - no known limit*/
 #define MAX_CONS 24
 
 /* maximum number of ports - no known limit, only extra memory used */
