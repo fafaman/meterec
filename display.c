@@ -395,7 +395,10 @@ void display_session(struct meterec_s *meterec, unsigned int y_pos, unsigned int
   for (port=0; port<meterec->n_ports; port++) {
   
     if (meterec->ports[port].record) 
-      color_set(YELLOW, NULL);
+      if (meterec->record_sts == ONGOING)
+        color_set(RED, NULL);
+      else 
+        color_set(YELLOW, NULL);
     else 
       color_set(GREEN, NULL);
     
