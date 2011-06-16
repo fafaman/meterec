@@ -300,6 +300,8 @@ void save_conf(struct meterec_s *meterec) {
 	}
 	fprintf(fd_conf, "};\n\n");
 	
+	fprintf(fd_conf, "version=1;\n\n");
+	
 	fclose(fd_conf);
 	
 }

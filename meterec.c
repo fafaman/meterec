@@ -44,8 +44,8 @@
 
 WINDOW * mainwin;
 
-int edit_mode = 0, display_names = 1;
-unsigned int x_pos = 0, y_pos = 0;
+int edit_mode=0, display_names=1, exit_code=0;
+unsigned int x_pos=0, y_pos=0;
 int running = 1;
 
 static unsigned long playhead = 0 ;
@@ -81,6 +81,8 @@ void cleanup_jack(void) {
 				fprintf(meterec->fd_log,"Disconnecting input port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].input), all_ports[i] );
 				jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].input));
 			}
+			
+			free(all_ports);
 		}
 		if (meterec->ports[port].output != NULL ) {
 			
@@ -90,6 +92,8 @@ void cleanup_jack(void) {
 				fprintf(meterec->fd_log,"Disconnecting output port '%s' from '%s'.\n", jack_port_name(meterec->ports[port].output), all_ports[i] );
 				jack_disconnect(meterec->client, all_ports[i], jack_port_name(meterec->ports[port].output));
 			}
+			
+			free(all_ports);
 		}
 	}
 	
@@ -112,25 +116,20 @@ void cleanup_curse(void) {
 static void cleanup(int sig) {
 	
 	stop();
+	running = 0;
 	cleanup_jack();
 	cleanup_curse();
 	fclose(meterec->fd_log);
 	(void) signal(sig, SIG_DFL);
 	
-	exit(0);
-	
 }
 
 void exit_on_error(char * reason) {
 	
-	stop();
 	fprintf(meterec->fd_log, "Error: %s\n", reason);
-	cleanup_jack();
-	cleanup_curse();
-	fclose(meterec->fd_log);
 	printf("Error: %s\n", reason);
-	
-	exit(1);
+	exit_code = 1;
+	cleanup(0);
 	
 }
 
@@ -281,6 +280,7 @@ void init_ports(struct meterec_s *meterec) {
 		
 		meterec->ports[port].write_disk_buffer = NULL;
 		meterec->ports[port].read_disk_buffer = NULL;
+		meterec->ports[port].monitor = OFF;
 		meterec->ports[port].record = OFF;
 		meterec->ports[port].mute = OFF;
 		
@@ -311,6 +311,7 @@ void init_takes(struct meterec_s *meterec) {
 	
 	for (take=0; take<MAX_TAKES; take++) {
 		
+		meterec->takes[take].take_file = NULL;
 		meterec->takes[take].take_fd = NULL;
 		meterec->takes[take].buf = NULL;
 		meterec->takes[take].info.format = 0;
@@ -336,6 +337,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	
 	meterec->n_tracks = 0;
 	meterec->connect_ports = 1;
+	
+	meterec->monitor = NULL;
 	
 	meterec->record_sts = OFF;
 	meterec->record_cmd = STOP;
@@ -368,7 +371,7 @@ void pre_option_init(struct meterec_s *meterec) {
 	
 }
 
-int find_take_name(char *session, unsigned int take, char * name) {
+int find_take_name(char *session, unsigned int take, char **name) {
 	
 	struct dirent *entry;
 	DIR *dp;
@@ -376,27 +379,30 @@ int find_take_name(char *session, unsigned int take, char * name) {
 	char *pattern;
 	
 	pattern = (char *) malloc( strlen(session) + strlen("_0000.") + 1 );
-	sprintf(pattern,"%s_%04d.",session,take);
+	sprintf(pattern,"%s_%04d.", session, take);
 	
 	dp = opendir(current);
 	
 	if (dp == NULL) {
 		perror("opendir");
-		return -1;
+		return 0;
 	}
 	
 	while((entry = readdir(dp)))
 		if (strncmp(entry->d_name, pattern, strlen(pattern)) == 0) {
+			
+			*name = (char *) malloc( strlen(entry->d_name) + 1);
+			strcpy(*name, entry->d_name);
+			
 			closedir(dp);
 			free(pattern);
-			free(name);
-			name = (char *) malloc( strlen(entry->d_name) );
-			strcpy(name, entry->d_name);
-		return 1;
+			
+			return 1;
 		}
 	
 	closedir(dp);
 	free(pattern);
+	
 	return 0;
 	
 }
@@ -414,8 +420,6 @@ int file_exists(char *file) {
 }
 
 void post_option_init(struct meterec_s *meterec, char *session) {
-	
-	unsigned int take;
 	
 	meterec->session_file = (char *) malloc( strlen(session) + strlen("..sess") + 1 );
 	sprintf(meterec->session_file,".%s.sess",session);
@@ -456,18 +460,24 @@ void post_option_init(struct meterec_s *meterec, char *session) {
 		exit(1);
 	}
 	
+}
+
+void seek_existing_takes(struct meterec_s *meterec, char *session) {
+	
+	unsigned int take;
+	
 	/* this needs to be moved at config file reading time and file creation time */
 	for (take=1; take<MAX_TAKES; take++) {
-		meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.????") + 1 );
-		if ( find_take_name(session, take, meterec->takes[take].take_file) ) 
-			printf("Found existing file '%s' for take %d\n",meterec->takes[take].take_file, take);
-		else 
-			sprintf(meterec->takes[take].take_file,"%s_%04d.%s",session,take, meterec->output_ext);
+		
+		if ( find_take_name(session, take, &meterec->takes[take].take_file) ) 
+			fprintf(meterec->fd_log, "Found existing file '%s' for take %d\n", meterec->takes[take].take_file, take);
+		else {
+			meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.????") + 1 );
+			sprintf(meterec->takes[take].take_file, "%s_%04d.%s", session, take, meterec->output_ext);
+		}
 	}
 	
 }
-
-
 
 /******************************************************************************
 ** JACK callback process
@@ -856,7 +866,7 @@ int keyboard_thread(void *arg) {
 	nodelay(stdscr, FALSE);
 	keypad(stdscr, TRUE);
 	
-	while (1) {
+	while (running) {
 	
 		key = wgetch(stdscr);
 		
@@ -1230,7 +1240,8 @@ int main(int argc, char *argv[])
 	fprintf(meterec->fd_log, "Connecting to jackd...\n");
 	if ((meterec->client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
 		fprintf(meterec->fd_log, "Failed to start '%s' jack client: %d\n", jackname, status);
-		exit_on_error("Failed to start jack client. Is jackd running?");
+		fprintf(stderr,"Failed to start '%s' jack client: %d - Is jackd running?\n", jackname, status);
+		exit(1);
 	}
 	fprintf(meterec->fd_log,"Registered as '%s'.\n", jack_get_client_name( meterec->client ) );
 	
@@ -1290,6 +1301,8 @@ int main(int argc, char *argv[])
 	
 	pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
 	
+	seek_existing_takes(meterec, session);
+	
 	/* Start threads doing disk accesses */
 	if (meterec->record_cmd==START) {
 		
@@ -1331,7 +1344,7 @@ int main(int argc, char *argv[])
 	cleanup(0);
 	pthread_join(kb_dt, NULL);
 	
-	return 0;
+	return exit_code;
 	
 }
 
