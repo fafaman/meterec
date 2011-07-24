@@ -21,10 +21,11 @@ if [ -n "$1" ]; then
 		
 		INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
 		
-		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=false; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"\"\; \} >> $CONF_FILE
+		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=false\; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"\"\; \} >> $CONF_FILE
 	
 	done
-	echo ");">> $CONF_FILE
+	echo ""   >> $CONF_FILE
+	echo ");" >> $CONF_FILE
 	
 else
 	echo "Usage: meterec-init-conf <session-name>"

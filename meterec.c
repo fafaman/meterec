@@ -71,6 +71,9 @@ void cleanup_jack(void) {
 	const char **all_ports;
 	unsigned int i, port;
 	
+	if (meterec->client == NULL)
+		return;
+	
 	for (port = 0; port < meterec->n_ports; port++) {
 		
 		if (meterec->ports[port].input != NULL ) {
@@ -130,7 +133,7 @@ void exit_on_error(char * reason) {
 	printf("Error: %s\n", reason);
 	exit_code = 1;
 	cleanup(0);
-	
+	exit(exit_code);
 }
 
 void time_sprint(struct time_s * time, char * string) {
