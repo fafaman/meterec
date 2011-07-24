@@ -403,52 +403,57 @@ void load_conf(struct meterec_s *meterec) {
 	}
 	
 	port_list = config_lookup(cf, "ports");
-	port_list_len = config_setting_length(port_list);
+	if (port_list) {
+		port_list_len = config_setting_length(port_list);
 	
-	for (port=0; port<port_list_len; port++) {
-		port_group = config_setting_get_elem(port_list, port);
+		for (port=0; port<port_list_len; port++) {
+			port_group = config_setting_get_elem(port_list, port);
 		
-		if (port_group) {
+			if (port_group) {
 			
-			// allocate memory for this port
-			meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-			meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+				// allocate memory for this port
+				meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 				
-			// create input ports
-			create_input_port ( meterec->client, port );
-			create_output_port ( meterec->client, port );
+				// create input ports
+				create_input_port ( meterec->client, port );
+				create_output_port ( meterec->client, port );
 						
-			if (config_setting_lookup_string(port_group, "takes", &takes))
-				meterec->n_takes = parse_takes(meterec, port, takes);
+				if (config_setting_lookup_string(port_group, "takes", &takes))
+					meterec->n_takes = parse_takes(meterec, port, takes);
 			
-			if (config_setting_lookup_bool(port_group, "mute", &mute))
-				meterec->ports[port].mute = mute;
+				if (config_setting_lookup_bool(port_group, "mute", &mute))
+					meterec->ports[port].mute = mute;
 			
-			if (config_setting_lookup_string(port_group, "record", &record))
-				meterec->ports[port].record = parse_record(record);
+				if (config_setting_lookup_string(port_group, "record", &record))
+					meterec->ports[port].record = parse_record(record);
 			
-			if (config_setting_lookup_string(port_group, "name", &name)) {
-				meterec->ports[port].name = (char *) malloc( strlen(name) + 1 ); 
-				strcpy(meterec->ports[port].name, name); 
-			}
+				if (config_setting_lookup_string(port_group, "name", &name)) {
+					meterec->ports[port].name = (char *) malloc( strlen(name) + 1 ); 
+					strcpy(meterec->ports[port].name, name); 
+				}
 			
-			connection_list = config_setting_get_member(port_group, "connections");
-			connection_list_len = config_setting_length(connection_list); 
+				connection_list = config_setting_get_member(port_group, "connections");
+				if (connection_list) {
+					connection_list_len = config_setting_length(connection_list); 
 			
-			for (con=0; con<connection_list_len; con++) {
-				port_name = config_setting_get_string_elem(connection_list, con);
+					for (con=0; con<connection_list_len; con++) {
+						port_name = config_setting_get_string_elem(connection_list, con);
 				
-				if (port_name)
-					meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
-					strcpy(meterec->ports[port].connections[con], port_name);
+						if (port_name) {
+							meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
+							strcpy(meterec->ports[port].connections[con], port_name);
 					
-					// connect to other ports
-					connect_any_port(meterec->client, (char *)port_name, port);
+							// connect to other ports
+							connect_any_port(meterec->client, (char *)port_name, port);
+						}
+					}
+					meterec->ports[port].portmap = con;
+				}
 			}
-			meterec->ports[port].portmap = con;
 		}
-	}
 	
+	}
 	
 	config_destroy(cf);
 		

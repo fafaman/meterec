@@ -27,6 +27,9 @@ if [ -n "$1" ]; then
 	echo ""   >> $CONF_FILE
 	echo ");" >> $CONF_FILE
 	
+	echo "version=1;" >> $CONF_FILE
+
+	
 else
 	echo "Usage: meterec-init-conf <session-name>"
 	exit 1

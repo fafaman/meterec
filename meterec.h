@@ -197,8 +197,13 @@ struct meterec_s
   unsigned int record_cmd;
 
   unsigned int playback_sts;
-  unsigned int playback_cmd;
-
+  unsigned int playback_cmd; 
+  
+  unsigned int curses_sts;
+  unsigned int config_sts;
+  unsigned int jack_sts;
+  
+  
   int connect_ports;
   
   unsigned int n_ports;

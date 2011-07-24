@@ -120,9 +120,15 @@ static void cleanup(int sig) {
 	
 	stop();
 	running = 0;
-	cleanup_jack();
-	cleanup_curse();
+	
+	if (meterec->jack_sts)
+		cleanup_jack();
+	
+	if (meterec->curses_sts)
+		cleanup_curse();
+		
 	fclose(meterec->fd_log);
+	
 	(void) signal(sig, SIG_DFL);
 	
 }
@@ -348,6 +354,10 @@ void pre_option_init(struct meterec_s *meterec) {
 	
 	meterec->playback_sts = OFF;
 	meterec->playback_cmd = START;
+	
+	meterec->jack_sts = OFF;
+	meterec->curses_sts = OFF;
+	meterec->config_sts = OFF;
 	
 	meterec->client = NULL;
 	meterec->fd_log = NULL;
@@ -830,7 +840,8 @@ void stop() {
 	
 	}
 	
-	save_conf(meterec);
+	if (meterec->config_sts) 
+		save_conf(meterec);
 	
 }
 
@@ -1247,6 +1258,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	fprintf(meterec->fd_log,"Registered as '%s'.\n", jack_get_client_name( meterec->client ) );
+
+	meterec->jack_sts = ONGOING;
 	
 	/* Register the signal process callback */
 	jack_set_process_callback(meterec->client, process_jack_data, meterec);
@@ -1272,6 +1285,8 @@ int main(int argc, char *argv[])
 		exit_on_error("Converted old configuration");
 	}
 	
+	meterec->config_sts = ONGOING;
+	
 	create_monitor_port(meterec->client);
 	
 	fprintf(meterec->fd_log, "Starting ncurses interface...\n");
@@ -1282,6 +1297,8 @@ int main(int argc, char *argv[])
 		fprintf(meterec->fd_log, "Error initialising ncurses.\n");
 		exit(1);
 	}
+	
+	meterec->curses_sts = ONGOING;
 	
 	start_color();
 	
