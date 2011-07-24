@@ -163,14 +163,17 @@ void display_meter(struct meterec_s *meterec, unsigned int y_pos, int display_na
 		    i += strlen(meterec->ports[port].name);
 	      }
 	  
-	  if (i < size_in-1) {
+      if (i < size_in-1) {
         printw("#");
       }
       else if ( i==meterec->ports[port].dkpeak_in-1 ) {
         printw("I");
       }
       else if ( i==meterec->ports[port].dkmax_in-1 ) {
-        printw(":");
+        if (i>width-3)
+	  printw("X");
+	else
+	  printw(":");
       }
       else if ( i < size_out-1 ) {
         printw("-");
