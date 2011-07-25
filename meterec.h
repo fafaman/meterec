@@ -160,6 +160,7 @@ struct port_s
   int record;
   int mute;
   int monitor;
+  int thru;
 
   unsigned int playback_take;
 

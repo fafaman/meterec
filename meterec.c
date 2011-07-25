@@ -292,6 +292,7 @@ void init_ports(struct meterec_s *meterec) {
 		meterec->ports[port].monitor = OFF;
 		meterec->ports[port].record = OFF;
 		meterec->ports[port].mute = OFF;
+		meterec->ports[port].thru = OFF;
 		
 		meterec->ports[port].peak_out = 0.0f;
 		meterec->ports[port].db_out = 0.0f;
@@ -634,6 +635,9 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			}
 		
 		}
+		
+		if (meterec->ports[port].thru)
+			out[i] += in[i];
 	
 	}
 	
@@ -1020,6 +1024,19 @@ int keyboard_thread(void *arg) {
 		
 		switch (key) {
 			
+			case 'T' : /* toggle pass thru on all ports */
+				if ( meterec->ports[y_pos].thru ) 
+					for ( port=0 ; port < meterec->n_ports ; port++) 
+						meterec->ports[port].thru = 0;
+				else 
+					for ( port=0 ; port < meterec->n_ports ; port++) 
+						meterec->ports[port].thru = 1;
+				break;
+			
+			case 't' : /* toggle pass thru on this port */
+				meterec->ports[y_pos].thru = !meterec->ports[y_pos].thru;
+				break;
+
 			case 'M' : /* toggle mute on all ports */
 				if ( meterec->ports[y_pos].mute ) 
 					for ( port=0 ; port < meterec->n_ports ; port++) 

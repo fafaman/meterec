@@ -23,7 +23,7 @@ x should rework buffer handling to start over immediately on playback and record
 x add a way to detect clicks (saturation)
 - enhance click detection to be raised exactly when value 1.0f is reached.
 - integrate a tuner (use tuneit or lingot) with a single key to select what port to tune
-- toggle pass tru (using jack conection) on a keystroke, this is to avoid larsen when playback 
+x toggle pass tru on a keystroke, this is to avoid larsen when playback 
 - toggle pass tru (using hw monitor) - see what "use HW mon" of jackd does.
 - center meterec in the console verticaly, this is not to be bothered by bad/misstuned screens not displaying whole console
 - center meterec in the console horizontaly...

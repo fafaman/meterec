@@ -271,7 +271,11 @@ void save_conf(struct meterec_s *meterec) {
 		else
 			rec = "---";
 		
-		fprintf(fd_conf, "record=\"%s\"; mute=%s; ", rec, meterec->ports[port].mute?"true":"false");
+		fprintf(fd_conf, "record=\"%s\"; ", rec);
+		
+		fprintf(fd_conf, "mute=%s; ", meterec->ports[port].mute?"true":"false");
+		
+		fprintf(fd_conf, "thru=%s; ", meterec->ports[port].thru?"true":"false");
 		
 		fprintf(fd_conf,"connections=(");
 		for (con=0; con< meterec->ports[port].portmap; con++) {
@@ -373,7 +377,7 @@ void load_conf(struct meterec_s *meterec) {
 	const config_setting_t *port_list, *port_group, *connection_list, *index_group ;
 	unsigned int port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
-	int mute=0;
+	int mute=OFF, thru=OFF;
 	char fn[4];
 				
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
@@ -424,6 +428,9 @@ void load_conf(struct meterec_s *meterec) {
 			
 				if (config_setting_lookup_bool(port_group, "mute", &mute))
 					meterec->ports[port].mute = mute;
+			
+				if (config_setting_lookup_bool(port_group, "thru", &thru))
+					meterec->ports[port].thru = thru;
 			
 				if (config_setting_lookup_string(port_group, "record", &record))
 					meterec->ports[port].record = parse_record(record);

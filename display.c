@@ -48,16 +48,21 @@ void display_port_info(struct port_s *port_p) {
   else 
      printw("[     ]");
 
-    if ( port_p->playback_take ) 
-    printw(" PLAYING take %d", port_p->playback_take);
+   if (port_p->thru)
+     printw("[THRU]");
   else 
-    printw(" PLAYING empty take 0");
+     printw("[    ]");
+
+   if ( port_p->playback_take ) 
+    printw(" PLAYING take %2d", port_p->playback_take);
+  else 
+    printw(" PLAYING no take");
   
+  printw(" | %5.1fdB", port_p->db_in);
+  printw(" (%5.1fdB)", port_p->db_max_in);
+
   if (port_p->name)
     printw(" | %s", port_p->name);
-
-  printw(" | %.1fdB", port_p->db_in);
-  printw(" (%.1fdB)", port_p->db_max_in);
 
 }
 
