@@ -37,3 +37,14 @@ popd
 
 echo =====================
 echo Done in ../meterec-$RELEASE.tgz
+echo =====================
+echo "cd ../"
+echo "tar -zxvf meterec-$RELEASE.tgz"
+echo "cd meterec-$RELEASE"
+echo "./configure && make"
+echo "./meterec-init-conf meterec"
+echo "./meterec"
+echo =====================
+echo "cd ../"
+echo "scp meterec-$RELEASE.tgz fafaman,meterec@frs.sourceforge.net:/home/frs/project/m/me/meterec"
+
