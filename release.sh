@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RELEASE=0.7
+RELEASE=0.8
 
 echo Relasing meterec-$RELEASE
 echo =====================

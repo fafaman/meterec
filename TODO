@@ -20,11 +20,12 @@ x allow contiguous takes during record (for long live concerts) hiting BKSP
 x convert old configuration files to .mrec
 x use only one configuration file .mrec
 x should rework buffer handling to start over immediately on playback and record. (maybe pre-fill read-buffer)
-- add a way to detect clicks (saturation)
+x add a way to detect clicks (saturation)
+- enhance click detection to be raised exactly when value 1.0f is reached.
 - integrate a tuner (use tuneit or lingot) with a single key to select what port to tune
 - toggle pass tru (using jack conection) on a keystroke, this is to avoid larsen when playback 
 - toggle pass tru (using hw monitor) - see what "use HW mon" of jackd does.
-- center meterec in the console verticaly, this is not to be bothered by bad/misstuned screens not dsiplqying whole console
+- center meterec in the console verticaly, this is not to be bothered by bad/misstuned screens not displaying whole console
 - center meterec in the console horizontaly...
 x Option to produce in stdout template file based on system...
 x Add creation of empty session file if file does not exists.

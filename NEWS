@@ -1,8 +1,25 @@
-Mon Oct 12 18:28:54 CEST 2009 - Fabrice Lebas <fabrice.lebas@gmail.com>
+Mon Jul 25 04:36:08 EDT 2011 - Fabrice Lebas <fabrice.lebas@gmail.com>
 
-  * Initial version
-  * Package creation
+  NEW Release 0.8
+  * support W64, WAV, OGG, FLAG take file recording and playback
+  * new session file .mrec
+  * old configuration (.sess/.conf) files will be converted to .mrec on first run
+  * use <BKSP> to create a new take on the fly
+  * monitor output reproduces audio input of the selected port
+  * removed problematic memory allocations as reported by valgrind --tool=memcheck --leak-check=full --track-origins=yes --log-file=/tmp/vlg ./meterec
+  * report clicks by showing a X in the vu-meter (not fully accurate)
+  * option to control playback state at startup
+  * Up/Down keys wrap
+  * Tested during a 3 hours live show.
+  
+  FIXED BUGS
+  * port names with spaces not supported - FIXED (NOT TESTED) when using new configuration file.
+  
+  KNONW BUGS
+  * in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
 
+  
 Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
  
   NEW Release 0.7
@@ -23,7 +40,12 @@ Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
   * display/hide port names in meter view using <n> key
   * stop recoding is <RETURN> instead of <SPACE> or <RETURN>
 
-  BUGS
+  KNOWN BUGS
   * in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
 playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
 
+
+Mon Oct 12 18:28:54 CEST 2009 - Fabrice Lebas <fabrice.lebas@gmail.com>
+
+  * Initial version
+  * Package creation

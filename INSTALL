@@ -14,9 +14,10 @@ Then as root:
 
 
 Requierement:
+- curses
 - jackd >= 0.100.0. 
 - libsndfile >= 1.0.0
-
+- libconfig >= 1.3.2
 
 
 Generic Autoconf Installation Instructions
