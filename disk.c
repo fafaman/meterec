@@ -8,6 +8,7 @@
 #include "config.h"
 #include "meterec.h"
 #include "disk.h"
+#include "conf.h"
 
 /******************************************************************************
 ** THREADs
@@ -100,11 +101,19 @@ int writer_thread(void *d)
       meterec->write_disk_buffer_thread_pos = i;
       
       if (meterec->record_cmd == RESTART ) {
+
         write_disk_close_fd(meterec, out);
+	
+	if (meterec->config_sts)
+	  save_conf(meterec);
+		
         compute_tracks_to_record(meterec);
+	
         out = write_disk_open_fd(meterec);
+	
         /*this should be protected with a mutex or so...*/
         meterec->record_cmd = START;
+	
       }
       
       /* run until empty buffer after a stop requets */
@@ -122,6 +131,9 @@ int writer_thread(void *d)
     }
     
     write_disk_close_fd(meterec, out);
+    
+    if (meterec->config_sts)
+      save_conf(meterec);
     
     fprintf(meterec->fd_log,"Writer thread: done.\n");
     

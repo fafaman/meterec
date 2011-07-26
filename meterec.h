@@ -195,14 +195,16 @@ struct meterec_s
   char *log_file;
 
   unsigned int record_sts;
-  unsigned int record_cmd;
+  unsigned int record_cmd;   /* from gui to disk */
 
   unsigned int playback_sts;
-  unsigned int playback_cmd; 
+  unsigned int playback_cmd; /* from gui to disk */
   
   unsigned int curses_sts;
   unsigned int config_sts;
   unsigned int jack_sts;
+  
+  unsigned int transport_master;
   
   
   int connect_ports;

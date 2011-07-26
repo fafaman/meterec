@@ -127,6 +127,9 @@ static void cleanup(int sig) {
 	if (meterec->curses_sts)
 		cleanup_curse();
 		
+	if (meterec->config_sts)
+		save_conf(meterec);
+		
 	fclose(meterec->fd_log);
 	
 	(void) signal(sig, SIG_DFL);
@@ -360,6 +363,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->curses_sts = OFF;
 	meterec->config_sts = OFF;
 	
+	meterec->transport_master = START;
+		
 	meterec->client = NULL;
 	meterec->fd_log = NULL;
 	
@@ -511,12 +516,18 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 
 	jack_default_audio_sample_t *in, *out, *mon;
 	unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
-	unsigned int playback_sts_local, record_sts_local;
+	static unsigned int playback_sts_local=OFF, record_sts_local=OFF;
 	float s;
 	struct meterec_s *meterec ;
 	
 	meterec = (struct meterec_s *)arg ;
 	
+	if ((playback_sts_local!=ONGOING) && (meterec->playback_sts==ONGOING))
+		jack_transport_start(meterec->client);
+		
+	if ((playback_sts_local==ONGOING) && (meterec->playback_sts!=ONGOING))
+		jack_transport_stop(meterec->client);
+		
 	/* make sure statuses do not change during callback */
 	playback_sts_local = meterec->playback_sts;
 	record_sts_local = meterec->record_sts;
@@ -800,7 +811,6 @@ void connect_any_port(jack_client_t *client, char *port_name, unsigned int port)
 void start_playback() {
 	
 	compute_takes_to_playback(meterec);
-	save_conf(meterec);
 	meterec->playback_cmd = START ;
 	pthread_create(&rd_dt, NULL, (void *)&reader_thread, (void *) meterec);
 	
@@ -843,9 +853,6 @@ void stop() {
 		pthread_join(rd_dt, NULL);
 	
 	}
-	
-	if (meterec->config_sts) 
-		save_conf(meterec);
 	
 }
 
@@ -1156,6 +1163,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       -t      record a new take at start\n");
 	fprintf(stderr, "       -p      no playback at start\n");
 	fprintf(stderr, "       -c      do not connect to jack ports listed in .mrec file\n");
+	fprintf(stderr, "       -m      do not try to become transport master\n");
 	fprintf(stderr, "\n\n");
 	fprintf(stderr, "Command keys:\n");
 	fprintf(stderr, "       q       quit\n");
@@ -1201,7 +1209,7 @@ int main(int argc, char *argv[])
 	
 	pre_option_init(meterec);
 	
-	while ((opt = getopt(argc, argv, "w:f:s:j:o:ptchv")) != -1) {
+	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:ptchvm")) != -1) {
 		switch (opt) {
 			case 'r':
 				ref_lev = atof(optarg);
@@ -1238,6 +1246,10 @@ int main(int argc, char *argv[])
 				
 			case 'c':
 				meterec->connect_ports = 0;
+				break;
+				
+			case 'm':
+				meterec->transport_master = OFF;
 				break;
 				
 			case 'h':
