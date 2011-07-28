@@ -304,10 +304,11 @@ void save_conf(struct meterec_s *meterec) {
 	}
 	fprintf(fd_conf, "};\n\n");
 	
-	fprintf(fd_conf, "version=1;\n\n");
+	fprintf(fd_conf, "version=1;\n\n");	
 	
 	fclose(fd_conf);
 	
+	fprintf(meterec->fd_log, "Saved configuration to '%s'.\n", file);
 }
 
 int parse_record(const char *record) {

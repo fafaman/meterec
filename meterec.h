@@ -201,6 +201,8 @@ struct meterec_s
   unsigned int playback_sts;
   unsigned int playback_cmd; /* from gui or process to disk */
 
+  unsigned int keyboard_cmd;
+  
   unsigned int curses_sts;
   unsigned int config_sts;
   unsigned int jack_sts;

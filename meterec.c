@@ -115,10 +115,18 @@ void cleanup_curse(void) {
 	
 }
 
+static void halt(int sig) {
+
+	running = 0;
+
+	(void) signal(sig, SIG_DFL);
+}
+
 /* Close down JACK when exiting */
-static void cleanup(int sig) {
+static void cleanup() {
 	
 	stop(meterec);
+	
 	running = 0;
 	
 	if (meterec->curses_sts)
@@ -127,16 +135,13 @@ static void cleanup(int sig) {
 	if (meterec->config_sts)
 		save_conf(meterec);
 		
-	pthread_join(kb_dt, NULL);
 	pthread_join(rd_dt, NULL);
 	pthread_join(wr_dt, NULL);
-		
+
 	if (meterec->jack_sts)
 		cleanup_jack();
 	
 	fclose(meterec->fd_log);
-	
-	(void) signal(sig, SIG_DFL);
 	
 }
 
@@ -145,8 +150,8 @@ void exit_on_error(char * reason) {
 	fprintf(meterec->fd_log, "Error: %s\n", reason);
 	printf("Error: %s\n", reason);
 	exit_code = 1;
-	cleanup(0);
-	exit(exit_code);
+	cleanup();
+	exit(1);
 }
 
 void time_sprint(struct time_s * time, char * string) {
@@ -362,6 +367,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	
 	meterec->playback_sts = OFF;
 	meterec->playback_cmd = START;
+	
+	meterec->keyboard_cmd = START;
 	
 	meterec->jack_sts = OFF;
 	meterec->curses_sts = OFF;
@@ -931,7 +938,7 @@ int keyboard_thread(void *arg) {
 	nodelay(stdscr, FALSE);
 	keypad(stdscr, TRUE);
 	
-	while (running) {
+	while (meterec->keyboard_cmd) {
 	
 		key = wgetch(stdscr);
 		
@@ -1156,6 +1163,7 @@ int keyboard_thread(void *arg) {
 			
 			case 'Q':
 			case 'q':
+				meterec->keyboard_cmd = STOP;
 				running = 0;
 				break;
 			
@@ -1340,7 +1348,8 @@ int main(int argc, char *argv[])
 	jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, meterec);
 	
 	/* Register function to handle transport changes */
-	jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
+	if (meterec->jack_transport)
+		jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
 	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);
@@ -1412,7 +1421,7 @@ int main(int argc, char *argv[])
 	}
 	
 	/* Register the cleanup function to be called when C-c */
-	signal(SIGINT, cleanup);
+	signal(SIGINT, halt);
 	
 	x_pos = meterec->n_takes;
 	
@@ -1436,8 +1445,11 @@ int main(int argc, char *argv[])
 		
 	}
 	
-	cleanup(0);
+	cleanup();
 	
+	pthread_kill(kb_dt, SIGTERM); 
+	pthread_join(kb_dt, NULL);
+
 	return exit_code;
 	
 }
