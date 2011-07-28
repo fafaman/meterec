@@ -529,23 +529,18 @@ static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos,
 	
 	if (pos) {}
 	
-	if (state == JackTransportStarting) {
-		if (!meterec->playback_sts) {
+	if (state == JackTransportStarting) 
+		if (!meterec->playback_sts) 
 			start_playback();
-			return 0;
-		}
-		else if ( meterec->playback_sts == ONGOING) 
+		else if (meterec->playback_sts == ONGOING) 
 			return 1;
 		
-	}
-	
 	if (state == JackTransportRolling) 
 		return 1;
 	
 	
 	if (state == JackTransportStopped) 
 		return 1;
-	
 	
 	return 0;
 }
