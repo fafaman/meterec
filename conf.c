@@ -273,9 +273,9 @@ void save_conf(struct meterec_s *meterec) {
 		
 		fprintf(fd_conf, "record=\"%s\"; ", rec);
 		
-		fprintf(fd_conf, "mute=%s; ", meterec->ports[port].mute?"true":"false");
+		fprintf(fd_conf, "mute=%s ", meterec->ports[port].mute?"true; ":"false;");
 		
-		fprintf(fd_conf, "thru=%s; ", meterec->ports[port].thru?"true":"false");
+		fprintf(fd_conf, "thru=%s ", meterec->ports[port].thru?"true; ":"false;");
 		
 		fprintf(fd_conf,"connections=(");
 		for (con=0; con< meterec->ports[port].portmap; con++) {
