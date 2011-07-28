@@ -548,7 +548,7 @@ static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos,
 
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg) {
-
+	
 	jack_default_audio_sample_t *in, *out, *mon=NULL;
 	jack_position_t pos;
 	static jack_transport_state_t transport_state=JackTransportStopped, previous_transport_state;
@@ -562,7 +562,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	if (meterec->jack_transport) {
 		previous_transport_state = transport_state;
 		transport_state = jack_transport_query(meterec->client, &pos);
-	 
+		
 		/* send a stop command if the transport state as changed for stopped */
 		if (previous_transport_state != transport_state)
 			if (transport_state == JackTransportStopped) {
