@@ -52,10 +52,11 @@
 /* status */
 #define OFF 0
 #define STARTING 1
-#define ONGOING 2
-#define STARVING 3
-#define STOPING 4
-#define PAUSED 5
+#define READY 2
+#define ONGOING 3
+#define STARVING 4
+#define STOPING 5
+#define PAUSED 6
 
 /* type of recording */
 #define REC 1
@@ -195,17 +196,16 @@ struct meterec_s
   char *log_file;
 
   unsigned int record_sts;
-  unsigned int record_cmd;   /* from gui to disk */
+  unsigned int record_cmd;   /* from gui or process to disk */
 
   unsigned int playback_sts;
-  unsigned int playback_cmd; /* from gui to disk */
-  
+  unsigned int playback_cmd; /* from gui or process to disk */
+
   unsigned int curses_sts;
   unsigned int config_sts;
   unsigned int jack_sts;
   
   unsigned int transport_master;
-  
   
   int connect_ports;
   
@@ -237,7 +237,8 @@ struct meterec_s
 
 };
 
-void stop(void);
+void start_playback(void);
+void stop(struct meterec_s *meterec);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void compute_tracks_to_record(struct meterec_s *meterec);

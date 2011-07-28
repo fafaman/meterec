@@ -292,7 +292,6 @@ unsigned int fill_buffer(unsigned int *opos , struct meterec_s *meterec) {
   return i;
 }
 
-
 int reader_thread(void *d)
 {
     unsigned int i, take, opos, thread_delay, new_buffer_pos;
@@ -322,11 +321,11 @@ int reader_thread(void *d)
         i = fill_buffer(&opos, meterec);
         meterec->read_disk_buffer_thread_pos = i;
     }
-
+       
     /* Start reading disk to fill the RT ringbuffer */
     new_buffer_pos = -1;
     while ( meterec->playback_cmd==START )  {
-
+    
     /* seek audio back and forth upon user request */
     seek = meterec->seek.disk_playhead_target;
     if (seek != (unsigned int)(-1) ) {
@@ -387,7 +386,7 @@ int reader_thread(void *d)
       meterec->playback_sts=ONGOING;
 
     usleep(thread_delay);
-
+    
   }
 
   /* close all fd's */
@@ -396,7 +395,7 @@ int reader_thread(void *d)
   fprintf(meterec->fd_log,"Reader thread: done.\n");
 
   meterec->playback_sts = OFF;
-
+  
   return 0;
 }
 

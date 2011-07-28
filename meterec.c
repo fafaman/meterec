@@ -118,11 +118,8 @@ void cleanup_curse(void) {
 /* Close down JACK when exiting */
 static void cleanup(int sig) {
 	
-	stop();
+	stop(meterec);
 	running = 0;
-	
-	if (meterec->jack_sts)
-		cleanup_jack();
 	
 	if (meterec->curses_sts)
 		cleanup_curse();
@@ -130,6 +127,13 @@ static void cleanup(int sig) {
 	if (meterec->config_sts)
 		save_conf(meterec);
 		
+	pthread_join(kb_dt, NULL);
+	pthread_join(rd_dt, NULL);
+	pthread_join(wr_dt, NULL);
+		
+	if (meterec->jack_sts)
+		cleanup_jack();
+	
 	fclose(meterec->fd_log);
 	
 	(void) signal(sig, SIG_DFL);
@@ -511,26 +515,65 @@ static int update_jack_buffsize(jack_nframes_t nframes, void *arg) {
 	
 }
 
+static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos, void *arg) {
+
+	struct meterec_s *meterec ;
+	
+	meterec = (struct meterec_s *)arg ;
+	
+	if (pos) {}
+	
+	if (state == JackTransportStarting) {
+		fprintf(meterec->fd_log,"JackTransportStarting\n"); /*remove*/
+		
+		if (!meterec->playback_sts) {
+			start_playback();
+			return 0;
+		}
+		else if ( meterec->playback_sts == ONGOING) {
+			return 1;
+		}
+	}
+	
+	if (state == JackTransportRolling) {
+		fprintf(meterec->fd_log,"JackTransportRolling\n"); /*remove*/
+		return 1;
+	}
+	
+	if (state == JackTransportStopped) {
+		fprintf(meterec->fd_log,"JackTransportStopped\n"); /*remove*/
+		return 1;
+	}
+	
+	return 0;
+}
+
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg) {
 
-	jack_default_audio_sample_t *in, *out, *mon;
+	jack_default_audio_sample_t *in, *out, *mon=NULL;
+	jack_position_t pos;
+	static jack_transport_state_t transport_state=JackTransportStopped, previous_transport_state;
 	unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
-	static unsigned int playback_sts_local=OFF, record_sts_local=OFF;
+	unsigned int playback_ongoing, record_ongoing;
 	float s;
 	struct meterec_s *meterec ;
 	
 	meterec = (struct meterec_s *)arg ;
 	
-	if ((playback_sts_local!=ONGOING) && (meterec->playback_sts==ONGOING))
-		jack_transport_start(meterec->client);
-		
-	if ((playback_sts_local==ONGOING) && (meterec->playback_sts!=ONGOING))
-		jack_transport_stop(meterec->client);
-		
-	/* make sure statuses do not change during callback */
-	playback_sts_local = meterec->playback_sts;
-	record_sts_local = meterec->record_sts;
+	previous_transport_state = transport_state;
+	transport_state = jack_transport_query(meterec->client, &pos);
+	 
+	/* compute local flags stable for this cycle */
+	playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_sts == ONGOING));
+	record_ongoing = (meterec->record_cmd != OFF);
+	
+	/* send a stop command if the transport state as changed for stopped */
+	if (previous_transport_state != transport_state)
+		if (transport_state == JackTransportStopped) {
+			meterec->playback_cmd = OFF;
+			meterec->record_cmd = OFF;
+		}
 	
 	/* check if there is a new buffer position to go to*/
 	if (meterec->seek.jack_buffer_target != (unsigned int)(-1)) {
@@ -588,7 +631,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					mon[i] += in[i];
 		
 		
-		if (playback_sts_local==ONGOING) {
+		if (playback_ongoing) {
 			
 			read_pos = meterec->read_disk_buffer_process_pos;
 			
@@ -613,7 +656,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					meterec->ports[port].peak_out = s;
 			}
 			
-			if (record_sts_local==ONGOING) {
+			if (record_ongoing) {
 			
 			write_pos = meterec->write_disk_buffer_process_pos;
 			
@@ -652,7 +695,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	
 	}
 	
-	if (playback_sts_local==ONGOING) {
+	if (playback_ongoing) {
 		
 		/* track buffer over/under flow -- needs rework */
 		remaining_read_disk_buffer = DISK_SIZE - ((meterec->read_disk_buffer_thread_pos-meterec->read_disk_buffer_process_pos) & (DISK_SIZE-1));
@@ -666,14 +709,14 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		/* update frame/time counter */
 		playhead += nframes ;
 		
-		if (record_sts_local==ONGOING) {
+		if (record_ongoing) {
 			
 			/* track buffer over/under flow */
 			remaining_write_disk_buffer = DISK_SIZE - ((meterec->write_disk_buffer_process_pos-meterec->write_disk_buffer_thread_pos) & (DISK_SIZE-1));
 			
 			if (remaining_write_disk_buffer <= nframes)
 				meterec->write_disk_buffer_overflow++;
-			
+
 			/* positon write pointer to end of ringbuffer*/
 			meterec->write_disk_buffer_process_pos = (meterec->write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
 		
@@ -813,7 +856,7 @@ void start_playback() {
 	compute_takes_to_playback(meterec);
 	meterec->playback_cmd = START ;
 	pthread_create(&rd_dt, NULL, (void *)&reader_thread, (void *) meterec);
-	
+
 }
 
 void start_record() {
@@ -822,38 +865,22 @@ void start_record() {
 	if (meterec->n_tracks) {
 		meterec->record_cmd = START;
 		pthread_create(&wr_dt, NULL, (void *)&writer_thread, (void *) meterec);
-		
-		while(meterec->record_sts!=ONGOING) 
-			fsleep(0.1f);
 	}
-	
+
 }
 
-void stop() {
-	
-	if (meterec->record_sts) {
+void stop(struct meterec_s *meterec) {
 		
-		meterec->record_cmd = STOP;
+	fprintf(meterec->fd_log, "Stop requested.\n");
+	
+	jack_transport_stop(meterec->client);
+}
+
+void roll(struct meterec_s *meterec) {
 		
-		fprintf(meterec->fd_log, "Waiting end of recording.\n");
-		while(meterec->record_cmd || meterec->record_sts) 
-			fsleep(0.05f);
-		
-		pthread_join(wr_dt, NULL);
+	fprintf(meterec->fd_log, "Roll requested.\n");
 	
-	}
-	
-	if (meterec->playback_sts) {
-		meterec->playback_cmd = STOP;
-		
-		fprintf(meterec->fd_log, "Waiting end of playback.\n");
-		while(meterec->playback_cmd || meterec->playback_sts)
-			fsleep(0.05f);
-			
-		pthread_join(rd_dt, NULL);
-	
-	}
-	
+	jack_transport_start(meterec->client);
 }
 
 unsigned int seek(int seek_sec) {
@@ -1092,10 +1119,10 @@ int keyboard_thread(void *arg) {
 			
 			case 10: /* RETURN */
 				if (meterec->playback_sts == ONGOING)
-					stop();
+					stop(meterec);
 				else if (meterec->playback_sts == OFF) {
-					start_record();    
-					start_playback();
+					start_record();
+					roll(meterec);
 				}
 				break;
 			
@@ -1103,13 +1130,15 @@ int keyboard_thread(void *arg) {
 			case 263: /* BACKSPACE */
 				if (meterec->record_sts == ONGOING) 
 					meterec->record_cmd = RESTART;
+				else if (meterec->playback_sts == OFF)
+					start_record();
 				break;
 			
 			case ' ':
 				if (meterec->playback_sts == ONGOING && meterec->record_sts == OFF)
-					stop();
+					stop(meterec);
 				else if (meterec->playback_sts == OFF)
-					start_playback();
+					roll(meterec);
 				break;
 			
 			case 'Q':
@@ -1296,6 +1325,9 @@ int main(int argc, char *argv[])
 	/* Register function to handle buffer size change */
 	jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, meterec);
 	
+	/* Register function to handle transport changes */
+	jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
+	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);
 	
@@ -1356,12 +1388,12 @@ int main(int argc, char *argv[])
 	if (meterec->record_cmd==START) {
 		
 		start_record();
-		start_playback();
+		jack_transport_start(meterec->client);
 		
 	}
 	else if (meterec->playback_cmd==START) {
 		
-		start_playback();
+		jack_transport_start(meterec->client);
 		
 	}
 	
@@ -1391,7 +1423,6 @@ int main(int argc, char *argv[])
 	}
 	
 	cleanup(0);
-	pthread_join(kb_dt, NULL);
 	
 	return exit_code;
 	
