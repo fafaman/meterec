@@ -44,7 +44,7 @@
 
 WINDOW * mainwin;
 
-int edit_mode=0, display_names=1, exit_code=0;
+int edit_mode=0, display_names=1;
 unsigned int x_pos=0, y_pos=0;
 int running = 1;
 
@@ -149,7 +149,6 @@ void exit_on_error(char * reason) {
 	
 	fprintf(meterec->fd_log, "Error: %s\n", reason);
 	printf("Error: %s\n", reason);
-	exit_code = 1;
 	cleanup();
 	exit(1);
 }
@@ -1450,7 +1449,7 @@ int main(int argc, char *argv[])
 	pthread_kill(kb_dt, SIGTERM); 
 	pthread_join(kb_dt, NULL);
 
-	return exit_code;
+	return 0;
 	
 }
 
