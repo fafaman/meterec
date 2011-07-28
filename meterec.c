@@ -569,15 +569,15 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				meterec->playback_cmd = OFF;
 				meterec->record_cmd = OFF;
 			}
-
+		
 		/* compute local flags stable for this cycle */
 		playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_sts == ONGOING));
-
+		
 	}
 	else {
 		/* compute local flags stable for this cycle */
 		playback_ongoing = (meterec->playback_sts == ONGOING);
-
+		
 	}
 	
 	record_ongoing = (meterec->record_cmd != OFF);
@@ -685,20 +685,21 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		else {
 			
 			for (i = 0; i < nframes; i++) {
-			
-			out[i] = 0.0f ;
-			
-			/* compute peak */
-			s = fabs(in[i] * 1.0f) ;
-			if (s > meterec->ports[port].peak_in)
-				meterec->ports[port].peak_in = s;
-			
+				
+				out[i] = 0.0f ;
+				
+				/* compute peak */
+				s = fabs(in[i] * 1.0f) ;
+				if (s > meterec->ports[port].peak_in)
+					meterec->ports[port].peak_in = s;
+				
 			}
-		
+			
 		}
 		
 		if (meterec->ports[port].thru)
-			out[i] += in[i];
+			for (i = 0; i < nframes; i++)
+				out[i] += in[i];
 	
 	}
 	
@@ -723,7 +724,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			
 			if (remaining_write_disk_buffer <= nframes)
 				meterec->write_disk_buffer_overflow++;
-
+			
 			/* positon write pointer to end of ringbuffer*/
 			meterec->write_disk_buffer_process_pos = (meterec->write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
 		
