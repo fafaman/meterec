@@ -205,7 +205,7 @@ struct meterec_s
   unsigned int config_sts;
   unsigned int jack_sts;
   
-  unsigned int transport_master;
+  unsigned int jack_transport;
   
   int connect_ports;
   

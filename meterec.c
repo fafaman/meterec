@@ -367,7 +367,7 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->curses_sts = OFF;
 	meterec->config_sts = OFF;
 	
-	meterec->transport_master = START;
+	meterec->jack_transport = 1;
 		
 	meterec->client = NULL;
 	meterec->fd_log = NULL;
@@ -524,26 +524,22 @@ static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos,
 	if (pos) {}
 	
 	if (state == JackTransportStarting) {
-		fprintf(meterec->fd_log,"JackTransportStarting\n"); /*remove*/
-		
 		if (!meterec->playback_sts) {
 			start_playback();
 			return 0;
 		}
-		else if ( meterec->playback_sts == ONGOING) {
+		else if ( meterec->playback_sts == ONGOING) 
 			return 1;
-		}
+		
 	}
 	
-	if (state == JackTransportRolling) {
-		fprintf(meterec->fd_log,"JackTransportRolling\n"); /*remove*/
+	if (state == JackTransportRolling) 
 		return 1;
-	}
 	
-	if (state == JackTransportStopped) {
-		fprintf(meterec->fd_log,"JackTransportStopped\n"); /*remove*/
+	
+	if (state == JackTransportStopped) 
 		return 1;
-	}
+	
 	
 	return 0;
 }
@@ -561,19 +557,28 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	
 	meterec = (struct meterec_s *)arg ;
 	
-	previous_transport_state = transport_state;
-	transport_state = jack_transport_query(meterec->client, &pos);
+	if (meterec->jack_transport) {
+		previous_transport_state = transport_state;
+		transport_state = jack_transport_query(meterec->client, &pos);
 	 
-	/* compute local flags stable for this cycle */
-	playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_sts == ONGOING));
-	record_ongoing = (meterec->record_cmd != OFF);
+		/* send a stop command if the transport state as changed for stopped */
+		if (previous_transport_state != transport_state)
+			if (transport_state == JackTransportStopped) {
+				meterec->playback_cmd = OFF;
+				meterec->record_cmd = OFF;
+			}
+
+		/* compute local flags stable for this cycle */
+		playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_sts == ONGOING));
+
+	}
+	else {
+		/* compute local flags stable for this cycle */
+		playback_ongoing = (meterec->playback_sts == ONGOING);
+
+	}
 	
-	/* send a stop command if the transport state as changed for stopped */
-	if (previous_transport_state != transport_state)
-		if (transport_state == JackTransportStopped) {
-			meterec->playback_cmd = OFF;
-			meterec->record_cmd = OFF;
-		}
+	record_ongoing = (meterec->record_cmd != OFF);
 	
 	/* check if there is a new buffer position to go to*/
 	if (meterec->seek.jack_buffer_target != (unsigned int)(-1)) {
@@ -873,14 +878,22 @@ void stop(struct meterec_s *meterec) {
 		
 	fprintf(meterec->fd_log, "Stop requested.\n");
 	
-	jack_transport_stop(meterec->client);
+	if (meterec->jack_transport)
+		jack_transport_stop(meterec->client);
+	else {
+		meterec->playback_cmd = STOP;
+		meterec->record_cmd = STOP;
+	}
 }
 
 void roll(struct meterec_s *meterec) {
 		
 	fprintf(meterec->fd_log, "Roll requested.\n");
 	
-	jack_transport_start(meterec->client);
+	if (meterec->jack_transport)
+		jack_transport_start(meterec->client);
+	else 
+		start_playback();
 }
 
 unsigned int seek(int seek_sec) {
@@ -1192,7 +1205,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       -t      record a new take at start\n");
 	fprintf(stderr, "       -p      no playback at start\n");
 	fprintf(stderr, "       -c      do not connect to jack ports listed in .mrec file\n");
-	fprintf(stderr, "       -m      do not try to become transport master\n");
+	fprintf(stderr, "       -i      do not interact with jack transport\n");
 	fprintf(stderr, "\n\n");
 	fprintf(stderr, "Command keys:\n");
 	fprintf(stderr, "       q       quit\n");
@@ -1238,7 +1251,7 @@ int main(int argc, char *argv[])
 	
 	pre_option_init(meterec);
 	
-	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:ptchvm")) != -1) {
+	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:ptchvi")) != -1) {
 		switch (opt) {
 			case 'r':
 				ref_lev = atof(optarg);
@@ -1277,8 +1290,8 @@ int main(int argc, char *argv[])
 				meterec->connect_ports = 0;
 				break;
 				
-			case 'm':
-				meterec->transport_master = OFF;
+			case 'i':
+				meterec->jack_transport = OFF;
 				break;
 				
 			case 'h':
@@ -1306,6 +1319,7 @@ int main(int argc, char *argv[])
 	fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
 	fprintf(meterec->fd_log,"%slayback at startup.\n",meterec->playback_cmd?"P":"No p");
 	fprintf(meterec->fd_log,"%secording new take at startup.\n",meterec->record_cmd?"R":"Not r");
+	fprintf(meterec->fd_log,"%snteract with jack transport.\n",meterec->jack_transport?"I":"Do not i");
 	fprintf(meterec->fd_log,"---- Starting ----\n");
 	
 	/* Register with Jack */
@@ -1388,12 +1402,12 @@ int main(int argc, char *argv[])
 	if (meterec->record_cmd==START) {
 		
 		start_record();
-		jack_transport_start(meterec->client);
+		roll(meterec);
 		
 	}
 	else if (meterec->playback_cmd==START) {
 		
-		jack_transport_start(meterec->client);
+		roll(meterec);
 		
 	}
 	
