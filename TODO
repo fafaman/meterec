@@ -12,9 +12,10 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
+- allow alsa volume control
 - use indexes to make playback loop
 - support jack session save
-- be a jack transport master
+x interact with jack transport
 - add option to stop and exit after a provided time
 x allow contiguous takes during record (for long live concerts) hiting BKSP
 x convert old configuration files to .mrec
@@ -22,6 +23,7 @@ x use only one configuration file .mrec
 x should rework buffer handling to start over immediately on playback and record. (maybe pre-fill read-buffer)
 x add a way to detect clicks (saturation)
 - enhance click detection to be raised exactly when value 1.0f is reached.
+- enhance click detection to show "ecretage"
 - integrate a tuner (use tuneit or lingot) with a single key to select what port to tune
 x toggle pass tru on a keystroke, this is to avoid larsen when playback 
 - toggle pass tru (using hw monitor) - see what "use HW mon" of jackd does.

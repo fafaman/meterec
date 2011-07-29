@@ -877,6 +877,19 @@ void start_record() {
 
 }
 
+void cancel_record() {
+	
+	meterec->record_cmd = STOP;
+	
+	pthread_join(wr_dt, NULL);
+	
+	meterec->n_takes --;
+	
+	if (meterec->config_sts)
+		save_conf(meterec);
+
+}
+
 void stop(struct meterec_s *meterec) {
 		
 	fprintf(meterec->fd_log, "Stop requested.\n");
@@ -1136,18 +1149,22 @@ int keyboard_thread(void *arg) {
 			case 10: /* RETURN */
 				if (meterec->playback_sts == ONGOING)
 					stop(meterec);
-				else if (meterec->playback_sts == OFF) {
-					start_record();
-					roll(meterec);
+				else {
+					if (meterec->record_sts == OFF)
+						start_record();
+					if (meterec->playback_sts == OFF) 
+						roll(meterec);
 				}
 				break;
 			
 			case 127: /* BACKSPACE */
 			case 263: /* BACKSPACE */
-				if (meterec->record_sts == ONGOING) 
+				if (meterec->record_sts == ONGOING && meterec->playback_sts == ONGOING) 
 					meterec->record_cmd = RESTART;
-				else if (meterec->playback_sts == OFF)
+				else if (meterec->record_sts == OFF && meterec->playback_sts == OFF)
 					start_record();
+				else if (meterec->record_sts == ONGOING && meterec->playback_sts == OFF)
+					cancel_record();
 				break;
 			
 			case ' ':
