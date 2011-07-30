@@ -71,6 +71,15 @@
 #define RED 3
 #define BLUE 4
 
+/* view type */
+#define VU 0
+#define EDIT 1
+#define PORT 2
+
+/* port selection */
+#define IN 0
+#define OUT 1
+
 
 /*
 note : 
@@ -140,6 +149,8 @@ struct port_s
   jack_port_t *output;
   
   unsigned int portmap;
+  const char **input_connected;
+  const char **output_connected;
   char *connections[MAX_CONS];
   char *name;
   
@@ -195,6 +206,8 @@ struct meterec_s
   char *conf_file;
   char *log_file;
 
+  char *jack_name;
+
   unsigned int record_sts;
   unsigned int record_cmd;   /* from gui or process to disk */
 
@@ -244,12 +257,6 @@ void stop(struct meterec_s *meterec);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void compute_tracks_to_record(struct meterec_s *meterec);
-void connect_any_port(jack_client_t *client, char *port_name, unsigned int port);
 void time_frm(struct time_s * time);
 void time_sprint(struct time_s * time, char * string);
 void time_hms(struct time_s * time);
-
-void create_input_port(jack_client_t *client, unsigned int port);
-void create_output_port(jack_client_t *client, unsigned int port);
-void create_monitor_port(jack_client_t *client);
-

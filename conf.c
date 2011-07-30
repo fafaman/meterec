@@ -29,6 +29,7 @@
 #include <libconfig.h>
  
 #include "meterec.h"
+#include "ports.h"
 
 
 /*
@@ -46,7 +47,8 @@ void parse_port_con(struct meterec_s *meterec, FILE *fd_conf, unsigned int port)
 	i = 0;
 	while ( sscanf(line+i,"%s%n",port_name,&u ) ) {
 		
-		connect_any_port(meterec->client, port_name, port);
+		register_port_old(meterec, port_name, port);
+		connect_any_port(meterec, port_name, port);
 		
 		i+=u;
 		
@@ -112,8 +114,8 @@ void load_setup(struct meterec_s *meterec) {
 			meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 			
 			// create input ports
-			create_input_port ( meterec->client, port );
-			create_output_port ( meterec->client, port );
+			create_input_port(meterec, port);
+			create_output_port(meterec, port);
 			
 			// connect to other ports
 			parse_port_con(meterec, fd_conf, port);
@@ -421,8 +423,8 @@ void load_conf(struct meterec_s *meterec) {
 				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 				
 				// create input ports
-				create_input_port ( meterec->client, port );
-				create_output_port ( meterec->client, port );
+				create_input_port(meterec, port);
+				create_output_port(meterec, port);
 						
 				if (config_setting_lookup_string(port_group, "takes", &takes))
 					meterec->n_takes = parse_takes(meterec, port, takes);
@@ -452,8 +454,8 @@ void load_conf(struct meterec_s *meterec) {
 							meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
 							strcpy(meterec->ports[port].connections[con], port_name);
 					
-							// connect to other ports
-							connect_any_port(meterec->client, (char *)port_name, port);
+							// store connection info
+							register_port(meterec, (char *)port_name, port);
 						}
 					}
 					meterec->ports[port].portmap = con;

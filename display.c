@@ -457,3 +457,120 @@ void display_session(struct meterec_s *meterec, unsigned int y_pos, unsigned int
         
 }
 
+void display_ports(struct meterec_s *meterec, unsigned int y_pos, unsigned int port_pos) 
+{
+	unsigned int take, port, i;
+	const char **in, **out;
+	jack_port_t *jack_port;
+  
+	/* y - port */
+	/* x - take */
+	
+	in=meterec->ports[y_pos].input_connected;
+	out=meterec->ports[y_pos].output_connected;
+	
+	printw("\n\n");
+
+	for (port=0; port<meterec->n_ports; port++) {
+	
+		printw("  ");
+		
+		if (*in) {
+			printw("%20s-+",*in);
+			in++;
+		} else {
+			if (port<y_pos)
+				printw("%20s |","");
+			else if (port==y_pos)
+				printw("%20s +","");
+			else 
+				printw("%20s  ","");
+		}
+		
+		if (y_pos==port)
+			printw("-");
+		else 
+			printw(" ");
+		
+		if (port_pos == IN && y_pos == port)
+			attron(A_REVERSE);
+		else 
+			attroff(A_REVERSE);
+		
+		printw("%s:in_%-2d",  meterec->jack_name, port+1);
+		
+		attroff(A_REVERSE);
+		
+		if (meterec->ports[port].thru)
+			printw("-> ");
+		else 
+			printw("   ");
+		
+		if (port_pos == OUT && y_pos == port)
+			attron(A_REVERSE);
+		else 
+			attroff(A_REVERSE);
+		
+		printw("%s:out_%-2d",  meterec->jack_name, port+1);
+		
+		attroff(A_REVERSE);
+		if (y_pos==port)
+			printw("-");
+		else 
+			printw(" ");
+		
+		
+		if (*out) {
+			printw("+-%s",*out);
+			out++;
+		} else {
+			if (port<y_pos)
+				printw("| ");
+			else if (port==y_pos)
+				printw("+ ");
+			else 
+				printw("  ");
+		}
+		
+		printw("\n");
+  	}
+        
+	while (*in || *out) {
+	
+		if (*in) {
+			printw("%20s-+",*in);
+			in++;
+		} else {
+			if (port<=y_pos)
+				printw("%20s +","");
+			else 
+				printw("%20s  ","");
+		}
+
+		for (i=0; i<(2*strlen(meterec->jack_name)+20); i++)
+			printw(" ");
+		
+		if (*out) {
+			printw("+-%s",*out);
+			out++;
+		} else {
+			if (port<=y_pos)
+				printw("+ ");
+			else 
+				printw("  ");
+		}
+		
+		printw("\n");
+	
+	
+	}
+	
+		
+	color_set(DEFAULT, NULL);
+	
+	printw("\n\n");
+	printw("  Port %2d ", y_pos+1);
+	display_port_info( &meterec->ports[y_pos] );
+        
+}
+

@@ -39,19 +39,19 @@
 #include "display.h"
 #include "disk.h"
 #include "conf.h"
+#include "ports.h"
 
 
 
 WINDOW * mainwin;
 
-int edit_mode=0, display_names=1;
-unsigned int x_pos=0, y_pos=0;
+int view=VU, display_names=1;
+unsigned int x_pos=0, y_pos=0, port_pos=0;
 int running = 1;
 
 static unsigned long playhead = 0 ;
 
 char *session = "meterec";
-char *jackname = "meterec" ;
 #if defined(HAVE_W64)
 char *output_ext = "w64" ;
 #else
@@ -291,6 +291,9 @@ void init_ports(struct meterec_s *meterec) {
 		
 		meterec->ports[port].input = NULL;
 		meterec->ports[port].output = NULL;
+
+		meterec->ports[port].input_connected = NULL;
+		meterec->ports[port].output_connected = NULL;
 		
 		meterec->ports[port].portmap = 0;
 		for (con = 0; con < MAX_CONS; con++)
@@ -358,6 +361,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	
 	meterec->n_tracks = 0;
 	meterec->connect_ports = 1;
+	
+	meterec->jack_name = "meterec";
 	
 	meterec->monitor = NULL;
 	
@@ -741,121 +746,6 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	
 }
 /******************************************************************************
-** PORTS
-*/
-
-void create_input_port(jack_client_t *client, unsigned int port) {
-	
-	char port_name[10] ;
-	
-	sprintf(port_name,"in_%d",port+1);
-	
-	fprintf(meterec->fd_log,"Creating input port '%s'.\n", port_name );
-	
-	if (!(meterec->ports[port].input = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0))) {
-		fprintf(meterec->fd_log, "Cannot register input port '%s'.\n",port_name);
-		exit_on_error("Cannot register input port");
-	}
-	
-}
-
-void create_output_port(jack_client_t *client, unsigned int port) {
-	
-	char port_name[10] ;
-	
-	sprintf(port_name,"out_%d",port+1);
-	
-	fprintf(meterec->fd_log,"Creating output port '%s'.\n", port_name );
-	
-	if (!(meterec->ports[port].output = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-		fprintf(meterec->fd_log, "Cannot register output port '%s'.\n",port_name);
-		exit_on_error("Cannot register output port");
-	}
-	
-}
-
-void create_monitor_port(jack_client_t *client) {
-	
-	char port_name[] = "monitor" ;
-	
-	fprintf(meterec->fd_log,"Creating output port '%s'.\n", port_name );
-	
-	if (!(meterec->monitor = jack_port_register(client, port_name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0))) {
-		fprintf(meterec->fd_log, "Cannot register output port '%s'.\n",port_name);
-		exit_on_error("Cannot register output port");
-	}
-	
-}
-
-/* Connect the chosen port to ours */
-void connect_any_port(jack_client_t *client, char *port_name, unsigned int port)
-{
-	jack_port_t *jack_port;
-	int jack_flags;
-	char *tmp = NULL;
-	
-	/* connect input port*/
-	
-	// Get the port we are connecting to
-	jack_port = jack_port_by_name(client, port_name);
-	
-	// Check if port exists
-	if (jack_port == NULL) {
-		fprintf(meterec->fd_log, "Can't find port '%s' assuming this is part of port name.\n", port_name);
-		
-		if ( meterec->ports[port].name ) {
-			tmp = (char *) malloc( strlen(meterec->ports[port].name) + 1 );
-			strcpy(tmp, meterec->ports[port].name);
-			free(meterec->ports[port].name);
-			meterec->ports[port].name = (char *) malloc( strlen(port_name) + 1 + strlen(tmp) + 1);
-			sprintf(meterec->ports[port].name, "%s %s",tmp, port_name);
-			free(tmp);
-		} else {
-			meterec->ports[port].name = (char *) malloc( strlen(port_name) + 1 );
-			strcpy(meterec->ports[port].name, port_name);
-		}
-		
-		return;
-		
-	}
-	else {
-		meterec->ports[port].connections[meterec->ports[port].portmap] = (char *) malloc( strlen(port_name) + 1 );
-		strcpy(meterec->ports[port].connections[meterec->ports[port].portmap], port_name);
-		meterec->ports[port].portmap += 1;
-	}
-	
-	if (!meterec->connect_ports)
-		return;
-	
-	/* check port flags */
-	jack_flags = jack_port_flags(jack_port);
-	
-	if ( jack_flags & JackPortIsInput ) {
-		
-		// Connect the port to our output port
-		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
-		if (jack_connect(client, jack_port_name(meterec->ports[port].output), jack_port_name(jack_port))) {
-			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
-			exit_on_error("Cannot connect ports");
-		}
-		
-	}
-	
-	if ( jack_flags & JackPortIsOutput ) {
-		
-		// Connect the port to our input port
-		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
-		if (jack_connect(client, jack_port_name(jack_port), jack_port_name(meterec->ports[port].input))) {
-			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
-			exit_on_error("Cannot connect ports");
-		}
-	
-	}
-	
-}
-
-
-/******************************************************************************
 ** THREAD Utils
 */
 
@@ -953,7 +843,8 @@ int keyboard_thread(void *arg) {
 		
 		fprintf(meterec->fd_log, "Key pressed: %d '%c'\n",key,key);
 		
-		if (edit_mode) {
+		switch (view) {
+		case EDIT: 
 			
 			switch (key) {
 				
@@ -1018,8 +909,8 @@ int keyboard_thread(void *arg) {
 				
 			}
 			
-		} 
-		else {
+			break;
+		case VU:
 			
 			switch (key) {
 				/* reset absolute maximum markers */
@@ -1046,7 +937,19 @@ int keyboard_thread(void *arg) {
 						meterec->seek.disk_playhead_target = seek(5);
 					break;
 			}
-			
+			break;
+		
+		case PORT:
+		
+			switch (key) {
+				case KEY_LEFT:
+					port_pos = IN;
+					break;
+				case KEY_RIGHT:
+					port_pos = OUT;
+					break;
+			}
+			break;
 		}
 		
 		/*
@@ -1143,7 +1046,14 @@ int keyboard_thread(void *arg) {
 				break;
 			
 			case 9: /* TAB */
-				edit_mode = !edit_mode ;
+				if (view==VU)
+					view=EDIT;
+				else if (view==EDIT) {
+					view=PORT;
+					retreive_connected_ports(meterec);
+				}
+				else if (view==PORT)
+					view=VU;
 				break;
 			
 			case 10: /* RETURN */
@@ -1221,7 +1131,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
 	fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
 	fprintf(stderr, "       -s      is session name [%s]\n",session);
-	fprintf(stderr, "       -j      is the jack client name [%s]\n",jackname);
+	fprintf(stderr, "       -j      is the jack client name [%s]\n",meterec->jack_name);
 	fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
 	fprintf(stderr, "       -t      record a new take at start\n");
 	fprintf(stderr, "       -p      no playback at start\n");
@@ -1292,7 +1202,7 @@ int main(int argc, char *argv[])
 				break;
 				
 			case 'j':
-				jackname = optarg ;
+				meterec->jack_name = optarg ;
 				break;
 				
 			case 'o':
@@ -1336,7 +1246,7 @@ int main(int argc, char *argv[])
 	fprintf(meterec->fd_log,"Updates per second: %d\n", rate);
 	fprintf(meterec->fd_log,"Console Width: %d\n", console_width);
 	fprintf(meterec->fd_log,"Session name: %s\n", session);
-	fprintf(meterec->fd_log,"Jack client name: %s\n", jackname);
+	fprintf(meterec->fd_log,"Jack client name: %s\n", meterec->jack_name);
 	fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
 	fprintf(meterec->fd_log,"%slayback at startup.\n",meterec->playback_cmd?"P":"No p");
 	fprintf(meterec->fd_log,"%secording new take at startup.\n",meterec->record_cmd?"R":"Not r");
@@ -1345,9 +1255,9 @@ int main(int argc, char *argv[])
 	
 	/* Register with Jack */
 	fprintf(meterec->fd_log, "Connecting to jackd...\n");
-	if ((meterec->client = jack_client_open(jackname, JackNullOption, &status)) == 0) {
-		fprintf(meterec->fd_log, "Failed to start '%s' jack client: %d\n", jackname, status);
-		fprintf(stderr,"Failed to start '%s' jack client: %d - Is jackd running?\n", jackname, status);
+	if ((meterec->client = jack_client_open(meterec->jack_name, JackNullOption, &status)) == 0) {
+		fprintf(meterec->fd_log, "Failed to start '%s' jack client: %d\n", meterec->jack_name, status);
+		fprintf(stderr,"Failed to start '%s' jack client: %d - Is jackd running?\n", meterec->jack_name, status);
 		exit(1);
 	}
 	fprintf(meterec->fd_log,"Registered as '%s'.\n", jack_get_client_name( meterec->client ) );
@@ -1374,6 +1284,7 @@ int main(int argc, char *argv[])
 	
 	if (file_exists(meterec->conf_file)) {
 		load_conf(meterec);
+		connect_all_ports(meterec);
 	} else {
 		load_setup(meterec);
 		load_session(meterec);
@@ -1384,7 +1295,7 @@ int main(int argc, char *argv[])
 	
 	meterec->config_sts = ONGOING;
 	
-	create_monitor_port(meterec->client);
+	create_monitor_port(meterec);
 	
 	fprintf(meterec->fd_log, "Starting ncurses interface...\n");
 	
@@ -1447,10 +1358,13 @@ int main(int argc, char *argv[])
 		display_status(meterec, playhead);
 		display_buffer(meterec, console_width);
 		
-		if (edit_mode)
-			display_session(meterec, y_pos, x_pos);
-		else
+		if (view==VU)
 			display_meter(meterec, y_pos, display_names, console_width, decay_len);
+		else if (view==EDIT)	
+			display_session(meterec, y_pos, x_pos);
+		else if (view==PORT) {
+			display_ports(meterec, y_pos, port_pos);
+		}
 		
 		refresh();
 		
