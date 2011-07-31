@@ -12,6 +12,7 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
+- ability to edit names from the interface.
 - rework port connections so self connect does not need to be ordered
 - allow ports to be connected when they get available
 - add a connection manager page

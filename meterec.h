@@ -197,6 +197,15 @@ struct seek_s
   
 };
 
+struct pos_s
+{
+	unsigned int port;
+	unsigned int take;
+	unsigned int inout;
+	unsigned int con_in;
+	unsigned int con_out;
+};
+
 struct meterec_s
 {
   FILE *fd_log ;
@@ -224,6 +233,9 @@ struct meterec_s
   
   int connect_ports;
   
+  const char **all_input_ports;
+  const char **all_output_ports;
+
   unsigned int n_ports;
   struct port_s ports[MAX_PORTS];
   
@@ -238,6 +250,8 @@ struct meterec_s
   jack_port_t *monitor;
   
   struct seek_s seek;
+  
+  struct pos_s pos;
   
   unsigned int output_fmt;
   char *output_ext;

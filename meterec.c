@@ -46,7 +46,6 @@
 WINDOW * mainwin;
 
 int view=VU, display_names=1;
-unsigned int x_pos=0, y_pos=0, port_pos=0;
 int running = 1;
 
 static unsigned long playhead = 0 ;
@@ -379,7 +378,17 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->config_sts = OFF;
 	
 	meterec->jack_transport = 1;
+	
+	meterec->pos.port = 0;
+	meterec->pos.take = 0;
+	meterec->pos.inout = 0;
+	meterec->pos.con_in = 0;
+	meterec->pos.con_out = 0;
+
 		
+	meterec->all_input_ports = NULL;
+	meterec->all_output_ports = NULL;
+	
 	meterec->client = NULL;
 	meterec->fd_log = NULL;
 	
@@ -827,7 +836,7 @@ unsigned int seek(int seek_sec) {
 int keyboard_thread(void *arg) {
 	
 	struct meterec_s *meterec ;
-	unsigned int port, take;
+	unsigned int y_pos, x_pos, port, take;
 	int key = 0;
 	
 	meterec = (struct meterec_s *)arg ;
@@ -843,6 +852,9 @@ int keyboard_thread(void *arg) {
 		
 		fprintf(meterec->fd_log, "Key pressed: %d '%c'\n",key,key);
 		
+		y_pos = meterec->pos.port;
+		x_pos = meterec->pos.take;
+		
 		switch (view) {
 		case EDIT: 
 			
@@ -852,13 +864,13 @@ int keyboard_thread(void *arg) {
 				** Move cursor 
 				*/
 				case KEY_LEFT :
-					if ( x_pos > 1 )
-						x_pos--;
+					if ( meterec->pos.take > 1 )
+						meterec->pos.take--;
 					break;
 				
 				case KEY_RIGHT :
-					if ( x_pos < meterec->n_takes )
-						x_pos++;
+					if ( meterec->pos.take < meterec->n_takes )
+						meterec->pos.take++;
 					break;
 			}
 			
@@ -943,10 +955,10 @@ int keyboard_thread(void *arg) {
 		
 			switch (key) {
 				case KEY_LEFT:
-					port_pos = IN;
+					meterec->pos.inout = IN;
 					break;
 				case KEY_RIGHT:
-					port_pos = OUT;
+					meterec->pos.inout = OUT;
 					break;
 			}
 			break;
@@ -1028,21 +1040,21 @@ int keyboard_thread(void *arg) {
 				break;
 			
 			case KEY_UP :
-				meterec->ports[y_pos].monitor = 0;
-				if ( y_pos == 0 )
-					y_pos = meterec->n_ports - 1;
+				meterec->ports[meterec->pos.port].monitor = 0;
+				if ( meterec->pos.port == 0 )
+					meterec->pos.port = meterec->n_ports - 1;
 				else
-					y_pos--;
-				meterec->ports[y_pos].monitor = 1;
+					meterec->pos.port--;
+				meterec->ports[meterec->pos.port].monitor = 1;
 				break;
 			
 			case KEY_DOWN :
-				meterec->ports[y_pos].monitor = 0;
-				if ( y_pos == meterec->n_ports - 1 )
-					y_pos = 0;
+				meterec->ports[meterec->pos.port].monitor = 0;
+				if ( meterec->pos.port == meterec->n_ports - 1 )
+					meterec->pos.port = 0;
 				else 
-					y_pos++;
-				meterec->ports[y_pos].monitor = 1;
+					meterec->pos.port++;
+				meterec->ports[meterec->pos.port].monitor = 1;
 				break;
 			
 			case 9: /* TAB */
@@ -1051,6 +1063,7 @@ int keyboard_thread(void *arg) {
 				else if (view==EDIT) {
 					view=PORT;
 					retreive_connected_ports(meterec);
+					retreive_existing_ports(meterec);
 				}
 				else if (view==PORT)
 					view=VU;
@@ -1347,7 +1360,7 @@ int main(int argc, char *argv[])
 	/* Register the cleanup function to be called when C-c */
 	signal(SIGINT, halt);
 	
-	x_pos = meterec->n_takes;
+	meterec->pos.take = meterec->n_takes;
 	
 	while (running) {
 		
@@ -1359,11 +1372,11 @@ int main(int argc, char *argv[])
 		display_buffer(meterec, console_width);
 		
 		if (view==VU)
-			display_meter(meterec, y_pos, display_names, console_width, decay_len);
+			display_meter(meterec, display_names, console_width, decay_len);
 		else if (view==EDIT)	
-			display_session(meterec, y_pos, x_pos);
+			display_session(meterec);
 		else if (view==PORT) {
-			display_ports(meterec, y_pos, port_pos);
+			display_ports(meterec);
 		}
 		
 		refresh();

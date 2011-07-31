@@ -65,6 +65,16 @@ void retreive_connected_ports(struct meterec_s *meterec) {
 
 };
 
+void retreive_existing_ports(struct meterec_s *meterec) {
+	
+	jack_free(meterec->all_input_ports);
+	jack_free(meterec->all_output_ports);
+	
+	meterec->all_input_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsInput);
+	meterec->all_output_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsOutput);
+	
+};
+
 void create_input_port(struct meterec_s *meterec, unsigned int port) {
 	
 	char port_name[10] ;
