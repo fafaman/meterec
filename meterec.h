@@ -77,8 +77,9 @@
 #define PORT 2
 
 /* port selection */
-#define IN 0
-#define OUT 1
+#define CON_IN -1
+#define CON 0
+#define CON_OUT 1
 
 
 /*
@@ -201,7 +202,7 @@ struct pos_s
 {
 	unsigned int port;
 	unsigned int take;
-	unsigned int inout;
+	int inout;
 	unsigned int con_in;
 	unsigned int con_out;
 };

@@ -462,128 +462,9 @@ void display_session(struct meterec_s *meterec)
         
 }
 
-void display_ports_1(struct meterec_s *meterec) 
-{
-	unsigned int port, i;
-	const char **in, **out;
-  
-	in=meterec->ports[meterec->pos.port].input_connected;
-	out=meterec->ports[meterec->pos.port].output_connected;
-	
-	printw("\n\n");
-
-	for (port=0; port<meterec->n_ports; port++) {
-	
-		printw("  ");
-		
-		color_port(meterec, meterec->pos.port);
-		
-		if (*in) {
-			printw("%20s-+",*in);
-			in++;
-		} else {
-			if (port<meterec->pos.port)
-				printw("%20s |","");
-			else if (port==meterec->pos.port)
-				printw("%20s +","");
-			else 
-				printw("%20s  ","");
-		}
-		
-		if (meterec->pos.port == port)
-			printw("-");
-		else 
-			printw(" ");
-		
-		if (meterec->pos.inout == IN && meterec->pos.port == port)
-			attron(A_REVERSE);
-		else 
-			attroff(A_REVERSE);
-		
-		color_port(meterec, port);
-		
-		printw("%s:in_%-2d",  meterec->jack_name, port+1);
-		
-		attroff(A_REVERSE);
-		color_set(DEFAULT, NULL);
-		
-		if (meterec->ports[port].thru)
-			printw("-> ");
-		else 
-			printw("   ");
-		
-		if (meterec->pos.inout == OUT && meterec->pos.port == port)
-			attron(A_REVERSE);
-		else 
-			attroff(A_REVERSE);
-		
-		printw("%s:out_%-2d",  meterec->jack_name, port+1);
-		
-		attroff(A_REVERSE);
-		if (meterec->pos.port==port)
-			printw("-");
-		else 
-			printw(" ");
-		
-		
-		if (*out) {
-			printw("+-%s",*out);
-			out++;
-		} else {
-			if (port < meterec->pos.port)
-				printw("| ");
-			else if (port==meterec->pos.port)
-				printw("+ ");
-			else 
-				printw("  ");
-		}
-		
-		printw("\n");
-  	}
-        
-	while (*in || *out) {
-	
-		if (*in) {
-			printw("%20s-+",*in);
-			in++;
-		} else {
-			if (port <= meterec->pos.port)
-				printw("%20s +","");
-			else 
-				printw("%20s  ","");
-		}
-
-		for (i=0; i<(2*strlen(meterec->jack_name)+20); i++)
-			printw(" ");
-		
-		if (*out) {
-			printw("+-%s",*out);
-			out++;
-		} else {
-			if (port <= meterec->pos.port)
-				printw("+ ");
-			else 
-				printw("  ");
-		}
-		
-		printw("\n");
-	
-	
-	}
-	
-		
-	color_set(DEFAULT, NULL);
-	
-	printw("\n\n");
-	printw("  Port %2d ", meterec->pos.port+1);
-	display_port_info( &meterec->ports[meterec->pos.port] );
-        
-}
-
-
 void display_ports(struct meterec_s *meterec) 
 {
-	unsigned int port, i;
+	unsigned int port=0, line=0, i;
 	const char **in, **out;
   
 	out=meterec->all_input_ports;
@@ -593,23 +474,34 @@ void display_ports(struct meterec_s *meterec)
 	display_port_info( &meterec->ports[meterec->pos.port] );
 	printw("\n\n");
 
-	for (port=0; port<meterec->n_ports; port++) {
+	while (*in || *out || port < meterec->n_ports) {
 	
 		printw("  ");
 		
 		if (*in) {
+		
+			if (meterec->pos.inout == CON_IN)
+				if (meterec->pos.con_in == line)
+					attron(A_REVERSE);
+					
 			if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, *in)) {
 				attron(A_BOLD);
 				printw("%20s",*in);
 				attroff(A_BOLD);
+				attroff(A_REVERSE);
 				printw("-+");
 			}
 			else if (port==meterec->pos.port) {
-				printw("%20s +",*in);
+				printw("%20s",*in);
+				attroff(A_REVERSE);
+				printw(" +");
 				color_port(meterec, meterec->pos.port);
 			}
-			else
-				printw("%20s |",*in);
+			else {
+				printw("%20s",*in);
+				attroff(A_REVERSE);
+				printw(" |");
+			}
 			in++;
 		} else {
 			if (port<meterec->pos.port)
@@ -620,60 +512,64 @@ void display_ports(struct meterec_s *meterec)
 				printw("%20s  ","");
 		}
 		
-		if (meterec->pos.port == port)
-			printw("-");
-		else 
-			printw(" ");
 		
-		if (meterec->pos.port == port) {
-			if (meterec->pos.inout == IN)
-				attron(A_REVERSE);
+		if (port<meterec->n_ports) {
+		
+			if (meterec->pos.port == port) {
+				printw("-");
+				if (!meterec->pos.inout)
+					attron(A_REVERSE);
+				else
+					attron(A_BOLD);
+			}
 			else 
-				attron(A_BOLD);
-		}
-		
-		color_port(meterec, port);
-		
-		printw("%s:in_%-2d",  meterec->jack_name, port+1);
-		
-		attroff(A_REVERSE);
-		attroff(A_BOLD);
-		color_set(DEFAULT, NULL);
-		
-		if (meterec->ports[port].thru)
-			printw("-> ");
-		else 
-			printw("   ");
-		
-		if (meterec->pos.port == port) {
-			if (meterec->pos.inout == OUT)
-				attron(A_REVERSE);
+				printw(" ");
+
+			color_port(meterec, port);
+
+			printw("%s:in_%-2d",  meterec->jack_name, port+1);
+
+			color_set(DEFAULT, NULL);
+
+			if (meterec->ports[port].thru)
+				printw("-> ");
 			else 
-				attron(A_BOLD);
+				printw("   ");
+
+			printw("%s:out_%-2d",  meterec->jack_name, port+1);
+
+			attroff(A_BOLD);
+			attroff(A_REVERSE);
+		
 		}
-		
-		printw("%s:out_%-2d",  meterec->jack_name, port+1);
-		
-		attroff(A_BOLD);
-		attroff(A_REVERSE);
+		else 
+			for (i=0; i<(2*strlen(meterec->jack_name)+17); i++)
+				printw(" ");
+
 		if (meterec->pos.port==port)
 			printw("-");
 		else 
 			printw(" ");
 		
-		
 		if (*out) {
 			if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *out)) {
 				printw("+-");
 				attron(A_BOLD);
-				printw("%s",*out);
-				attroff(A_BOLD);
 			}
 			else if (port==meterec->pos.port) {
-				printw("+ %s",*out);
+				printw("+ ");
 			}
 			else
-				printw("| %s",*out);
+				printw("| ");
+				
+			if (meterec->pos.inout == CON_OUT)
+				if (meterec->pos.con_out == line)
+					attron(A_REVERSE);
+				
+			printw("%s",*out);
+			attroff(A_BOLD);
+			attroff(A_REVERSE);
+			
 			out++;
 		} else {
 			if (port<meterec->pos.port)
@@ -685,62 +581,13 @@ void display_ports(struct meterec_s *meterec)
 		}
 		color_set(DEFAULT, NULL);
 		printw("\n");
+		
+		if (port < meterec->n_ports)
+			port ++;
+			
+		line ++;
   	}
         
-	while (*in || *out) {
-	
-		printw("  ");
-
-		if (*in) {
-			if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, *in)) {
-				attron(A_BOLD);
-				printw("%20s",*in);
-				attroff(A_BOLD);
-				printw("-+",*in);
-			}
-			else {
-				printw("%20s |",*in);
-			}
-			in++;
-		} else {
-			if (port<meterec->pos.port)
-				printw("%20s |","");
-			else if (port==meterec->pos.port)
-				printw("%20s +","");
-			else 
-				printw("%20s  ","");
-		}
-		
-		for (i=0; i<(2*strlen(meterec->jack_name)+18); i++)
-			printw(" ");
-		
-		if (*out) {
-			if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *out)) {
-				printw("+-");
-				attron(A_BOLD);
-				printw("%s",*out);
-				attroff(A_BOLD);
-			}
-			else {
-				printw("| %s",*out);
-			}
-			out++;
-		} else {
-			if (port<meterec->pos.port)
-				printw("|");
-			else if (port==meterec->pos.port)
-				printw("+");
-			else 
-				printw("");
-		}
-		
-		printw("\n");
-	
-	
-	}
-	
-		
 	color_set(DEFAULT, NULL);
-	
-        
+
 }

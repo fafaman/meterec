@@ -955,10 +955,20 @@ int keyboard_thread(void *arg) {
 		
 			switch (key) {
 				case KEY_LEFT:
-					meterec->pos.inout = IN;
+					meterec->pos.inout --;
+					if (meterec->pos.inout < CON_IN)
+						meterec->pos.inout = CON_OUT;
 					break;
 				case KEY_RIGHT:
-					meterec->pos.inout = OUT;
+					meterec->pos.inout ++;
+					if (meterec->pos.inout > CON_OUT)
+						meterec->pos.inout = CON_IN;
+					break;
+				case 'c':
+					if (meterec->pos.inout == CON_IN)
+						connect_any_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
+					else if (meterec->pos.inout == CON_OUT)
+						connect_any_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
 					break;
 			}
 			break;
@@ -973,6 +983,13 @@ int keyboard_thread(void *arg) {
 			switch (key) {
 				/* Change record mode */
 				case 'R' : 
+					if ( meterec->ports[y_pos].record == REC )
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = OFF;
+					else
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = REC;
+					break;
 				case 'r' : 
 					if ( meterec->ports[y_pos].record == REC )
 						meterec->ports[y_pos].record = OFF;
@@ -981,6 +998,13 @@ int keyboard_thread(void *arg) {
 					break;
 				
 				case 'D' : 
+					if ( meterec->ports[y_pos].record == DUB )
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = OFF;
+					else
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = DUB;
+					break;
 				case 'd' : 
 					if ( meterec->ports[y_pos].record == DUB )
 						meterec->ports[y_pos].record = OFF;
@@ -989,6 +1013,13 @@ int keyboard_thread(void *arg) {
 					break;
 				
 				case 'O' : 
+					if ( meterec->ports[y_pos].record == OVR )
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = OFF;
+					else
+						for ( port=0 ; port < meterec->n_ports ; port++)
+							meterec->ports[port].record = OVR;
+					break;
 				case 'o' : 
 					if ( meterec->ports[y_pos].record == OVR )
 						meterec->ports[y_pos].record = OFF;
@@ -1040,21 +1071,35 @@ int keyboard_thread(void *arg) {
 				break;
 			
 			case KEY_UP :
-				meterec->ports[meterec->pos.port].monitor = 0;
-				if ( meterec->pos.port == 0 )
-					meterec->pos.port = meterec->n_ports - 1;
-				else
-					meterec->pos.port--;
-				meterec->ports[meterec->pos.port].monitor = 1;
+				if (view == PORT && meterec->pos.inout) {
+					if (meterec->pos.inout == CON_IN)
+						meterec->pos.con_in --;
+					if (meterec->pos.inout == CON_OUT)
+						meterec->pos.con_out --;
+				} else {
+					meterec->ports[meterec->pos.port].monitor = 0;
+					if ( meterec->pos.port == 0 )
+						meterec->pos.port = meterec->n_ports - 1;
+					else
+						meterec->pos.port--;
+					meterec->ports[meterec->pos.port].monitor = 1;
+				}
 				break;
 			
 			case KEY_DOWN :
-				meterec->ports[meterec->pos.port].monitor = 0;
-				if ( meterec->pos.port == meterec->n_ports - 1 )
-					meterec->pos.port = 0;
-				else 
-					meterec->pos.port++;
-				meterec->ports[meterec->pos.port].monitor = 1;
+				if (view == PORT && meterec->pos.inout) {
+					if (meterec->pos.inout == CON_IN)
+						meterec->pos.con_in ++;
+					if (meterec->pos.inout == CON_OUT)
+						meterec->pos.con_out ++;
+				} else {
+					meterec->ports[meterec->pos.port].monitor = 0;
+					if ( meterec->pos.port == meterec->n_ports - 1 )
+						meterec->pos.port = 0;
+					else 
+						meterec->pos.port++;
+					meterec->ports[meterec->pos.port].monitor = 1;
+				}
 				break;
 			
 			case 9: /* TAB */
