@@ -47,7 +47,8 @@ int process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	for (port=0; port<meterec->n_ports; port++)
 		for (map=0; map<meterec->ports[port].portmap; map++)
 			if ( strcmp(port_name, meterec->ports[port].connections[map]) == 0 )
-				connect_any_port(meterec, (char*) port_name, port);
+				if (meterec->connect_ports)
+					connect_any_port(meterec, (char*) port_name, port);
 	
 	return 0;
 }
@@ -59,6 +60,7 @@ void retreive_connected_ports(struct meterec_s *meterec) {
 	for (port=0; port<meterec->n_ports; port++) {
 		jack_free(meterec->ports[port].input_connected);
 		jack_free(meterec->ports[port].output_connected);
+		
 		meterec->ports[port].input_connected = jack_port_get_connections( meterec->ports[port].input );
 		meterec->ports[port].output_connected = jack_port_get_connections( meterec->ports[port].output );
 	}
@@ -188,9 +190,6 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 	/* connect input port*/
 	jack_port = jack_port_by_name(meterec->client, port_name);
 	
-	if (!meterec->connect_ports)
-		return;
-	
 	if (jack_port == NULL) 
 		return;
 		
@@ -201,6 +200,12 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 		
 		// Connect the port to our output port
 		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+
+		if (jack_port_connected_to(meterec->ports[port].output, port_name)) {
+			fprintf(meterec->fd_log, "Ports '%s' and '%s' already connected\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+			return;
+		}
+		
 		if (jack_connect(meterec->client, jack_port_name(meterec->ports[port].output), jack_port_name(jack_port))) {
 			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
 			exit_on_error("Cannot connect ports");
@@ -212,9 +217,66 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 		
 		// Connect the port to our input port
 		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
+
+		if (jack_port_connected_to(meterec->ports[port].input, port_name)) {
+			fprintf(meterec->fd_log, "Ports '%s' and '%s' already connected\n", jack_port_name(meterec->ports[port].input), jack_port_name(jack_port));
+			return;
+		}
+		
 		if (jack_connect(meterec->client, jack_port_name(jack_port), jack_port_name(meterec->ports[port].input))) {
 			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
 			exit_on_error("Cannot connect ports");
+		}
+	
+	}
+	
+}
+
+
+void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned int port)
+{
+	jack_port_t *jack_port;
+	int jack_flags;
+	
+	/* connect input port*/
+	jack_port = jack_port_by_name(meterec->client, port_name);
+	
+	if (jack_port == NULL) 
+		return;
+		
+	/* check port flags */
+	jack_flags = jack_port_flags(jack_port);
+	
+	if ( jack_flags & JackPortIsInput ) {
+		
+		// Disconnect the port from our output port
+		fprintf(meterec->fd_log,"Disconnecting '%s' from '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+
+		if (!jack_port_connected_to(meterec->ports[port].output, port_name)) {
+			fprintf(meterec->fd_log, "Ports '%s' and '%s' already disconnected\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+			return;
+		}
+		
+		if (jack_disconnect(meterec->client, jack_port_name(meterec->ports[port].output), jack_port_name(jack_port))) {
+			fprintf(meterec->fd_log, "Cannot disconnect ports '%s' and '%s'\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
+			exit_on_error("Cannot disconnect ports");
+		}
+		
+	}
+	
+	if ( jack_flags & JackPortIsOutput ) {
+		
+		// Connect the port to our input port
+		fprintf(meterec->fd_log,"Disconnecting '%s' from '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
+
+		if (!jack_port_connected_to(meterec->ports[port].input, port_name)) {
+			fprintf(meterec->fd_log, "Ports '%s' and '%s' already disconnected\n", jack_port_name(meterec->ports[port].input), jack_port_name(jack_port));
+			return;
+		}
+		
+		if (jack_disconnect(meterec->client, jack_port_name(jack_port), jack_port_name(meterec->ports[port].input))) {
+			fprintf(meterec->fd_log, "Cannot disconnect ports '%s' and '%s'\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
+			exit_on_error("Cannot disconnect ports");
 		}
 	
 	}

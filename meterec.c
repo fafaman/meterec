@@ -970,6 +970,12 @@ int keyboard_thread(void *arg) {
 					else if (meterec->pos.inout == CON_OUT)
 						connect_any_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
 					break;
+				case 'x':
+					if (meterec->pos.inout == CON_IN)
+						disconnect_any_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
+					else if (meterec->pos.inout == CON_OUT)
+						disconnect_any_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+					break;
 			}
 			break;
 		}
@@ -1342,7 +1348,8 @@ int main(int argc, char *argv[])
 	
 	if (file_exists(meterec->conf_file)) {
 		load_conf(meterec);
-		connect_all_ports(meterec);
+		if (meterec->connect_ports)
+			connect_all_ports(meterec);
 	} else {
 		load_setup(meterec);
 		load_session(meterec);
