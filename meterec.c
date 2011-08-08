@@ -57,7 +57,7 @@ char *output_ext = "w64" ;
 char *output_ext = "wav" ;
 #endif
 
-pthread_t wr_dt, rd_dt, kb_dt ;
+pthread_t wr_dt=(pthread_t)NULL, rd_dt=(pthread_t)NULL, kb_dt=(pthread_t)NULL ;
 
 struct meterec_s * meterec ;
 
@@ -134,8 +134,11 @@ static void cleanup() {
 	if (meterec->config_sts)
 		save_conf(meterec);
 		
-	pthread_join(rd_dt, NULL);
-	pthread_join(wr_dt, NULL);
+	if (rd_dt)
+		pthread_join(rd_dt, NULL);
+		
+	if (wr_dt)
+		pthread_join(wr_dt, NULL);
 
 	if (meterec->jack_sts)
 		cleanup_jack();
