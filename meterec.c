@@ -329,6 +329,27 @@ void init_ports(struct meterec_s *meterec) {
 	
 }
 
+void free_ports(struct meterec_s *meterec) {
+	
+	unsigned int port, con;
+	
+	for (port = 0; port < MAX_PORTS; port++) {
+		
+		free(meterec->ports[port].input_connected);
+		free(meterec->ports[port].output_connected);
+		
+		for (con = 0; con < MAX_CONS; con++)
+			free(meterec->ports[port].connections[con]);
+		
+		free(meterec->ports[port].name);
+		
+		free(meterec->ports[port].write_disk_buffer);
+		free(meterec->ports[port].read_disk_buffer);
+		
+	}
+	
+}
+
 void init_takes(struct meterec_s *meterec) {
 	
 	unsigned int port, take, track ;
@@ -352,6 +373,20 @@ void init_takes(struct meterec_s *meterec) {
 			meterec->takes[take].port_has_track[port] = 0;
 			meterec->takes[take].port_has_lock[port] = 0;
 		}
+		
+	}
+	
+}
+
+void free_takes(struct meterec_s *meterec) {
+	
+	unsigned int port, take, track ;
+	
+	for (take=0; take<MAX_TAKES; take++) {
+		
+		free(meterec->takes[take].take_file);
+		free(meterec->takes[take].take_fd);
+		free(meterec->takes[take].buf);
 		
 	}
 	
@@ -416,6 +451,19 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->seek.keyboard_lock = 0;
 	
 }
+
+void free_options(struct meterec_s *meterec) {
+	
+	free(meterec->all_input_ports);
+	free(meterec->all_output_ports);
+	free(meterec->session_file);
+	free(meterec->setup_file);
+	free(meterec->conf_file);
+	free(meterec->log_file);
+	free(meterec->output_ext);
+	
+}
+
 
 int find_take_name(char *session, unsigned int take, char **name) {
 	
@@ -1444,7 +1492,13 @@ int main(int argc, char *argv[])
 	
 	pthread_kill(kb_dt, SIGTERM); 
 	pthread_join(kb_dt, NULL);
-
+	
+	free_scale();
+	free_ports(meterec);
+	free_takes(meterec);
+	free_options(meterec);
+	free(meterec);
+	
 	return 0;
 	
 }

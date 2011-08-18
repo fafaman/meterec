@@ -204,6 +204,11 @@ void display_meter(struct meterec_s *meterec, int display_names, int width, int 
 
 }
 
+void free_scale(void) {
+	free(scale);
+	free(line);
+}
+
 void init_display_scale( unsigned int width )
 {
 

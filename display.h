@@ -28,4 +28,5 @@ void display_status(struct meterec_s *meterec, unsigned int playhead);
 void display_buffer(struct meterec_s *meterec, int width);
 void display_meter(struct meterec_s *meterec, int display_names, int width, int decay_len);
 void init_display_scale(unsigned int width);
+void free_scale(void);
 
