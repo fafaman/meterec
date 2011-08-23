@@ -27,7 +27,7 @@
 #include "meterec.h"
 #include "ports.h"
 
-int process_port_register(jack_port_id_t port_id, int new, void *arg) {
+void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 
 	struct meterec_s *meterec ;
 	unsigned int port, con;
@@ -35,7 +35,7 @@ int process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	jack_port_t *jack_port;
 	
 	if (!new) 
-		return 0;
+		return;
 	
 	meterec = (struct meterec_s *)arg ;
 	
@@ -49,8 +49,6 @@ int process_port_register(jack_port_id_t port_id, int new, void *arg) {
 			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 )
 				if (meterec->connect_ports)
 					connect_any_port(meterec, (char*) port_name, port);
-	
-	return 0;
 }
 
 void retreive_connected_ports(struct meterec_s *meterec) {

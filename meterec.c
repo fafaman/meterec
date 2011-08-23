@@ -1390,7 +1390,7 @@ int main(int argc, char *argv[])
 		jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
 	
 	/* Register function to handle new ports */
-	jack_set_port_registration_callback(meterec->client, (JackPortRegistrationCallback)process_port_register, meterec);
+	jack_set_port_registration_callback(meterec->client, process_port_register, meterec);
 	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);

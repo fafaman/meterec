@@ -21,7 +21,7 @@
 */
 
 
-int process_port_register(jack_port_id_t port_id, int new, void *arg);
+void process_port_register(jack_port_id_t port_id, int new, void *arg);
 void create_input_port(struct meterec_s *meterec, unsigned int port);
 void create_output_port(struct meterec_s *meterec, unsigned int port);
 void create_monitor_port(struct meterec_s *meterec) ;
