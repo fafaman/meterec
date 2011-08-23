@@ -280,7 +280,7 @@ void save_conf(struct meterec_s *meterec) {
 		fprintf(fd_conf, "thru=%s ", meterec->ports[port].thru?"true; ":"false;");
 		
 		fprintf(fd_conf,"connections=(");
-		for (con=0; con< meterec->ports[port].portmap; con++) {
+		for (con=0; con< meterec->ports[port].n_cons; con++) {
 			if (con)
 				fprintf(fd_conf, ",");
 			
@@ -458,7 +458,7 @@ void load_conf(struct meterec_s *meterec) {
 							register_port(meterec, (char *)port_name, port);
 						}
 					}
-					meterec->ports[port].portmap = con;
+					meterec->ports[port].n_cons = con;
 				}
 			}
 		}

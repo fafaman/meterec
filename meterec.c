@@ -297,7 +297,7 @@ void init_ports(struct meterec_s *meterec) {
 		meterec->ports[port].input_connected = NULL;
 		meterec->ports[port].output_connected = NULL;
 		
-		meterec->ports[port].portmap = 0;
+		meterec->ports[port].n_cons = 0;
 		for (con = 0; con < MAX_CONS; con++)
 			meterec->ports[port].connections[con] = NULL;
 		
@@ -338,7 +338,7 @@ void free_ports(struct meterec_s *meterec) {
 		free(meterec->ports[port].input_connected);
 		free(meterec->ports[port].output_connected);
 		
-		for (con = 0; con < meterec->ports[port].portmap; con++)
+		for (con = 0; con < meterec->ports[port].n_cons; con++)
 			free(meterec->ports[port].connections[con]);
 		
 		free(meterec->ports[port].name);
@@ -1390,7 +1390,7 @@ int main(int argc, char *argv[])
 		jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
 	
 	/* Register function to handle new ports */
-	jack_set_port_registration_callback(meterec->client, process_port_register, meterec);
+	jack_set_port_registration_callback(meterec->client, (JackPortRegistrationCallback)process_port_register, meterec);
 	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);

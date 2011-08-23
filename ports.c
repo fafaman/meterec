@@ -30,7 +30,7 @@
 int process_port_register(jack_port_id_t port_id, int new, void *arg) {
 
 	struct meterec_s *meterec ;
-	unsigned int port, map;
+	unsigned int port, con;
 	const char *port_name;
 	jack_port_t *jack_port;
 	
@@ -45,8 +45,8 @@ int process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	port_name = jack_port_name(jack_port);
 	
 	for (port=0; port<meterec->n_ports; port++)
-		for (map=0; map<meterec->ports[port].portmap; map++)
-			if ( strcmp(port_name, meterec->ports[port].connections[map]) == 0 )
+		for (con=0; con<meterec->ports[port].n_cons; con++)
+			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 )
 				if (meterec->connect_ports)
 					connect_any_port(meterec, (char*) port_name, port);
 	
@@ -148,9 +148,9 @@ void register_port_old(struct meterec_s *meterec, char *port_name, unsigned int 
 		
 	}
 	else {
-		meterec->ports[port].connections[meterec->ports[port].portmap] = (char *) malloc( strlen(port_name) + 1 );
-		strcpy(meterec->ports[port].connections[meterec->ports[port].portmap], port_name);
-		meterec->ports[port].portmap += 1;
+		meterec->ports[port].connections[meterec->ports[port].n_cons] = (char *) malloc( strlen(port_name) + 1 );
+		strcpy(meterec->ports[port].connections[meterec->ports[port].n_cons], port_name);
+		meterec->ports[port].n_cons += 1;
 	}
 }
 
@@ -165,43 +165,43 @@ void register_port(struct meterec_s *meterec, char *port_name, unsigned int port
 	if (jack_port == NULL) 
 		fprintf(meterec->fd_log, "Can't find port '%s' will connect later if port becomes available.\n", port_name);
 		
-	meterec->ports[port].connections[meterec->ports[port].portmap] = (char *) malloc( strlen(port_name) + 1 );
-	strcpy(meterec->ports[port].connections[meterec->ports[port].portmap], port_name);
-	meterec->ports[port].portmap += 1;
+	meterec->ports[port].connections[meterec->ports[port].n_cons] = (char *) malloc( strlen(port_name) + 1 );
+	strcpy(meterec->ports[port].connections[meterec->ports[port].n_cons], port_name);
+	meterec->ports[port].n_cons += 1;
 	
 }
 
 void deregister_port(struct meterec_s *meterec, char *port_name, unsigned int port) {
 
-	unsigned int con, portmap;
+	unsigned int con, n_cons;
 	
-	portmap = meterec->ports[port].portmap;
+	n_cons = meterec->ports[port].n_cons;
 	
-	for (con=0; con < portmap; con++) 
+	for (con=0; con<n_cons; con++) 
 		if ( strcmp(meterec->ports[port].connections[con], port_name) == 0 ) 
 			break;
 	
-	if (con < portmap) {
+	if (con < n_cons) {
 		free(meterec->ports[port].connections[con]);
-		portmap--;
+		n_cons--;
 		
-		for ( ; con<portmap; con++) 
+		for ( ; con<n_cons; con++) 
 			meterec->ports[port].connections[con] = meterec->ports[port].connections[con+1];
 		
-		meterec->ports[port].connections[portmap+1] = NULL;
+		meterec->ports[port].connections[n_cons+1] = NULL;
 		
-		meterec->ports[port].portmap = portmap;
+		meterec->ports[port].n_cons = n_cons;
 	}
 	
 }
 
 void connect_all_ports(struct meterec_s *meterec) {
 
-	unsigned int port, map;
+	unsigned int port, con;
 	
 	for (port=0; port<meterec->n_ports; port++)
-		for (map=0; map<meterec->ports[port].portmap; map++)
-			connect_any_port(meterec, meterec->ports[port].connections[map], port);
+		for (con=0; con<meterec->ports[port].n_cons; con++)
+			connect_any_port(meterec, meterec->ports[port].connections[con], port);
 
 }
 

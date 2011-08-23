@@ -149,7 +149,7 @@ struct port_s
   jack_port_t *input;
   jack_port_t *output;
   
-  unsigned int portmap;
+  unsigned int n_cons;
   const char **input_connected;
   const char **output_connected;
   char *connections[MAX_CONS];
