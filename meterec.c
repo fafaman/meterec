@@ -338,7 +338,7 @@ void free_ports(struct meterec_s *meterec) {
 		free(meterec->ports[port].input_connected);
 		free(meterec->ports[port].output_connected);
 		
-		for (con = 0; con < MAX_CONS; con++)
+		for (con = 0; con < meterec->ports[port].portmap; con++)
 			free(meterec->ports[port].connections[con]);
 		
 		free(meterec->ports[port].name);
@@ -380,7 +380,7 @@ void init_takes(struct meterec_s *meterec) {
 
 void free_takes(struct meterec_s *meterec) {
 	
-	unsigned int port, take, track ;
+	unsigned int take;
 	
 	for (take=0; take<MAX_TAKES; take++) {
 		
@@ -1017,15 +1017,15 @@ int keyboard_thread(void *arg) {
 					break;
 				case 'c':
 					if (meterec->pos.inout == CON_IN)
-						connect_any_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
+						register_connect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
 					else if (meterec->pos.inout == CON_OUT)
-						connect_any_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+						register_connect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
 					break;
 				case 'x':
 					if (meterec->pos.inout == CON_IN)
-						disconnect_any_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
+						deregister_disconnect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
 					else if (meterec->pos.inout == CON_OUT)
-						disconnect_any_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+						deregister_disconnect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
 					break;
 			}
 			break;
@@ -1388,6 +1388,9 @@ int main(int argc, char *argv[])
 	/* Register function to handle transport changes */
 	if (meterec->jack_transport)
 		jack_set_sync_callback(meterec->client, process_jack_sync, meterec);
+	
+	/* Register function to handle new ports */
+	jack_set_port_registration_callback(meterec->client, process_port_register, meterec);
 	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);

@@ -171,6 +171,30 @@ void register_port(struct meterec_s *meterec, char *port_name, unsigned int port
 	
 }
 
+void deregister_port(struct meterec_s *meterec, char *port_name, unsigned int port) {
+
+	unsigned int con, portmap;
+	
+	portmap = meterec->ports[port].portmap;
+	
+	for (con=0; con < portmap; con++) 
+		if ( strcmp(meterec->ports[port].connections[con], port_name) == 0 ) 
+			break;
+	
+	if (con < portmap) {
+		free(meterec->ports[port].connections[con]);
+		portmap--;
+		
+		for ( ; con<portmap; con++) 
+			meterec->ports[port].connections[con] = meterec->ports[port].connections[con+1];
+		
+		meterec->ports[port].connections[portmap+1] = NULL;
+		
+		meterec->ports[port].portmap = portmap;
+	}
+	
+}
+
 void connect_all_ports(struct meterec_s *meterec) {
 
 	unsigned int port, map;
@@ -282,5 +306,19 @@ void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned in
 	}
 	
 }
+
+void register_connect_port(struct meterec_s *meterec, char *port_name, unsigned int port)
+{
+	register_port(meterec, port_name, port);
+	connect_any_port(meterec, port_name, port);
+}
+
+void deregister_disconnect_port(struct meterec_s *meterec, char *port_name, unsigned int port)
+{
+	deregister_port(meterec, port_name, port);
+	disconnect_any_port(meterec, port_name, port);
+
+}
+
 
 

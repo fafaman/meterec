@@ -32,4 +32,5 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned int port);
 void retreive_connected_ports(struct meterec_s *meterec);
 void retreive_existing_ports(struct meterec_s *meterec);
-	
+void register_connect_port(struct meterec_s *meterec, char *port_name, unsigned int port);
+void deregister_disconnect_port(struct meterec_s *meterec, char *port_name, unsigned int port);
