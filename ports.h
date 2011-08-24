@@ -34,3 +34,4 @@ void retreive_connected_ports(struct meterec_s *meterec);
 void retreive_existing_ports(struct meterec_s *meterec);
 void register_connect_port(struct meterec_s *meterec, char *port_name, unsigned int port);
 void deregister_disconnect_port(struct meterec_s *meterec, char *port_name, unsigned int port);
+char* port_rename(struct meterec_s *meterec, unsigned int port);

@@ -318,5 +318,21 @@ void deregister_disconnect_port(struct meterec_s *meterec, char *port_name, unsi
 
 }
 
+char* port_rename(struct meterec_s *meterec, unsigned int port) 
+{
+	char *new;
+	
+	new = (char *) malloc( MAX_NAME_LEN + 1 );
+	
+	if (meterec->ports[port].name) 
+		free(meterec->ports[port].name);
+	
+	meterec->ports[port].name = new;
+	
+	*new     = '_';
+	*(new+1) = '\0';
+	
+	return new;
+}
 
 

@@ -43,6 +43,8 @@
 /*number of seek indexes*/
 #define MAX_INDEX 12
 
+#define MAX_NAME_LEN 80
+
 /* commands */
 #define STOP 0
 #define START 1

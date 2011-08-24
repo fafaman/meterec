@@ -889,6 +889,8 @@ int keyboard_thread(void *arg) {
 	struct meterec_s *meterec ;
 	unsigned int y_pos, x_pos, port, take;
 	int key = 0;
+	int freetext = 0;
+	char *text = NULL;
 	
 	meterec = (struct meterec_s *)arg ;
 	
@@ -905,6 +907,33 @@ int keyboard_thread(void *arg) {
 		
 		y_pos = meterec->pos.port;
 		x_pos = meterec->pos.take;
+		
+		if (freetext) {
+			
+			if (key == 10) {
+				freetext = 1;
+			}
+			else {
+				if (key < 32)
+					continue;
+				if (key > 126)
+					continue;
+				if (key == '"')
+					continue;
+				
+				*text     = key;
+				*(text+1) = '_';
+				*(text+2) = '\0';
+				text++;
+			}
+			
+			freetext --;
+			
+			if (freetext == 0)
+				*text = '\0';
+			
+			continue;
+		}
 		
 		switch (view) {
 		case EDIT: 
@@ -1089,6 +1118,11 @@ int keyboard_thread(void *arg) {
 		}
 		
 		switch (key) {
+			
+			case 'i' : /* rename the current port */
+				text = port_rename(meterec, y_pos);
+				freetext = MAX_NAME_LEN;
+				break;
 			
 			case 'T' : /* toggle pass thru on all ports */
 				if ( meterec->ports[y_pos].thru ) 
@@ -1427,6 +1461,7 @@ int main(int argc, char *argv[])
 	
 	meterec->curses_sts = ONGOING;
 	
+	curs_set(0);
 	start_color();
 	
 	// choose our color pairs
