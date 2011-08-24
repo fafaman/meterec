@@ -83,6 +83,7 @@
 #define CON 0
 #define CON_OUT 1
 
+#define MAX_UINT ((unsigned int)(-1))
 
 /*
 note : 
@@ -200,6 +201,12 @@ struct seek_s
   
 };
 
+struct loop_s
+{
+	unsigned int low;
+	unsigned int high;
+};
+
 struct pos_s
 {
 	unsigned int port;
@@ -251,6 +258,8 @@ struct meterec_s
   jack_nframes_t jack_buffsize;
 
   jack_port_t *monitor;
+  
+  struct loop_s loop;
   
   struct seek_s seek;
   

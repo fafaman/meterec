@@ -215,6 +215,21 @@ void read_peak(float bias) {
 	
 }
 
+void set_loop(struct meterec_s *meterec, unsigned int loophead) {
+	
+	if (meterec->loop.low == NULL) {
+		meterec->loop.low = loophead;
+	}
+	else if (loophead > meterec->loop.low) {
+		meterec->loop.high = loophead;
+	}
+	else if (loophead < meterec->loop.low) {
+		meterec->loop.high = meterec->loop.low;
+		meterec->loop.low = loophead;
+	}
+
+}
+
 /******************************************************************************
 ** Takes and ports
 */
@@ -441,14 +456,17 @@ void pre_option_init(struct meterec_s *meterec) {
 	pthread_mutex_init(&meterec->seek.mutex, NULL);
 	
 	for (index=0; index<MAX_INDEX; index++)
-		meterec->seek.index[index] = -1;
+		meterec->seek.index[index] = MAX_UINT;
 	
-	meterec->seek.disk_playhead_target = -1;
-	meterec->seek.jack_buffer_target = -1;
-	meterec->seek.playhead_target = -1;
+	meterec->seek.disk_playhead_target = MAX_UINT;
+	meterec->seek.jack_buffer_target = MAX_UINT;
+	meterec->seek.playhead_target = MAX_UINT;
 	
 	meterec->seek.files_reopen = 0;
 	meterec->seek.keyboard_lock = 0;
+
+	meterec->loop.low = MAX_UINT;
+	meterec->loop.high = MAX_UINT;
 	
 }
 
@@ -648,7 +666,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	record_ongoing = (meterec->record_cmd != OFF);
 	
 	/* check if there is a new buffer position to go to*/
-	if (meterec->seek.jack_buffer_target != (unsigned int)(-1)) {
+	if (meterec->seek.jack_buffer_target != MAX_UINT) {
 		
 		pthread_mutex_lock( &meterec->seek.mutex );
 		
@@ -665,8 +683,8 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			playhead = meterec->seek.playhead_target;
 		}
 		
-		meterec->seek.playhead_target = -1;
-		meterec->seek.jack_buffer_target = -1;
+		meterec->seek.playhead_target = MAX_UINT;
+		meterec->seek.jack_buffer_target = MAX_UINT;
 		
 		pthread_mutex_unlock( &meterec->seek.mutex );
 		
@@ -1248,7 +1266,11 @@ int keyboard_thread(void *arg) {
 		
 		/* set index using SHIFT */
 		if ( KEY_F(13) <= key && key <= KEY_F(24) ) 
-		meterec->seek.index[key - KEY_F(13)] = playhead ;
+			meterec->seek.index[key - KEY_F(13)] = playhead ;
+		
+		/* set loop using CONTROL */
+		if ( KEY_F(25) <= key && key <= KEY_F(36) ) 
+			set_loop(meterec, meterec->seek.index[key - KEY_F(25)]);
 		
 		/* seek to index */
 		if (!meterec->record_sts && meterec->playback_sts ) {
