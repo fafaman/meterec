@@ -911,7 +911,13 @@ int keyboard_thread(void *arg) {
 		if (freetext) {
 			
 			if (key == 10) {
-				freetext = 1;
+				freetext = 0;
+			} 
+			else if ((key == 127 || key == 263) && freetext < MAX_NAME_LEN) {
+				text --;
+				freetext ++;
+				*text = '_';
+				*(text+1) = '\0';
 			}
 			else {
 				if (key < 32)
@@ -924,10 +930,9 @@ int keyboard_thread(void *arg) {
 				*text     = key;
 				*(text+1) = '_';
 				*(text+2) = '\0';
-				text++;
+				text ++;
+				freetext --;
 			}
-			
-			freetext --;
 			
 			if (freetext == 0)
 				*text = '\0';
