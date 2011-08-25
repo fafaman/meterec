@@ -43,6 +43,7 @@
 /*number of seek indexes*/
 #define MAX_INDEX 12
 
+/* max when editing port names */
 #define MAX_NAME_LEN 80
 
 /* commands */
@@ -145,7 +146,6 @@ struct take_s
  
 };
 
-
 struct port_s
 {
 
@@ -199,6 +199,14 @@ struct seek_s
   /* do not allow severeal pending seek requests */
   unsigned int keyboard_lock;
   
+};
+
+struct event_s {
+	
+	jack_nframes_t disk_playhead;
+	jack_nframes_t jack_playhead;
+	struct event_s *next;
+	struct event_s *prev;
 };
 
 struct loop_s
@@ -264,6 +272,9 @@ struct meterec_s
   struct seek_s seek;
   
   struct pos_s pos;
+  
+  struct event_s *event_disk;
+  struct event_s *event_jack;
   
   unsigned int output_fmt;
   char *output_ext;

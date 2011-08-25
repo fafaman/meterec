@@ -217,7 +217,7 @@ void read_peak(float bias) {
 
 void set_loop(struct meterec_s *meterec, unsigned int loophead) {
 	
-	if (meterec->loop.low == NULL) {
+	if (meterec->loop.low == MAX_UINT) {
 		meterec->loop.low = loophead;
 	}
 	else if (loophead > meterec->loop.low) {
