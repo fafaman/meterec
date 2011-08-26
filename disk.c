@@ -330,7 +330,10 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 }
 
-void add_event(struct event_s *event, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead) {
+void add_event(struct event_s **event_p, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead) {
+	
+	struct event_s *event;
+	event = *event_p;
 	
 	if (event == NULL) {
 		event = (struct event_s *)malloc(sizeof(struct event_s));
@@ -354,7 +357,10 @@ void add_event(struct event_s *event, jack_nframes_t disk_playhead, jack_nframes
 	
 }
 
-void find_last_event(struct event_s *event) {
+void find_last_event(struct event_s **event_p) {
+	
+	struct event_s *event;
+	event = *event_p;
 	
 	if (event == NULL)
 		return;
@@ -364,7 +370,10 @@ void find_last_event(struct event_s *event) {
 	
 }
 
-void rm_last_event(struct event_s *event) {
+void rm_last_event(struct event_s **event_p) {
+	
+	struct event_s *event;
+	event = *event_p;
 	
 	if (event == NULL)
 		return;
@@ -379,7 +388,10 @@ void rm_last_event(struct event_s *event) {
 	
 }
 
-void find_first_event(struct event_s *event) {
+void find_first_event(struct event_s **event_p) {
+	
+	struct event_s *event;
+	event = *event_p;
 	
 	if (event == NULL)
 		return;
@@ -389,7 +401,10 @@ void find_first_event(struct event_s *event) {
 	
 }
 
-void rm_first_event(struct event_s *event) {
+void rm_first_event(struct event_s **event_p) {
+	
+	struct event_s *event;
+	event = *event_p;
 	
 	if (event == NULL)
 		return;
@@ -496,14 +511,16 @@ int reader_thread(void *d)
 				
 				read_disk_seek(meterec, meterec->loop.low);
 				
-				i -= playhead - meterec->loop.high;
+				i -= playhead - meterec->loop.high; // This seams useless/wring
 				playhead = meterec->loop.low;
 				
 				opos = 0;
 				
 				i = fill_buffer(meterec, &opos, &playhead);
 				
-				add_event(meterec->event_disk, meterec->loop.high, meterec->loop.low);
+				pthread_mutex_lock(&meterec->loop.mutex);
+				add_event(&meterec->event, meterec->loop.high, meterec->loop.low);
+				pthread_mutex_unlock(&meterec->loop.mutex);
 			}
 		}
 		

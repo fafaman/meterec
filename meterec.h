@@ -184,21 +184,21 @@ struct port_s
 
 struct seek_s 
 {
-  pthread_mutex_t mutex ;
-
-  jack_nframes_t index[MAX_INDEX];
-  
-  /* request from keyboard thread to disk thread */
-  jack_nframes_t disk_playhead_target;
-  int files_reopen; 
-  
-  /* request of disk thread to jack process */
-  unsigned int jack_buffer_target;
-  jack_nframes_t playhead_target;
-  
-  /* do not allow severeal pending seek requests */
-  unsigned int keyboard_lock;
-  
+	pthread_mutex_t mutex ;
+	
+	jack_nframes_t index[MAX_INDEX];
+	
+	/* request from keyboard thread to disk thread */
+	jack_nframes_t disk_playhead_target;
+	int files_reopen; 
+	
+	/* request of disk thread to jack process */
+	unsigned int jack_buffer_target;
+	jack_nframes_t playhead_target;
+	
+	/* do not allow severeal pending seek requests */
+	unsigned int keyboard_lock;
+	
 };
 
 struct event_s {
@@ -213,6 +213,7 @@ struct loop_s
 {
 	unsigned int low;
 	unsigned int high;
+	pthread_mutex_t mutex ;
 };
 
 struct pos_s
@@ -226,67 +227,66 @@ struct pos_s
 
 struct meterec_s
 {
-  FILE *fd_log ;
-
-  char *session_file;
-  char *setup_file;
-  char *conf_file;
-  char *log_file;
-
-  char *jack_name;
-
-  unsigned int record_sts;
-  unsigned int record_cmd;   /* from gui or process to disk */
-
-  unsigned int playback_sts;
-  unsigned int playback_cmd; /* from gui or process to disk */
-
-  unsigned int keyboard_cmd;
-  
-  unsigned int curses_sts;
-  unsigned int config_sts;
-  unsigned int jack_sts;
-  
-  unsigned int jack_transport;
-  
-  int connect_ports;
-  
-  const char **all_input_ports;
-  const char **all_output_ports;
-
-  unsigned int n_ports;
-  struct port_s ports[MAX_PORTS];
-  
-  unsigned int n_takes;
-  struct take_s takes[MAX_TAKES];
-
-  unsigned int n_tracks;
-
-  jack_client_t *client;
-  jack_nframes_t jack_buffsize;
-
-  jack_port_t *monitor;
-  
-  struct loop_s loop;
-  
-  struct seek_s seek;
-  
-  struct pos_s pos;
-  
-  struct event_s *event_disk;
-  struct event_s *event_jack;
-  
-  unsigned int output_fmt;
-  char *output_ext;
-
-  unsigned int write_disk_buffer_thread_pos;
-  unsigned int write_disk_buffer_process_pos;
-  unsigned int write_disk_buffer_overflow;
-
-  unsigned int read_disk_buffer_thread_pos;
-  unsigned int read_disk_buffer_process_pos;
-  unsigned int read_disk_buffer_overflow;
-
+	FILE *fd_log ;
+	
+	char *session_file;
+	char *setup_file;
+	char *conf_file;
+	char *log_file;
+	
+	char *jack_name;
+	
+	unsigned int record_sts;
+	unsigned int record_cmd;   /* from gui or process to disk */
+	
+	unsigned int playback_sts;
+	unsigned int playback_cmd; /* from gui or process to disk */
+	
+	unsigned int keyboard_cmd;
+	
+	unsigned int curses_sts;
+	unsigned int config_sts;
+	unsigned int jack_sts;
+	
+	unsigned int jack_transport;
+	
+	int connect_ports;
+	
+	const char **all_input_ports;
+	const char **all_output_ports;
+	
+	unsigned int n_ports;
+	struct port_s ports[MAX_PORTS];
+	
+	unsigned int n_takes;
+	struct take_s takes[MAX_TAKES];
+	
+	unsigned int n_tracks;
+	
+	jack_client_t *client;
+	jack_nframes_t jack_buffsize;
+	
+	jack_port_t *monitor;
+	
+	struct loop_s loop;
+	
+	struct seek_s seek;
+	
+	struct pos_s pos;
+	
+	struct event_s *event;
+	
+	unsigned int output_fmt;
+	char *output_ext;
+	
+	unsigned int write_disk_buffer_thread_pos;
+	unsigned int write_disk_buffer_process_pos;
+	unsigned int write_disk_buffer_overflow;
+	
+	unsigned int read_disk_buffer_thread_pos;
+	unsigned int read_disk_buffer_process_pos;
+	unsigned int read_disk_buffer_overflow;
+	
 };
 
 void start_playback(void);
