@@ -269,6 +269,8 @@ void display_buffer(struct meterec_s *meterec, int width) {
   
   width -= 3;
   
+  width /= 2;
+  
   rdsize = width * read_disk_buffer_level(meterec);
   
   if (rdsize > peak_rdsize && meterec->playback_sts == ONGOING) 
@@ -283,7 +285,7 @@ void display_buffer(struct meterec_s *meterec, int width) {
     else 
       printw(" ");
   }
-  printw("%sRD\n", pedale);
+  printw("%sRD|", pedale);
 
 
   if (meterec->record_sts==ONGOING) {
@@ -306,6 +308,7 @@ void display_buffer(struct meterec_s *meterec, int width) {
     else 
       printw(" ");
   }
+  
   printw("\n");
 
     
@@ -320,6 +323,31 @@ void display_buffer(struct meterec_s *meterec, int width) {
       pedale = "/";
  }
 
+}
+void display_loop(struct meterec_s *meterec) {
+	
+	jack_nframes_t rate;
+	struct time_s low, high;
+	
+	rate = jack_get_sample_rate(meterec->client);
+	
+	if (meterec->loop.low == MAX_UINT) 
+		printw("[-:--:--.---]");
+	else {
+		low.frm = meterec->loop.low;
+		low.rate = rate ;
+		time_hms(&low);
+		printw("[%d:%02d:%02d.%03d]", low.h, low.m, low.s, low.ms);
+	}
+	
+	if (meterec->loop.high == MAX_UINT) 
+		printw("[-:--:--.---]");
+	else {
+		high.frm = meterec->loop.high;
+		high.rate = rate ;
+		time_hms(&high);
+		printw("[%d:%02d:%02d.%03d]\n", high.h, high.m, high.s, high.ms);
+	}
 }
 
 void display_status(struct meterec_s *meterec, unsigned int playhead) {

@@ -1558,6 +1558,7 @@ int main(int argc, char *argv[])
 		clear();
 		
 		display_status(meterec, playhead);
+		display_loop(meterec);
 		display_buffer(meterec, console_width);
 		
 		if (view==VU)

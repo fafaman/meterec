@@ -20,6 +20,7 @@
 
 */
 
+void display_loop(struct meterec_s *meterec);
 void display_ports(struct meterec_s *meterec);
 void display_session(struct meterec_s *meterec);
 void display_port_info(struct port_s *port_p);
