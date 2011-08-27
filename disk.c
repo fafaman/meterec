@@ -251,7 +251,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos , unsigne
 	
 	unsigned int i,  port, take, track, ntrack=0, fill;
 	
-	
+	/* lets fill local buffer only if previously emptied*/
 	if (*opos == 0) {
 	
 		/* load the local buffer */
@@ -330,92 +330,89 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 }
 
-void add_event(struct event_s **event_p, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead) {
+void add_event(struct meterec_s *meterec, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead) {
 	
-	struct event_s *event;
-	event = *event_p;
-	
-	if (event == NULL) {
-		event = (struct event_s *)malloc(sizeof(struct event_s));
-		event->prev = NULL;
-		event->next = NULL;
+	if (meterec->event == NULL) {
+		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
+		meterec->event->prev = NULL;
+		meterec->event->next = NULL;
+		fprintf(meterec->fd_log,"DBG: add_event: created from NULL.\n");
 	}
 	else {
 		
-		while (event->next)
-			event = event->next;
+		while (meterec->event->next)
+			meterec->event = meterec->event->next;
 		
-		event->next = (struct event_s *)malloc(sizeof(struct event_s));
-		event->next->prev = event;
-		event->next->next = NULL;
+		meterec->event->next = (struct event_s *)malloc(sizeof(struct event_s));
+		meterec->event->next->prev = meterec->event;
+		meterec->event->next->next = NULL;
 		
-		event = event->next;
+		meterec->event = meterec->event->next;
+		fprintf(meterec->fd_log,"DBG: add_event: adding in queue.\n");
 	}
 	
-	event->disk_playhead = disk_playhead;
-	event->jack_playhead = jack_playhead;
+	meterec->event->disk_playhead = disk_playhead;
+	meterec->event->jack_playhead = jack_playhead;
 	
 }
 
-void find_last_event(struct event_s **event_p) {
+void find_last_event(struct meterec_s *meterec) {
 	
-	struct event_s *event;
-	event = *event_p;
-	
-	if (event == NULL)
+	if (meterec->event == NULL)
 		return;
 	
-	while (event->next)
-		event = event->next;
+	while (meterec->event->next)
+		meterec->event = meterec->event->next;
 	
 }
 
-void rm_last_event(struct event_s **event_p) {
+void rm_last_event(struct meterec_s *meterec) {
 	
-	struct event_s *event;
-	event = *event_p;
-	
-	if (event == NULL)
+	if (meterec->event == NULL)
 		return;
 	
-	while (event->next)
-		event = event->next;
+	while (meterec->event->next)
+		meterec->event = meterec->event->next;
 	
-	if (event->prev)
-		event->prev->next = NULL;
-	
-	free(event);
+	if (meterec->event->prev) {
+		meterec->event = meterec->event->prev->next = NULL;
+		free(meterec->event->next);
+		meterec->event->next = NULL;
+	}
+	else {
+		free(meterec->event);
+		meterec->event = NULL;
+	}
 	
 }
 
-void find_first_event(struct event_s **event_p) {
+void find_first_event(struct meterec_s *meterec) {
 	
-	struct event_s *event;
-	event = *event_p;
-	
-	if (event == NULL)
+	if (meterec->event == NULL)
 		return;
 	
-	while (event->prev)
-		event = event->prev;
+	while (meterec->event->prev)
+		meterec->event = meterec->event->prev;
 	
 }
 
-void rm_first_event(struct event_s **event_p) {
-	
-	struct event_s *event;
-	event = *event_p;
-	
-	if (event == NULL)
+void rm_first_event(struct meterec_s *meterec) {
+		
+	if (meterec->event == NULL)
 		return;
 	
-	while (event->prev)
-		event = event->prev;
+	while (meterec->event->prev)
+		meterec->event = meterec->event->prev;
 	
-	if (event->next)
-		event->next->prev = NULL;
-	
-	free(event);
+	if (meterec->event->next) {
+		meterec->event = meterec->event->next ;
+		free(meterec->event->prev);
+		meterec->event->prev = NULL;
+	}
+	else {
+		free(meterec->event);
+		meterec->event = NULL;
+	}
 	
 }
 
@@ -489,12 +486,12 @@ int reader_thread(void *d)
 			/* store playhead value matching above buffer position */
 			new_playhead_target = seek;
 			playhead = seek;
-			/* lets fill local buffer only if previously emptied*/
+			
 		}
 		
 		
 		
-		if (meterec->loop.low != MAX_UINT) {
+		if (meterec->loop.low != MAX_UINT && meterec->loop.low != MAX_UINT) {
 			if (playhead < meterec->loop.high)
 				may_loop = 1;
 			else 
@@ -511,16 +508,16 @@ int reader_thread(void *d)
 				
 				read_disk_seek(meterec, meterec->loop.low);
 				
-				i -= playhead - meterec->loop.high; // This seams useless/wring
+				i -= (playhead - meterec->loop.high);
+				i &= (DISK_SIZE - 1);
+				
 				playhead = meterec->loop.low;
 				
 				opos = 0;
 				
-				i = fill_buffer(meterec, &opos, &playhead);
-				
-				pthread_mutex_lock(&meterec->loop.mutex);
-				add_event(&meterec->event, meterec->loop.high, meterec->loop.low);
-				pthread_mutex_unlock(&meterec->loop.mutex);
+				pthread_mutex_lock(&meterec->event_mutex);
+				add_event(meterec, meterec->loop.low, meterec->loop.high);
+				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		}
 		

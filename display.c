@@ -346,8 +346,10 @@ void display_loop(struct meterec_s *meterec) {
 		high.frm = meterec->loop.high;
 		high.rate = rate ;
 		time_hms(&high);
-		printw("[%d:%02d:%02d.%03d]\n", high.h, high.m, high.s, high.ms);
+		printw("[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
 	}
+	
+	printw("\n");
 }
 
 void display_status(struct meterec_s *meterec, unsigned int playhead) {

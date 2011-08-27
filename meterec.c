@@ -467,9 +467,9 @@ void pre_option_init(struct meterec_s *meterec) {
 
 	meterec->loop.low = MAX_UINT;
 	meterec->loop.high = MAX_UINT;
-	pthread_mutex_init(&meterec->loop.mutex, NULL);
 	
 	meterec->event = NULL;
+	pthread_mutex_init(&meterec->event_mutex, NULL);
 }
 
 void free_options(struct meterec_s *meterec) {
@@ -804,20 +804,23 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		
 		if (meterec->event) {
 			
-			find_first_event(&meterec->event);
+			pthread_mutex_lock( &meterec->event_mutex );
+			
+			find_first_event(meterec);
 			
 			while (playhead > meterec->event->jack_playhead) {
 				
-				playhead -= meterec->event->jack_playhead ;
 				playhead += meterec->event->disk_playhead ;
+				playhead -= meterec->event->jack_playhead ;
 				
-				pthread_mutex_lock( &meterec->loop.mutex );
-				rm_first_event( &meterec->event );
-				pthread_mutex_unlock( &meterec->loop.mutex );
+				rm_first_event(meterec);
+				find_first_event(meterec);
 				
 				if (!meterec->event)
 					break;
 			}
+			
+			pthread_mutex_unlock( &meterec->event_mutex );
 			
 		}
 		

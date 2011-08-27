@@ -213,7 +213,6 @@ struct loop_s
 {
 	unsigned int low;
 	unsigned int high;
-	pthread_mutex_t mutex ;
 };
 
 struct pos_s
@@ -275,6 +274,7 @@ struct meterec_s
 	struct pos_s pos;
 	
 	struct event_s *event;
+	pthread_mutex_t event_mutex ;
 	
 	unsigned int output_fmt;
 	char *output_ext;
