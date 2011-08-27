@@ -260,91 +260,120 @@ void init_display_scale( unsigned int width )
   
 }
 
+void display_rd_buffer(struct meterec_s *meterec) {
+	int size, i;
+	static int peak=0;
+	static char *pedale = "|";
+	const int width = 11;
+	
+	size = width * read_disk_buffer_level(meterec);
+	
+	if (size > peak && meterec->playback_sts == ONGOING) 
+		peak = size;
+		
+	
+	for (i=0; i<width; i++) {
+		if (i == peak-1)
+			printw(":");
+		else if (i > size-1)
+			printw("I");
+		else 
+			printw(" ");
+	}
+	printw("%s", pedale);
 
-void display_buffer(struct meterec_s *meterec, int width) {
-
-  int wrlevel, wrsize, rdsize, i;
-  static int peak_wrsize=0, peak_rdsize=0;
-  static char *pedale = "|";
-  
-  width -= 3;
-  
-  width /= 2;
-  
-  rdsize = width * read_disk_buffer_level(meterec);
-  
-  if (rdsize > peak_rdsize && meterec->playback_sts == ONGOING) 
-    peak_rdsize = rdsize;
-  
-  printw("  ");
-  for (i=0; i<width-3; i++) {
-    if (i == peak_rdsize-1)
-      printw(":");
-    else if (i > rdsize-1)
-      printw("+");
-    else 
-      printw(" ");
-  }
-  printw("%sRD|", pedale);
-
-
-  if (meterec->record_sts==ONGOING) {
-    printw("WR%s", pedale);
-  } else {
-    printw("WR-");
-  }
-
-  wrlevel = (meterec->write_disk_buffer_process_pos - meterec->write_disk_buffer_thread_pos) & (DISK_SIZE-1);
-  wrsize = (width * wrlevel) / DISK_SIZE;
-
-  if (wrsize > peak_wrsize) 
-    peak_wrsize = wrsize;
-
-  for (i=0; i<peak_wrsize; i++) {
-    if (i < wrsize-1)
-      printw("+");
-    else if (i == peak_wrsize-1)
-      printw(":");
-    else 
-      printw(" ");
-  }
-  
-  printw("\n");
-
-    
-  if (meterec->playback_sts==ONGOING) {
-    if      (*pedale=='/')
-      pedale = "-";
-    else if (*pedale=='-')
-      pedale = "\\";
-    else if (*pedale=='\\')
-      pedale = "|";
-    else if (*pedale=='|')
-      pedale = "/";
- }
-
+	if (meterec->playback_sts==ONGOING) {
+		if      (*pedale=='/')
+			pedale = "-";
+		else if (*pedale=='-')
+			pedale = "\\";
+		else if (*pedale=='\\')
+			pedale = "|";
+		else if (*pedale=='|')
+			pedale = "/";
+	}
+	
 }
-void display_loop(struct meterec_s *meterec) {
+
+void display_wr_buffer(struct meterec_s *meterec) {
+	int size, i;
+	static int peak=0;
+	static char *pedale = "|";
+	const int width = 11;
 	
-	jack_nframes_t rate;
-	struct time_s low, high;
+	size = width * write_disk_buffer_level(meterec);
 	
-	rate = jack_get_sample_rate(meterec->client);
+	if (size > peak) 
+		peak = size;
+		
+	printw("%s", pedale);
+	for (i=0; i<width; i++) {
+		if (i < size-1)
+			printw("I");
+		else if (i == peak-1)
+			printw(":");
+		else 
+			printw(" ");
+	}
+
+	if (meterec->record_sts==ONGOING) {
+		if      (*pedale=='/')
+			pedale = "-";
+		else if (*pedale=='-')
+			pedale = "\\";
+		else if (*pedale=='\\')
+			pedale = "|";
+		else if (*pedale=='|')
+			pedale = "/";
+	}
+	
+}
+
+void display_cpu_load(struct meterec_s *meterec) {
+	int size, i;
+	static int peak=0;
+	const int width = 10;
+	
+	size = width * jack_cpu_load(meterec->client) / 100.0f;
+	
+	if (size > peak) 
+		peak = size;
+		
+	for (i=0; i<width; i++) {
+		if (i < size-1)
+			printw("|");
+		else if (i == peak-1)
+			printw(":");
+		else 
+			printw(" ");
+	}
+	
+}
+
+
+void display_loop(struct meterec_s *meterec, unsigned int playhead) {
+	
+	struct time_s low, high, now;
 	
 	if (meterec->loop.low == MAX_UINT) 
 		printw("[-:--:--.---]");
 	else {
 		low.frm = meterec->loop.low;
-		low.rate = rate ;
+		low.rate = meterec->jack.sample_rate ;
 		time_hms(&low);
 		printw("[%d:%02d:%02d.%03d]", low.h, low.m, low.s, low.ms);
 	}
 	
+	now.frm = playhead;
+	now.rate = meterec->jack.sample_rate ;
+	time_hms(&now);
+	printw(" %d:%02d:%02d.%03d ", now.h, now.m, now.s, now.ms);
+		
 	if (meterec->loop.high == MAX_UINT) 
 		printw("[-:--:--.---]");
 	else {
 		high.frm = meterec->loop.high;
-		high.rate = rate ;
+		high.rate = meterec->jack.sample_rate ;
 		time_hms(&high);
 		printw("[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
 	}
@@ -352,71 +381,75 @@ void display_loop(struct meterec_s *meterec) {
 	printw("\n");
 }
 
-void display_status(struct meterec_s *meterec, unsigned int playhead) {
-  
-  float load;
-  static float  max_load=0.0f;
-  jack_nframes_t rate;
-  struct time_s time;
-  
-  rate = jack_get_sample_rate(meterec->client);
-  load = jack_cpu_load(meterec->client);
-  
-  time.frm = playhead ;
-  time.rate = rate ;
-  time_hms(&time);
-  
-  if (load>max_load) 
-    max_load = load;
-  
-  printw("%dHz %d:%02d:%02d.%03d %4.1f%% (%3.1f%%) ", rate, time.h, time.m, time.s, time.ms, load , max_load);
-  
-  printw("[> ");
-  
-  if (meterec->playback_sts==OFF) 
-    printw("%-8s","OFF");
-  if (meterec->playback_sts==STARTING) 
-    printw("%-8s","STARTING");
-  if (meterec->playback_sts==ONGOING) 
-    printw("%-8s","ONGOING");
-  if (meterec->playback_sts==PAUSED) 
-    printw("%-8s","PAUSED");
-  if (meterec->playback_sts==STOPING) 
-    printw("%-8s","STOPING");
+void display_rd_status(struct meterec_s *meterec) {
+	
+	printw("[> ");
+		
+	if (meterec->playback_sts==OFF) 
+		printw("%-8s","OFF");
+	else if (meterec->playback_sts==STARTING) 
+		printw("%-8s","STARTING");
+	else if (meterec->playback_sts==ONGOING) 
+		printw("%-8s","ONGOING");
+	else if (meterec->playback_sts==PAUSED) 
+		printw("%-8s","PAUSED");
+	else if (meterec->playback_sts==STOPING) 
+		printw("%-8s","STOPING");
+	
+	printw("]");
+	
+}
 
-  printw("]");
+void display_wr_status(struct meterec_s *meterec) {
+	
+	if (meterec->record_sts) 
+	color_set(RED, NULL);
+	
+	printw("[O ");
+	
+	if (meterec->record_sts==OFF) 
+		printw("%-8s","OFF");
+	else if (meterec->record_sts==STARTING) 
+		printw("%-8s","STARTING");
+	else if (meterec->record_sts==ONGOING) 
+		printw("%-8s","ONGOING");
+	else if (meterec->record_sts==STOPING) 
+		printw("%-8s","STOPING");
+	
+	printw("]");
+	
+	display_wr_buffer(meterec);
+	
+	if (meterec->record_sts) {
+		attron(A_BOLD);
+		printw(" Take %d",meterec->n_takes+1);
+		attroff(A_BOLD); 
+	}
+	
+	
+	if (meterec->write_disk_buffer_overflow)
+		printw(" OVERFLOWS(%d)",meterec->write_disk_buffer_overflow);
+	
+	color_set(DEFAULT, NULL);
+}
 
+void display_header(struct meterec_s *meterec, unsigned int playhead, unsigned int width) {
 
-  if (meterec->record_sts) 
-    color_set(RED, NULL);
-  
-  printw("[O ");
-
-  if (meterec->record_sts==OFF) 
-    printw("%-8s","OFF");
-  if (meterec->record_sts==STARTING) 
-    printw("%-8s","STARTING");
-  if (meterec->record_sts==ONGOING) 
-    printw("%-8s","ONGOING");
-  if (meterec->record_sts==STOPING) 
-    printw("%-8s","STOPING");
-
-  printw("]");
-  
-  if (meterec->record_sts) {
-    attron(A_BOLD);
-    printw(" Take %d",meterec->n_takes+1);
-    attroff(A_BOLD); 
-  }
-    
-  
-  if (meterec->write_disk_buffer_overflow)
-    printw(" OVERFLOWS(%d)",meterec->write_disk_buffer_overflow);
-
-  color_set(DEFAULT, NULL);
-
-  printw("\n");
-  
+	unsigned int i;
+	
+	display_rd_status(meterec);
+	display_rd_buffer(meterec);
+	display_cpu_load(meterec);
+	
+	for (i = width - 34 - 3*13; i; i--)
+		printw(" ");
+	
+	display_loop(meterec,playhead);
+		
+	display_wr_status(meterec);
+	
+	printw("\n");
+		
 }
 
 static void color_port(struct meterec_s *meterec, unsigned int port) {
@@ -432,85 +465,85 @@ static void color_port(struct meterec_s *meterec, unsigned int port) {
 
 void display_session(struct meterec_s *meterec) 
 {
-  unsigned int take, port;
-  unsigned int y_pos, x_pos;
-  
-  y_pos = meterec->pos.port;
-  x_pos = meterec->pos.take;
-
-  
-  printw("  Take %2d ",x_pos);
-  printw("%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
-  printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
-  printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
-  
-  printw("\n\n");
-
-  for (port=0; port<meterec->n_ports; port++) {
-  
-    color_port(meterec, port);
-    
-    if (y_pos == port) 
-       attron(A_REVERSE);
-    else 
-       attroff(A_REVERSE);
-  
-    printw("%02d",port+1);
-
-    display_port_recmode(&meterec->ports[port]);
-
-    for (take=1; take<meterec->n_takes+1; take++) {
-    
-      if ((y_pos == port) || (x_pos == take))
-         attron(A_REVERSE);
-      else 
-         attroff(A_REVERSE);
-
-      if ((y_pos == port) && (x_pos == take))
-         attroff(A_REVERSE);
-
-      if ( meterec->ports[port].playback_take == take )
-        attron(A_BOLD);
-        
-      if ( meterec->takes[take].port_has_lock[port] )
-        printw(meterec->takes[take].port_has_track[port]?"L":"l");
-      else if ( meterec->ports[port].playback_take == take ) 
-        printw("P");
-      else if ( meterec->takes[take].port_has_track[port] ) 
-        printw("X");
-      else 
-        printw("-");
-        
-      attroff(A_BOLD);
-              
-    }
+	unsigned int take, port;
+	unsigned int y_pos, x_pos;
 	
-    printw("\n");
-  }
-  
-  attroff(A_REVERSE);
-  color_set(DEFAULT, NULL);
-
-  printw("\n\n");
-  printw("  Port %2d ", y_pos+1);
-  display_port_info( &meterec->ports[y_pos] );
-        
+	y_pos = meterec->pos.port;
+	x_pos = meterec->pos.take;
+	
+	
+	printw("  Take %2d ",x_pos);
+	printw("%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
+	printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
+	printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
+	
+	printw("\n\n");
+	
+	for (port=0; port<meterec->n_ports; port++) {
+		
+		color_port(meterec, port);
+		
+		if (y_pos == port) 
+			attron(A_REVERSE);
+		else 
+			attroff(A_REVERSE);
+		
+		printw("%02d",port+1);
+		
+		display_port_recmode(&meterec->ports[port]);
+		
+		for (take=1; take<meterec->n_takes+1; take++) {
+			
+			if ((y_pos == port) || (x_pos == take))
+				attron(A_REVERSE);
+			else 
+				attroff(A_REVERSE);
+			
+			if ((y_pos == port) && (x_pos == take))
+				attroff(A_REVERSE);
+			
+			if ( meterec->ports[port].playback_take == take )
+				attron(A_BOLD);
+			
+			if ( meterec->takes[take].port_has_lock[port] )
+				printw(meterec->takes[take].port_has_track[port]?"L":"l");
+			else if ( meterec->ports[port].playback_take == take ) 
+				printw("P");
+			else if ( meterec->takes[take].port_has_track[port] ) 
+				printw("X");
+			else 
+				printw("-");
+			
+			attroff(A_BOLD);
+			
+		}
+		
+		printw("\n");
+	}
+	
+	attroff(A_REVERSE);
+	color_set(DEFAULT, NULL);
+	
+	printw("\n\n");
+	printw("  Port %2d ", y_pos+1);
+	display_port_info( &meterec->ports[y_pos] );
+	
 }
 
 void display_ports(struct meterec_s *meterec) 
 {
 	unsigned int port=0, line=0, i;
 	const char **in, **out;
-  
+	
 	out=meterec->all_input_ports;
 	in=meterec->all_output_ports;
 		
 	printw("  Port %2d ", meterec->pos.port+1);
 	display_port_info( &meterec->ports[meterec->pos.port] );
 	printw("\n\n");
-
-	while (*in || *out || port < meterec->n_ports) {
 	
+	while (*in || *out || port < meterec->n_ports) {
+		
 		printw("  ");
 		
 		if (*in) {
@@ -559,20 +592,20 @@ void display_ports(struct meterec_s *meterec)
 			}
 			else 
 				printw(" ");
-
+			
 			color_port(meterec, port);
-
+			
 			printw("%s:in_%-2d",  meterec->jack_name, port+1);
-
+			
 			color_set(DEFAULT, NULL);
-
+			
 			if (meterec->ports[port].thru)
 				printw("-> ");
 			else 
 				printw("   ");
-
+			
 			printw("%s:out_%-2d",  meterec->jack_name, port+1);
-
+			
 			attroff(A_BOLD);
 			attroff(A_REVERSE);
 		
@@ -580,7 +613,7 @@ void display_ports(struct meterec_s *meterec)
 		else 
 			for (i=0; i<(2*strlen(meterec->jack_name)+17); i++)
 				printw(" ");
-
+		
 		if (meterec->pos.port==port)
 			printw("-");
 		else 
@@ -621,8 +654,8 @@ void display_ports(struct meterec_s *meterec)
 			port ++;
 			
 		line ++;
-  	}
-        
+	}
+	
 	color_set(DEFAULT, NULL);
-
+	
 }

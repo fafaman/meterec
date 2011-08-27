@@ -1573,9 +1573,7 @@ int main(int argc, char *argv[])
 		
 		clear();
 		
-		display_status(meterec, playhead);
-		display_loop(meterec);
-		display_buffer(meterec, console_width);
+		display_header(meterec, playhead, console_width);
 		
 		if (view==VU)
 			display_meter(meterec, display_names, console_width, decay_len);

@@ -554,10 +554,15 @@ int reader_thread(void *d)
 }
 
 float read_disk_buffer_level(struct meterec_s *meterec) {
-	float rdlevel;
-	
-	rdlevel = (meterec->read_disk_buffer_process_pos - meterec->read_disk_buffer_thread_pos) & (DISK_SIZE-1);
-	return  (float)(rdlevel / DISK_SIZE);
+	float level;
+	level = (meterec->read_disk_buffer_process_pos - meterec->read_disk_buffer_thread_pos) & (DISK_SIZE-1);
+	return  (float)(level / DISK_SIZE);
+}
+
+float write_disk_buffer_level(struct meterec_s *meterec) {
+	float level;
+	level = (meterec->write_disk_buffer_process_pos - meterec->write_disk_buffer_thread_pos) & (DISK_SIZE-1);
+	return  (float)(level / DISK_SIZE);
 }
 
 unsigned int set_thread_delay(jack_client_t *client) {

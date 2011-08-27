@@ -23,6 +23,7 @@
 int writer_thread(void *d);
 int reader_thread(void *d);
 float read_disk_buffer_level(struct meterec_s *meterec);
+float write_disk_buffer_level(struct meterec_s *meterec);
 unsigned int set_thread_delay(jack_client_t *client);
 void add_event(struct meterec_s *meterec, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead);
 void find_last_event(struct meterec_s *meterec) ;
