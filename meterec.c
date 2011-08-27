@@ -809,13 +809,12 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			
 			find_first_event(meterec);
 			
-			while (playhead > meterec->event->jack_playhead) {
+			while (playhead > meterec->event->jack_playhead && meterec->event->type == LOOP) {
 				
 				playhead += meterec->event->disk_playhead ;
 				playhead -= meterec->event->jack_playhead ;
 				
 				rm_first_event(meterec);
-				find_first_event(meterec);
 				
 				if (!meterec->event)
 					break;

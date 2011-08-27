@@ -330,7 +330,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 }
 
-void add_event(struct meterec_s *meterec, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead) {
+void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead, unsigned int jack_buf_pos) {
 	
 	if (meterec->event == NULL) {
 		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
@@ -351,8 +351,10 @@ void add_event(struct meterec_s *meterec, jack_nframes_t disk_playhead, jack_nfr
 		fprintf(meterec->fd_log,"DBG: add_event: adding in queue.\n");
 	}
 	
+	meterec->event->type = type;
 	meterec->event->disk_playhead = disk_playhead;
 	meterec->event->jack_playhead = jack_playhead;
+	meterec->event->jack_buf_pos = jack_buf_pos;
 	
 }
 
@@ -414,6 +416,16 @@ void rm_first_event(struct meterec_s *meterec) {
 		meterec->event = NULL;
 	}
 	
+}
+
+void clear_event(struct meterec_s *meterec) {
+		
+	if (meterec->event == NULL)
+		return;
+	
+	while (meterec->event)
+		rm_first_event(meterec);
+		
 }
 
 int reader_thread(void *d)
@@ -516,7 +528,7 @@ int reader_thread(void *d)
 				opos = 0;
 				
 				pthread_mutex_lock(&meterec->event_mutex);
-				add_event(meterec, meterec->loop.low, meterec->loop.high);
+				add_event(meterec, LOOP, meterec->loop.low, meterec->loop.high, 0);
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		}
@@ -526,8 +538,16 @@ int reader_thread(void *d)
 			
 			pthread_mutex_lock( &meterec->seek.mutex );
 			meterec->seek.jack_buffer_target = new_buffer_pos;
-			meterec->seek.playhead_target = new_playhead_target ;
+			meterec->seek.playhead_target = new_playhead_target;
 			pthread_mutex_unlock( &meterec->seek.mutex );
+			
+			/* fill event queue */
+			pthread_mutex_lock(&meterec->event_mutex);
+			if (meterec->seek.files_reopen)
+				add_event(meterec, LOCK, 0, new_playhead_target, new_buffer_pos);
+			else
+				add_event(meterec, SEEK, new_playhead_target,0 , new_buffer_pos);
+			pthread_mutex_unlock(&meterec->event_mutex);
 			
 			new_buffer_pos = MAX_UINT;
 			new_playhead_target = MAX_UINT;

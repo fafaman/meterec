@@ -67,6 +67,12 @@
 #define OVR 4
 #define MAX_REC OVR*2
 
+/* type of events */
+#define NONE 0
+#define SEEK 1
+#define LOOP 2
+#define LOCK 3
+
 /* display colors */
 #define DEFAULT 0
 #define GREEN 1
@@ -203,8 +209,10 @@ struct seek_s
 
 struct event_s {
 	
+	unsigned int type;
 	jack_nframes_t disk_playhead;
 	jack_nframes_t jack_playhead;
+	unsigned int jack_buf_pos;
 	struct event_s *next;
 	struct event_s *prev;
 };
