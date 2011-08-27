@@ -224,6 +224,12 @@ struct pos_s
 	unsigned int con_out;
 };
 
+struct jack_s
+{
+	unsigned int sample_rate;
+};
+
+
 struct meterec_s
 {
 	FILE *fd_log ;
@@ -266,6 +272,8 @@ struct meterec_s
 	jack_nframes_t jack_buffsize;
 	
 	jack_port_t *monitor;
+	
+	struct jack_s jack;
 	
 	struct loop_s loop;
 	

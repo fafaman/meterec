@@ -306,6 +306,12 @@ void save_conf(struct meterec_s *meterec) {
 	}
 	fprintf(fd_conf, "};\n\n");
 	
+	if (meterec->jack.sample_rate) {
+		fprintf(fd_conf, "jack=\n{\n");
+		fprintf(fd_conf, "  sample_rate=%d;\n", meterec->jack.sample_rate);
+		fprintf(fd_conf, "};\n\n");
+	}
+	
 	fprintf(fd_conf, "version=1;\n\n");	
 	
 	fclose(fd_conf);
@@ -377,10 +383,11 @@ void load_conf(struct meterec_s *meterec) {
 	
 	unsigned int port=0, con=0, index=0;
 	config_t cfg, *cf;
-	const config_setting_t *port_list, *port_group, *connection_list, *index_group ;
+	const config_setting_t *port_list, *port_group, *connection_list, *index_group, *jack_group ;
 	unsigned int port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
+	long int sample_rate;
 	char fn[4];
 				
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
@@ -408,6 +415,12 @@ void load_conf(struct meterec_s *meterec) {
 				parse_time(meterec, index, time);
 		}
 	}
+	
+	jack_group = config_lookup(cf, "jack");
+	
+	if (jack_group) 
+		if (config_setting_lookup_int(jack_group, "sample_rate", &sample_rate))
+			meterec->jack.sample_rate = sample_rate;
 	
 	port_list = config_lookup(cf, "ports");
 	if (port_list) {

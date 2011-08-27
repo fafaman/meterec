@@ -438,7 +438,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->pos.con_in = 0;
 	meterec->pos.con_out = 0;
 
-		
+	meterec->jack.sample_rate = 0;
+			
 	meterec->all_input_ports = NULL;
 	meterec->all_output_ports = NULL;
 	
@@ -1495,6 +1496,18 @@ int main(int argc, char *argv[])
 		save_conf(meterec);
 		fprintf(meterec->fd_log, "Converted old configuration to %s.\n", meterec->conf_file );
 		exit_on_error("Converted old configuration");
+	}
+	
+	if (!meterec->jack.sample_rate)
+		meterec->jack.sample_rate = jack_get_sample_rate(meterec->client);
+	else if (meterec->jack.sample_rate != jack_get_sample_rate(meterec->client)) {
+		fprintf(meterec->fd_log, "Session sample rate (%dHz) is not the same as jackd sample rate (%dHz).\n",
+			meterec->jack.sample_rate,
+			jack_get_sample_rate(meterec->client));
+		fprintf(meterec->fd_log, "Restart jackd with %dHz saple rate or remove sample rate entry from '%s' configuration file.\n",
+			meterec->jack.sample_rate,
+			meterec->conf_file);
+		exit_on_error("Session sample rate is not the same as jackd sample rate.");
 	}
 	
 	meterec->config_sts = ONGOING;
