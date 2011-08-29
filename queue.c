@@ -57,7 +57,7 @@ void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t old_
 	
 }
 
-struct event_s * find_last_event(struct meterec_s *meterec) {
+struct event_s * last_event(struct meterec_s *meterec) {
 	
 	struct event_s *event;
 	
@@ -72,6 +72,43 @@ struct event_s * find_last_event(struct meterec_s *meterec) {
 	return event;
 }
 
+struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
+	
+	struct event_s *event;
+	int match_type, match_queue
+	
+	if (meterec->event == NULL)
+		return NULL;
+		
+	event = meterec->event;
+	
+	while (event->next) {
+		
+		if (type)
+			if (event->type == type)
+				match_type = 1;
+			else 
+				match_type = 0;
+		else 
+			match_type = 1;
+			
+		if (queue)
+			if (event->queue == queue)
+				match_queue = 1;
+			else 
+				match_queue = 0;
+		else 
+			match_queue = 1;
+			
+		if (match_type && match_queue)
+			return event;
+		
+		event = event->next;
+	}
+	
+	return NULL;
+}
+
 void rm_last_event(struct meterec_s *meterec) {
 	
 	struct event_s *event;
@@ -79,7 +116,7 @@ void rm_last_event(struct meterec_s *meterec) {
 	if (meterec->event == NULL)
 		return;
 	
-	event = find_last_event(meterec);
+	event = last_event(meterec);
 	
 	if (event->prev) {
 		event->prev->next = NULL;
