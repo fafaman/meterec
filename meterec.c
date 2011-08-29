@@ -692,6 +692,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
 				pthread_mutex_lock(&meterec->event_mutex);
 				rm_event(meterec, event);
+				event = NULL;
 				pthread_mutex_unlock(&meterec->event_mutex);
 				break;
 			case SEEK:
@@ -699,6 +700,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				playhead = event->new_playhead;
 				pthread_mutex_lock(&meterec->event_mutex);
 				rm_event(meterec, event);
+				event = NULL;
 				pthread_mutex_unlock(&meterec->event_mutex);
 				break;
 		}
@@ -822,6 +824,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					playhead -= event->new_playhead ;
 					pthread_mutex_lock( &meterec->event_mutex );
 					rm_event(meterec, event);
+					event = NULL;
 					pthread_mutex_unlock( &meterec->event_mutex );
 				}
 			
@@ -930,6 +933,7 @@ unsigned int seek(int seek_sec) {
 int keyboard_thread(void *arg) {
 	
 	struct meterec_s *meterec ;
+	struct event_s *event ;
 	unsigned int y_pos, x_pos, port, take;
 	int key = 0;
 	int freetext = 0;
@@ -1005,7 +1009,9 @@ int keyboard_thread(void *arg) {
 			/* 
 			** Change Locks 
 			*/
-			if (!meterec->seek.keyboard_lock) {
+			event = find_first_event(meterec, ALL, LOCK);
+			
+			if (!event) {
 				
 				switch (key) {
 					case 'L' : /* clear all other locks for that port & process with toggle */
@@ -1016,12 +1022,6 @@ int keyboard_thread(void *arg) {
 						meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
 						
 						if (changed_takes_to_playback(meterec) && (meterec->playback_sts != OFF)) {
-							pthread_mutex_lock( &meterec->seek.mutex );
-							meterec->seek.disk_playhead_target = playhead;
-							meterec->seek.files_reopen = 1;
-							meterec->seek.keyboard_lock = 1;
-							pthread_mutex_unlock( &meterec->seek.mutex );
-							
 							pthread_mutex_lock( &meterec->event_mutex );
 							add_event(meterec, LOCK, DISK, MAX_UINT, playhead, MAX_UINT); 
 							pthread_mutex_unlock( &meterec->event_mutex );
@@ -1042,12 +1042,6 @@ int keyboard_thread(void *arg) {
 								meterec->takes[x_pos].port_has_lock[port] = 1;
 						
 						if (changed_takes_to_playback(meterec) && (meterec->playback_sts != OFF)) {
-							pthread_mutex_lock( &meterec->seek.mutex );
-							meterec->seek.disk_playhead_target = playhead;
-							meterec->seek.files_reopen = 1;
-							meterec->seek.keyboard_lock = 1;
-							pthread_mutex_unlock( &meterec->seek.mutex );
-							
 							pthread_mutex_lock( &meterec->event_mutex );
 							add_event(meterec, LOCK, DISK, MAX_UINT, playhead, MAX_UINT);
 							pthread_mutex_unlock( &meterec->event_mutex );

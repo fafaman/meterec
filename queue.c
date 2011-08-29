@@ -32,7 +32,7 @@
 
 void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
 	
-	fprintf(meterec->fd_log, "Event type %d added in queue %d\n",type, queue);
+//	fprintf(meterec->fd_log, "Event type %d added in queue %d\n",type, queue);
 	
 	if (meterec->event == NULL) {
 		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
@@ -103,7 +103,7 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 			match_queue = 1;
 			
 		if (match_type && match_queue) {
-			fprintf(meterec->fd_log, "Event type %d found in queue %d\n",event->type, event->queue);
+//			fprintf(meterec->fd_log, "Event type %d found in queue %d\n",event->type, event->queue);
 			return event;
 		}
 //		fprintf(meterec->fd_log, "Event search more...\n",event->type, event->queue);
