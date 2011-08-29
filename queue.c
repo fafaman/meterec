@@ -30,7 +30,9 @@
 #include "meterec.h"
 #include "conf.h"
 
-void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
+void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
+	
+	fprintf(meterec->fd_log, "Event type %d added in queue %d\n",type, queue);
 	
 	if (meterec->event == NULL) {
 		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
@@ -50,7 +52,7 @@ void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t old_
 	}
 	
 	meterec->event->type = type;
-	meterec->event->queue = COMMAND;
+	meterec->event->queue = queue;
 	meterec->event->old_playhead = old_playhead;
 	meterec->event->new_playhead = new_playhead;
 	meterec->event->buffer_pos = buffer_pos;
@@ -75,14 +77,14 @@ struct event_s * last_event(struct meterec_s *meterec) {
 struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
 	
 	struct event_s *event;
-	int match_type, match_queue
+	int match_type, match_queue;
 	
 	if (meterec->event == NULL)
 		return NULL;
 		
 	event = meterec->event;
 	
-	while (event->next) {
+	while (event) {
 		
 		if (type)
 			if (event->type == type)
@@ -100,9 +102,12 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 		else 
 			match_queue = 1;
 			
-		if (match_type && match_queue)
+		if (match_type && match_queue) {
+			fprintf(meterec->fd_log, "Event type %d found in queue %d\n",event->type, event->queue);
 			return event;
-		
+		}
+//		fprintf(meterec->fd_log, "Event search more...\n",event->type, event->queue);
+
 		event = event->next;
 	}
 	
@@ -128,25 +133,6 @@ void rm_last_event(struct meterec_s *meterec) {
 	free(event);
 }
 
-void rm_first_event(struct meterec_s *meterec) {
-		
-	struct event_s *event;
-	
-	if (meterec->event == NULL)
-		return;
-	
-	if (meterec->event->next) {
-		meterec->event = meterec->event->next;
-		free(meterec->event->prev);
-		meterec->event->prev = NULL;
-	}
-	else {
-		free(meterec->event);
-		meterec->event = NULL;
-	}
-	
-}
-
 void rm_all_event(struct meterec_s *meterec) {
 		
 	if (meterec->event == NULL)
@@ -155,4 +141,20 @@ void rm_all_event(struct meterec_s *meterec) {
 	while (meterec->event)
 		rm_last_event(meterec);
 		
+}
+
+void rm_event(struct meterec_s *meterec, struct event_s *event) {
+
+	
+	if (event->prev)
+		event->prev->next = event->next ;
+	
+	if (event->next)
+		event->next->prev = event->prev ;
+	
+	if (event->prev == NULL && event->next == NULL)
+		meterec->event = NULL;
+		
+	free(event);
+	
 }

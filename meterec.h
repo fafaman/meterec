@@ -210,9 +210,10 @@ struct seek_s
 struct event_s {
 	
 	unsigned int type;
-	jack_nframes_t disk_playhead;
-	jack_nframes_t jack_playhead;
-	unsigned int jack_buf_pos;
+	unsigned int queue;
+	jack_nframes_t old_playhead;
+	jack_nframes_t new_playhead;
+	unsigned int buffer_pos;
 	struct event_s *next;
 	struct event_s *prev;
 };
@@ -221,6 +222,7 @@ struct loop_s
 {
 	unsigned int low;
 	unsigned int high;
+	unsigned int enable;
 };
 
 struct pos_s

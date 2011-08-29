@@ -33,6 +33,9 @@
 #include "conf.h"
 #include "queue.h"
 
+#define RD_BUFF_LEN ((meterec->read_disk_buffer_process_pos - meterec->read_disk_buffer_thread_pos) & (DISK_SIZE-1))
+
+
 /******************************************************************************
 ** THREADs
 */
@@ -334,11 +337,10 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 int reader_thread(void *d)
 {
-	unsigned int i, opos, thread_delay, new_buffer_pos;
-	struct meterec_s *meterec ;
-	jack_nframes_t playhead = 0, seek, new_playhead_target = MAX_UINT;
-	int may_loop = 0;
+	unsigned int i, opos, thread_delay, may_loop;
+	jack_nframes_t playhead = 0, jack_playhead;
 	struct event_s *event;
+	struct meterec_s *meterec ;
 	
 	meterec = (struct meterec_s *)d ;
 	
@@ -365,79 +367,92 @@ int reader_thread(void *d)
 	}
 	
 	/* Start reading disk to fill the RT ringbuffer */
-	new_buffer_pos = MAX_UINT;
 	while ( meterec->playback_cmd==START )  {
 		
-		event = find_first_event(meterec, COMMAND, ALL);
+		event = find_first_event(meterec, DISK, ALL);
 		
 		if (event) {
+			switch (event->type) {
 			
-			if (event.type == LOCK) {
+			case LOOP:
+				
+				/* Is next loop event already */
+				if (playhead > event->old_playhead) {
+				
+					jack_playhead = playhead - RD_BUFF_LEN;
+					if (jack_playhead < event->old_playhead) {
+					
+						/*we need to empty buffer up to the loop point */
+						meterec->read_disk_buffer_thread_pos -= event->old_playhead;
+						meterec->read_disk_buffer_thread_pos += playhead;
+						meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
+						
+						read_disk_seek(meterec, event->old_playhead);
+						opos = 0;
+						
+						playhead = event->old_playhead;
+					}
+				
+				}
+				
+				break;
+			
+			case LOCK:
 				
 				read_disk_close_fd(meterec);
 				compute_takes_to_playback(meterec);
 				read_disk_open_fd(meterec);
 				
-			}
-			
-			if (event.type == LOCK || event.type == SEEK) {
+			case SEEK:
 				
 				/* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
 				meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - BUF_SIZE - 1;
 				meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
 				
-				read_disk_seek(meterec, event.new_playhead);
+				read_disk_seek(meterec, event->new_playhead);
 				opos = 0;
 				
-				event.buffer_pos  = meterec->read_disk_buffer_thread_pos;
-				event.buffer_pos -= 1;
-				event.buffer_pos &= (DISK_SIZE - 1);
+				event->buffer_pos  = meterec->read_disk_buffer_thread_pos;
+				event->buffer_pos -= 1;
+				event->buffer_pos &= (DISK_SIZE - 1);
 				
-				playhead = event.new_playhead;
+				playhead = event->new_playhead;
 				
-			}
+				break;
+			}	
 		}
 		
 		
-		if (meterec->loop.low != MAX_UINT && meterec->loop.low != MAX_UINT) {
+		may_loop = 0;
+		if (meterec->loop.enable) 
 			if (playhead < meterec->loop.high)
 				may_loop = 1;
-			else 
-				may_loop = 0;
-		}
 		
 		i = fill_buffer(meterec, &opos, &playhead);
 		
-		if (may_loop) {
-			
-			may_loop = 0;
-			
+		if (may_loop)
 			if (playhead > meterec->loop.high) {
 				
-				read_disk_seek(meterec, meterec->loop.low);
+				read_disk_seek(meterec, event->old_playhead);
+				opos = 0;
 				
 				i -= (playhead - meterec->loop.high);
 				i &= (DISK_SIZE - 1);
 				
 				playhead = meterec->loop.low;
 				
-				opos = 0;
-				
 				pthread_mutex_lock(&meterec->event_mutex);
-				add_event(meterec, LOOP, meterec->loop.low, meterec->loop.high, 0);
+				add_event(meterec, LOOP, JACK, meterec->loop.low, meterec->loop.high, 0);
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
-		}
 		
 		
 		if (event) 
-			if (event.type == SEEK || event.type == LOCK) 
+			if (event->type == SEEK || event->type == LOCK) 
 				if (meterec->read_disk_buffer_thread_pos != i)
-					event.queue = DISK;
+					event->queue = JACK;
 		
 		meterec->read_disk_buffer_thread_pos = i;
-		
-		
 		
 		if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
 			meterec->playback_sts=ONGOING;

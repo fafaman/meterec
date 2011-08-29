@@ -28,13 +28,13 @@
 
 /* queuees */
 #define ALL 0
-#define COMMAND 1
-#define DISK 2
+#define DISK 1
+#define JACK 2
 
 
-void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
+void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
 void find_last_event(struct meterec_s *meterec) ;
 void rm_last_event(struct meterec_s *meterec) ;
 struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type);
-void rm_first_event(struct meterec_s *meterec) ;
 void clear_event(struct meterec_s *meterec);
+void rm_event(struct meterec_s *meterec, struct event_s *event);

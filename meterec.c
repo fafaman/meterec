@@ -230,8 +230,10 @@ void set_loop(struct meterec_s *meterec, unsigned int loophead) {
 		meterec->loop.low = loophead;
 	}
 	
+	meterec->loop.enable = 1;
+	
 	pthread_mutex_lock( &meterec->event_mutex );
-	add_event(meterec, LOOP, meterec->loop.high, meterec->loop.low, MAX_UINT);
+	add_event(meterec, LOOP, DISK, meterec->loop.high, meterec->loop.low, MAX_UINT);
 	pthread_mutex_unlock( &meterec->event_mutex );
 
 }
@@ -474,6 +476,7 @@ void pre_option_init(struct meterec_s *meterec) {
 
 	meterec->loop.low = MAX_UINT;
 	meterec->loop.high = MAX_UINT;
+	meterec->loop.enable = 0;
 	
 	meterec->event = NULL;
 	pthread_mutex_init(&meterec->event_mutex, NULL);
@@ -648,6 +651,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	unsigned int playback_ongoing, record_ongoing;
 	float s;
 	struct meterec_s *meterec ;
+	struct event_s *event;
 	
 	meterec = (struct meterec_s *)arg ;
 	
@@ -674,36 +678,38 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	
 	record_ongoing = (meterec->record_cmd != OFF);
 	
-	/* check if there is a new buffer position to go to*/
-	if (meterec->seek.jack_buffer_target != MAX_UINT) {
+	event = find_first_event(meterec, JACK, ALL);
 		
-		pthread_mutex_lock( &meterec->seek.mutex );
+	if (event) {
+		switch (event->type) {
 		
-		meterec->read_disk_buffer_process_pos = meterec->seek.jack_buffer_target;
-		
-		/* if we seek because of a file re-open, compensate for what played since re-open request */
-		if ( meterec->seek.files_reopen ) {
-			meterec->read_disk_buffer_process_pos += (playhead - meterec->seek.playhead_target);
-			meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
-			meterec->seek.files_reopen = 0;
-			meterec->seek.keyboard_lock = 0;
-		} else {
-			/* re-align playhead value if we moved due to a simple seek */
-			playhead = meterec->seek.playhead_target;
+			case LOCK:
+				meterec->read_disk_buffer_process_pos = event->buffer_pos;
+				
+				/* if we seek because of a file re-open, compensate for what played since re-open request */
+				meterec->read_disk_buffer_process_pos += playhead ;
+				meterec->read_disk_buffer_process_pos -= event->new_playhead;
+				meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
+				pthread_mutex_lock(&meterec->event_mutex);
+				rm_event(meterec, event);
+				pthread_mutex_unlock(&meterec->event_mutex);
+				break;
+			case SEEK:
+				meterec->read_disk_buffer_process_pos = event->buffer_pos;
+				playhead = event->new_playhead;
+				pthread_mutex_lock(&meterec->event_mutex);
+				rm_event(meterec, event);
+				pthread_mutex_unlock(&meterec->event_mutex);
+				break;
 		}
-		
-		meterec->seek.playhead_target = MAX_UINT;
-		meterec->seek.jack_buffer_target = MAX_UINT;
-		
-		pthread_mutex_unlock( &meterec->seek.mutex );
-		
 	}
+	
 	
 	/* get the monitor port buffer*/
 	if (meterec->monitor != NULL) {
 		mon = (jack_default_audio_sample_t *) jack_port_get_buffer(meterec->monitor, nframes);
 		
-		/* clean buffer */
+		/* clean buffer because we will accumulate on it */
 		for (i = 0; i < nframes; i++)
 			mon[i] = 0.0f;
 		
@@ -809,27 +815,16 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		/* set new playhead position */
 		playhead += nframes ;
 		
-		if (meterec->event) {
+		if (event)
+			if (event->type == LOOP)
+				if (playhead > event->old_playhead) {
+					playhead += event->old_playhead ;
+					playhead -= event->new_playhead ;
+					pthread_mutex_lock( &meterec->event_mutex );
+					rm_event(meterec, event);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				}
 			
-			pthread_mutex_lock( &meterec->event_mutex );
-			
-			find_first_event(meterec);
-			
-			while (playhead > meterec->event->jack_playhead && meterec->event->type == LOOP) {
-				
-				playhead += meterec->event->disk_playhead ;
-				playhead -= meterec->event->jack_playhead ;
-				
-				rm_first_event(meterec);
-				
-				if (!meterec->event)
-					break;
-			}
-			
-			pthread_mutex_unlock( &meterec->event_mutex );
-			
-		}
-		
 		if (record_ongoing) {
 			
 			/* track buffer over/under flow */
@@ -1028,7 +1023,7 @@ int keyboard_thread(void *arg) {
 							pthread_mutex_unlock( &meterec->seek.mutex );
 							
 							pthread_mutex_lock( &meterec->event_mutex );
-							add_event(meterec, LOCK, MAX_UINT, playhead, MAX_UINT); 
+							add_event(meterec, LOCK, DISK, MAX_UINT, playhead, MAX_UINT); 
 							pthread_mutex_unlock( &meterec->event_mutex );
 						}
 						break;
@@ -1054,7 +1049,7 @@ int keyboard_thread(void *arg) {
 							pthread_mutex_unlock( &meterec->seek.mutex );
 							
 							pthread_mutex_lock( &meterec->event_mutex );
-							add_event(meterec, LOCK, MAX_UINT, playhead, MAX_UINT);
+							add_event(meterec, LOCK, DISK, MAX_UINT, playhead, MAX_UINT);
 							pthread_mutex_unlock( &meterec->event_mutex );
 						}
 						break;
@@ -1085,7 +1080,7 @@ int keyboard_thread(void *arg) {
 						meterec->seek.disk_playhead_target = seek(-5);
 						
 						pthread_mutex_lock( &meterec->event_mutex );
-						add_event(meterec, SEEK, MAX_UINT, seek(-5), MAX_UINT);
+						add_event(meterec, SEEK, DISK, MAX_UINT, seek(-5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
 					break;
 				
@@ -1094,7 +1089,7 @@ int keyboard_thread(void *arg) {
 						meterec->seek.disk_playhead_target = seek(5);
 						
 						pthread_mutex_lock( &meterec->event_mutex );
-						add_event(meterec, SEEK, MAX_UINT, seek(5), MAX_UINT);
+						add_event(meterec, SEEK, DISK, MAX_UINT, seek(5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
 					break;
 			}
@@ -1328,7 +1323,7 @@ int keyboard_thread(void *arg) {
 				sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_playhead_target );
 				
 				pthread_mutex_lock( &meterec->event_mutex );
-				add_event(meterec, SEEK, MAX_UINT, meterec->seek.index[key - KEY_F(1)], MAX_UINT);
+				add_event(meterec, SEEK, DISK, MAX_UINT, meterec->seek.index[key - KEY_F(1)], MAX_UINT);
 				pthread_mutex_unlock( &meterec->event_mutex );
 				
 			}
@@ -1339,7 +1334,7 @@ int keyboard_thread(void *arg) {
 				pthread_mutex_unlock( &meterec->seek.mutex );
 				
 				pthread_mutex_lock( &meterec->event_mutex );
-				add_event(meterec, SEEK, MAX_UINT, 0, MAX_UINT);
+				add_event(meterec, SEEK, DISK, MAX_UINT, 0, MAX_UINT);
 				pthread_mutex_unlock( &meterec->event_mutex );
 			}
 		}
