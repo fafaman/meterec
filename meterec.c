@@ -40,6 +40,7 @@
 #include "disk.h"
 #include "conf.h"
 #include "ports.h"
+#include "queue.h"
 
 
 

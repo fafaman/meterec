@@ -31,6 +31,7 @@
 #include "meterec.h"
 #include "disk.h"
 #include "conf.h"
+#include "queue.h"
 
 /******************************************************************************
 ** THREADs
@@ -330,103 +331,6 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 }
 
-void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t disk_playhead, jack_nframes_t jack_playhead, unsigned int jack_buf_pos) {
-	
-	if (meterec->event == NULL) {
-		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
-		meterec->event->prev = NULL;
-		meterec->event->next = NULL;
-		fprintf(meterec->fd_log,"DBG: add_event: created from NULL.\n");
-	}
-	else {
-		
-		while (meterec->event->next)
-			meterec->event = meterec->event->next;
-		
-		meterec->event->next = (struct event_s *)malloc(sizeof(struct event_s));
-		meterec->event->next->prev = meterec->event;
-		meterec->event->next->next = NULL;
-		
-		meterec->event = meterec->event->next;
-		fprintf(meterec->fd_log,"DBG: add_event: adding in queue.\n");
-	}
-	
-	meterec->event->type = type;
-	meterec->event->disk_playhead = disk_playhead;
-	meterec->event->jack_playhead = jack_playhead;
-	meterec->event->jack_buf_pos = jack_buf_pos;
-	
-}
-
-void find_last_event(struct meterec_s *meterec) {
-	
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event->next)
-		meterec->event = meterec->event->next;
-	
-}
-
-void rm_last_event(struct meterec_s *meterec) {
-	
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event->next)
-		meterec->event = meterec->event->next;
-	
-	if (meterec->event->prev) {
-		meterec->event = meterec->event->prev->next = NULL;
-		free(meterec->event->next);
-		meterec->event->next = NULL;
-	}
-	else {
-		free(meterec->event);
-		meterec->event = NULL;
-	}
-	
-}
-
-void find_first_event(struct meterec_s *meterec) {
-	
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event->prev)
-		meterec->event = meterec->event->prev;
-	
-}
-
-void rm_first_event(struct meterec_s *meterec) {
-		
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event->prev)
-		meterec->event = meterec->event->prev;
-	
-	if (meterec->event->next) {
-		meterec->event = meterec->event->next ;
-		free(meterec->event->prev);
-		meterec->event->prev = NULL;
-	}
-	else {
-		free(meterec->event);
-		meterec->event = NULL;
-	}
-	
-}
-
-void clear_event(struct meterec_s *meterec) {
-		
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event)
-		rm_first_event(meterec);
-		
-}
 
 int reader_thread(void *d)
 {

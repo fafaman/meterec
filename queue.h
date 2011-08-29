@@ -20,8 +20,21 @@
 
 */
 
-int writer_thread(void *d);
-int reader_thread(void *d);
-float read_disk_buffer_level(struct meterec_s *meterec);
-float write_disk_buffer_level(struct meterec_s *meterec);
-unsigned int set_thread_delay(jack_client_t *client);
+/* type of events */
+#define NONE 0
+#define SEEK 1
+#define LOOP 2
+#define LOCK 3
+
+/* queuees */
+#define NONE 0
+#define COMMAND 1
+#define DISK 2
+
+
+void add_event(struct meterec_s *meterec, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
+void find_last_event(struct meterec_s *meterec) ;
+void rm_last_event(struct meterec_s *meterec) ;
+void find_first_event(struct meterec_s *meterec) ;
+void rm_first_event(struct meterec_s *meterec) ;
+void clear_event(struct meterec_s *meterec);
