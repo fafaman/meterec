@@ -35,6 +35,7 @@
 #include <curses.h>
 
 #include "config.h"
+#include "position.h"
 #include "meterec.h"
 #include "display.h"
 #include "disk.h"
@@ -155,33 +156,6 @@ void exit_on_error(char * reason) {
 	cleanup();
 	exit(1);
 }
-
-void time_sprint(struct time_s * time, char * string) {
-	sprintf(string, "%u:%02u:%02u.%03u",time->h, time->m, time->s, time->ms);
-	
-}
-
-void time_hms(struct time_s * time) {
-	
-	unsigned int rate = time->rate;
-	
-	time->h = (unsigned int) ( time->frm / rate ) / 3600;
-	time->m = (unsigned int) ((time->frm / rate ) / 60 ) % 60;
-	time->s = (unsigned int) ( time->frm / rate ) % 60;
-	rate /= 1000;
-	time->ms =(unsigned int) ( time->frm / rate ) % 1000;
-	
-}
-
-void time_frm(struct time_s * time) {
-	time->frm =  (unsigned int) (
-		time->h  * time->rate * 3600 +
-		time->m  * time->rate * 60 +
-		time->s  * time->rate +
-		time->ms * time->rate / 1000
-		);
-}
-
 
 /* Sleep for a fraction of a second */
 static int fsleep( float secs ) {

@@ -28,6 +28,7 @@
 #include <jack/jack.h>
 #include <libconfig.h>
  
+#include "position.h"
 #include "meterec.h"
 #include "ports.h"
 

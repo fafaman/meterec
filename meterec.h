@@ -131,11 +131,6 @@ take 7 contains 2 tracks that are mapped on port 8 and 3
 
 */
 
-struct time_s 
-{
-	unsigned int h,m,s,ms,frm,rate;
-};
-
 struct take_s
 {
   unsigned int ntrack; /* number of tracks in this take */
@@ -312,6 +307,3 @@ void stop(struct meterec_s *meterec);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void compute_tracks_to_record(struct meterec_s *meterec);
-void time_frm(struct time_s * time);
-void time_sprint(struct time_s * time, char * string);
-void time_hms(struct time_s * time);

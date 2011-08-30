@@ -26,6 +26,7 @@
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <curses.h>
+#include "position.h"
 #include "meterec.h"
 #include "disk.h"
 
