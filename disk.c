@@ -366,6 +366,8 @@ int reader_thread(void *d)
 		meterec->read_disk_buffer_thread_pos = i;
 	}
 	
+	meterec->playback_sts=ONGOING;
+	
 	/* Start reading disk to fill the RT ringbuffer */
 	while ( meterec->playback_cmd==START )  {
 		
@@ -410,6 +412,7 @@ int reader_thread(void *d)
 				meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
 				
 				read_disk_seek(meterec, event->new_playhead);
+				
 				opos = 0;
 				
 				event->buffer_pos  = meterec->read_disk_buffer_thread_pos;
@@ -417,6 +420,8 @@ int reader_thread(void *d)
 				event->buffer_pos &= (DISK_SIZE - 1);
 				
 				playhead = event->new_playhead;
+				
+				event->queue = DISK_PENDING;
 				
 				break;
 			}	
@@ -433,7 +438,7 @@ int reader_thread(void *d)
 		if (may_loop)
 			if (playhead > meterec->loop.high) {
 				
-				read_disk_seek(meterec, event->old_playhead);
+				read_disk_seek(meterec, meterec->loop.low);
 				opos = 0;
 				
 				i -= (playhead - meterec->loop.high);
@@ -446,16 +451,13 @@ int reader_thread(void *d)
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		
-		
+		event = find_first_event(meterec, DISK_PENDING, ALL);
 		if (event) 
 			if (event->type == SEEK || event->type == LOCK) 
 				if (meterec->read_disk_buffer_thread_pos != i)
 					event->queue = JACK;
 		
 		meterec->read_disk_buffer_thread_pos = i;
-		
-		if ( meterec->playback_sts==STARTING && (1-read_disk_buffer_level(meterec) > (4.0f/5)) )
-			meterec->playback_sts=ONGOING;
 		
 		usleep(thread_delay);
 		

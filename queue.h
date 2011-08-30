@@ -29,7 +29,8 @@
 /* queuees */
 #define ALL 0
 #define DISK 1
-#define JACK 2
+#define DISK_PENDING 2
+#define JACK 3
 
 
 void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);

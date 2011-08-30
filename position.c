@@ -39,35 +39,35 @@ void time_sprint(struct time_s * time, char * string) {
 void time_hms(struct time_s * time) {
 	
 	unsigned int rate = time->rate;
-	unsigned int mil = (time->rate/1000);
 	unsigned int frm = time->frm;
 	
-	time->ms =( frm / mil) % 1000; 
-	time->s = ( frm / rate ) % 60;   frm /= 60;
-	time->m = ( frm / rate ) % 60;   frm /= 60;
-	time->h = ( frm / rate );
+	time->h = (unsigned int) ( frm / rate ) / 3600;
 	
-}
-
-void time_hms2(struct time_s * time) {
+	frm -= time->h  * rate * 3600;
 	
-	unsigned int rate = time->rate;
-	
-	time->h = (unsigned int) ( time->frm / rate ) / 3600;
 	time->m = (unsigned int) ((time->frm / rate ) / 60 ) % 60;
+	
+	frm -= time->m  * rate * 60; 
+	
 	time->s = (unsigned int) ( time->frm / rate ) % 60;
-	time->ms =(unsigned int) ( 1000*time->frm / rate ) % 1000;
+	
+	frm -= time->s  * rate; 
+	
+	time->ms  = frm*10000; 
+	time->ms /= rate ;
+	time->ms += 5;
+	time->ms /= 10;
+	time->ms %= 1000;
+	
 	
 }
 
 void time_frm(struct time_s * time) {
 
-	unsigned int mil = (time->rate/1000);
-	
 	time->frm =  (unsigned int) (
 		time->h  * time->rate * 3600 +
 		time->m  * time->rate * 60 +
 		time->s  * time->rate +
-		time->ms * mil 
+		(time->ms * time->rate) / 1000
 		);
 }

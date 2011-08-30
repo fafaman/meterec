@@ -67,12 +67,6 @@
 #define OVR 4
 #define MAX_REC OVR*2
 
-/* type of events */
-#define NONE 0
-#define SEEK 1
-#define LOOP 2
-#define LOCK 3
-
 /* display colors */
 #define DEFAULT 0
 #define GREEN 1

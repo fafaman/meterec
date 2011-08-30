@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	char time_str[40];
 	
 	time.rate = 44100;
-	time.frm = 44;
+	time.frm = 123456789;
 	
 	time_hms(&time);
 	time_sprint(&time, time_str); printf("%s %dh\n", time_str, time.frm);
@@ -70,7 +70,17 @@ int main(int argc, char *argv[])
 	time_hms(&time);
 	time_sprint(&time, time_str); printf("%s %dh\n", time_str, time.frm);
 	
-	printf("%d %d\n", 44100/1000, (44/44 % 1000) );
+	time_frm(&time);
+	time_sprint(&time, time_str); printf("%s %df\n", time_str, time.frm);
+	time_hms(&time);
+	time_sprint(&time, time_str); printf("%s %dh\n", time_str, time.frm);
+	
+	time_frm(&time);
+	time_sprint(&time, time_str); printf("%s %df\n", time_str, time.frm);
+	time_hms(&time);
+	time_sprint(&time, time_str); printf("%s %dh\n", time_str, time.frm);
+	
+	printf("%d %d\n", (890000/44100 + 5)/10, (44/44 % 1000) );
 	
 	
 	return 0;

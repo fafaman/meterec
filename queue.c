@@ -32,30 +32,34 @@
 
 void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
 	
-//	fprintf(meterec->fd_log, "Event type %d added in queue %d\n",type, queue);
+	struct event_s *event;
 	
-	if (meterec->event == NULL) {
-		meterec->event = (struct event_s *)malloc(sizeof(struct event_s));
-		meterec->event->prev = NULL;
-		meterec->event->next = NULL;
+	event = meterec->event;
+	
+	if (event == NULL) {
+		event = (struct event_s *)malloc(sizeof(struct event_s));
+		event->prev = NULL;
+		event->next = NULL;
+		
+		meterec->event = event;
 	}
 	else {
 		
-		while (meterec->event->next)
-			meterec->event = meterec->event->next;
+		while (event->next)
+			event = event->next;
 		
-		meterec->event->next = (struct event_s *)malloc(sizeof(struct event_s));
-		meterec->event->next->prev = meterec->event;
-		meterec->event->next->next = NULL;
+		event->next = (struct event_s *)malloc(sizeof(struct event_s));
+		event->next->prev = event;
+		event->next->next = NULL;
 		
-		meterec->event = meterec->event->next;
+		event = event->next;
 	}
 	
-	meterec->event->type = type;
-	meterec->event->queue = queue;
-	meterec->event->old_playhead = old_playhead;
-	meterec->event->new_playhead = new_playhead;
-	meterec->event->buffer_pos = buffer_pos;
+	event->type = type;
+	event->queue = queue;
+	event->old_playhead = old_playhead;
+	event->new_playhead = new_playhead;
+	event->buffer_pos = buffer_pos;
 	
 }
 

@@ -661,8 +661,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				meterec->read_disk_buffer_process_pos = event->buffer_pos;
 				
 				/* if we seek because of a file re-open, compensate for what played since re-open request */
-				meterec->read_disk_buffer_process_pos += playhead ;
-				meterec->read_disk_buffer_process_pos -= event->new_playhead;
+				meterec->read_disk_buffer_process_pos += (playhead  - event->new_playhead);
 				meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
 				pthread_mutex_lock(&meterec->event_mutex);
 				rm_event(meterec, event);
@@ -794,8 +793,8 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		if (event)
 			if (event->type == LOOP)
 				if (playhead > event->old_playhead) {
-					playhead += event->old_playhead ;
-					playhead -= event->new_playhead ;
+					playhead += event->new_playhead ;
+					playhead -= event->old_playhead ;
 					pthread_mutex_lock( &meterec->event_mutex );
 					rm_event(meterec, event);
 					event = NULL;
@@ -1027,6 +1026,7 @@ int keyboard_thread(void *arg) {
 			
 			break;
 		case VU:
+			event = find_first_event(meterec, ALL, SEEK);
 			
 			switch (key) {
 				/* reset absolute maximum markers */
@@ -1044,21 +1044,19 @@ int keyboard_thread(void *arg) {
 					break;
 				
 				case KEY_LEFT:
-					if (!meterec->record_sts && meterec->playback_sts )
-						meterec->seek.disk_playhead_target = seek(-5);
-						
+					if (!meterec->record_sts && meterec->playback_sts && !event) {
 						pthread_mutex_lock( &meterec->event_mutex );
 						add_event(meterec, SEEK, DISK, MAX_UINT, seek(-5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
+					}
 					break;
 				
 				case KEY_RIGHT:
-					if (!meterec->record_sts && meterec->playback_sts )
-						meterec->seek.disk_playhead_target = seek(5);
-						
+					if (!meterec->record_sts && meterec->playback_sts && !event) {
 						pthread_mutex_lock( &meterec->event_mutex );
 						add_event(meterec, SEEK, DISK, MAX_UINT, seek(5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
+					}
 					break;
 			}
 			break;
@@ -1285,22 +1283,12 @@ int keyboard_thread(void *arg) {
 		if (!meterec->record_sts && meterec->playback_sts ) {
 			
 			if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
-				pthread_mutex_lock( &meterec->seek.mutex );
-				meterec->seek.disk_playhead_target = meterec->seek.index[key - KEY_F(1)];
-				pthread_mutex_unlock( &meterec->seek.mutex );
-				sprintf(meterec->log_file,"key: seek %d",meterec->seek.disk_playhead_target );
-				
 				pthread_mutex_lock( &meterec->event_mutex );
 				add_event(meterec, SEEK, DISK, MAX_UINT, meterec->seek.index[key - KEY_F(1)], MAX_UINT);
 				pthread_mutex_unlock( &meterec->event_mutex );
-				
 			}
 			
 			if ( key == KEY_HOME ) {
-				pthread_mutex_lock( &meterec->seek.mutex );
-				meterec->seek.disk_playhead_target = 0;
-				pthread_mutex_unlock( &meterec->seek.mutex );
-				
 				pthread_mutex_lock( &meterec->event_mutex );
 				add_event(meterec, SEEK, DISK, MAX_UINT, 0, MAX_UINT);
 				pthread_mutex_unlock( &meterec->event_mutex );
@@ -1575,6 +1563,23 @@ int main(int argc, char *argv[])
 		else if (view==PORT) {
 			display_ports(meterec);
 		}
+		
+		struct event_s *event;
+		static int n_ev, m_ev=0;
+		
+		event = meterec->event ;
+		
+		n_ev =0;
+		while (event) {
+			printw("\nevent: queue %d - type %d - new %d ",event->queue , event->type, event->new_playhead);
+			event = event->next;
+			n_ev ++;
+		}
+		
+		if (n_ev>m_ev) {
+			m_ev = n_ev;
+		}
+		printw("\nevent: max %d ",m_ev);
 		
 		refresh();
 		
