@@ -790,11 +790,10 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		/* set new playhead position */
 		playhead += nframes ;
 		
-		if (event)
+		if (event) 
 			if (event->type == LOOP)
-				if (playhead > event->old_playhead) {
-					playhead += event->new_playhead ;
-					playhead -= event->old_playhead ;
+				if (playhead > event->new_playhead) {
+					playhead -= ( event->new_playhead - event->old_playhead );
 					pthread_mutex_lock( &meterec->event_mutex );
 					rm_event(meterec, event);
 					event = NULL;
@@ -1547,6 +1546,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT, halt);
 	
 	meterec->pos.take = meterec->n_takes;
+		char dq[400] = "" ;
 	
 	while (running) {
 		
@@ -1571,7 +1571,7 @@ int main(int argc, char *argv[])
 		
 		n_ev =0;
 		while (event) {
-			printw("\nevent: queue %d - type %d - new %d ",event->queue , event->type, event->new_playhead);
+			sprintf(dq, "%s\nqueue %d - type %d - old %d - new %d - buf %d ",dq, event->queue , event->type,event->old_playhead, event->new_playhead, event->buffer_pos);
 			event = event->next;
 			n_ev ++;
 		}
@@ -1579,7 +1579,7 @@ int main(int argc, char *argv[])
 		if (n_ev>m_ev) {
 			m_ev = n_ev;
 		}
-		printw("\nevent: max %d ",m_ev);
+		printw("%s\nevent: max %d ",dq, m_ev);
 		
 		refresh();
 		

@@ -97,7 +97,8 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 				match_type = 0;
 		else 
 			match_type = 1;
-			
+		
+		
 		if (queue)
 			if (event->queue == queue)
 				match_queue = 1;
@@ -105,12 +106,10 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 				match_queue = 0;
 		else 
 			match_queue = 1;
-			
-		if (match_type && match_queue) {
-//			fprintf(meterec->fd_log, "Event type %d found in queue %d\n",event->type, event->queue);
+		
+		
+		if (match_type && match_queue) 
 			return event;
-		}
-//		fprintf(meterec->fd_log, "Event search more...\n",event->type, event->queue);
 
 		event = event->next;
 	}
@@ -160,5 +159,6 @@ void rm_event(struct meterec_s *meterec, struct event_s *event) {
 		meterec->event = NULL;
 		
 	free(event);
+	event = NULL;
 	
 }
