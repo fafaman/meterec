@@ -378,24 +378,29 @@ int reader_thread(void *d)
 			
 			case LOOP:
 				
-				/* Is next loop event already */
-				if (playhead > event->old_playhead) {
-				
+				/* Is next loop event already in the buffer */
+				if (meterec->loop.enable && playhead > meterec->loop.high) {
+					
 					jack_playhead = playhead - RD_BUFF_LEN;
-					if (jack_playhead < event->old_playhead) {
+					if (jack_playhead < meterec->loop.high) {
 					
 						/*we need to empty buffer up to the loop point */
-						meterec->read_disk_buffer_thread_pos -= event->old_playhead;
+						meterec->read_disk_buffer_thread_pos -= meterec->loop.high;
 						meterec->read_disk_buffer_thread_pos += playhead;
 						meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
 						
-						read_disk_seek(meterec, event->old_playhead);
+						read_disk_seek(meterec, meterec->loop.low);
 						opos = 0;
 						
-						playhead = event->old_playhead;
+						playhead = meterec->loop.low;
 					}
 				
 				}
+				
+				pthread_mutex_lock(&meterec->event_mutex);
+				rm_event(meterec, event);
+				event = NULL;
+				pthread_mutex_unlock(&meterec->event_mutex);
 				
 				break;
 			
