@@ -43,7 +43,83 @@
 #include "ports.h"
 #include "queue.h"
 
+void p(struct meterec_s *meterec) {
+	
+	struct event_s *event;
+	
+	event = meterec->event ;
+	while (event) {
+		printf("queue %d - type %d - old %d - new %d - buf %d\n", event->queue , event->type,event->old_playhead, event->new_playhead, event->buffer_pos);
+		event = event->next;
+	}
+	printf("================================================================================\n");
+}
 
+int main(int argc, char *argv[])
+{
+	struct event_s *event;
+	struct meterec_s *meterec;
+	
+	meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
+	
+	meterec->event = NULL;
+	
+	
+	add_event(meterec,1,1,1,1,1);
+	p(meterec);
+	
+	event = find_first_event(meterec, 1, 0);
+	rm_event(meterec, event);
+	p(meterec);
+	
+	add_event(meterec,1,1,1,1,1);
+	add_event(meterec,2,1,1,1,2);
+	add_event(meterec,3,1,1,1,3);
+	p(meterec);
+	
+	event = find_first_event(meterec, 1, 0);
+	rm_event(meterec, event);
+	p(meterec);
+	
+	event = find_first_event(meterec, 3, 0);
+	rm_event(meterec, event);
+	p(meterec);
+	
+	event = find_first_event(meterec, 2, 0);
+	rm_event(meterec, event);
+	p(meterec);
+	
+	event = find_first_event(meterec, 1, 0);
+	rm_event(meterec, event);
+	p(meterec);
+	
+	add_event(meterec,1,1,1,1,1);
+	add_event(meterec,2,1,1,1,2);
+	add_event(meterec,2,1,1,1,3);
+	add_event(meterec,3,1,1,1,4);
+	add_event(meterec,2,1,1,1,5);
+	add_event(meterec,3,1,1,1,6);
+	p(meterec);
+	
+	find_rm_events(meterec, 2, 0);
+	p(meterec);
+	
+	find_rm_events(meterec, 1, 0);
+	p(meterec);
+	
+	find_rm_events(meterec, 2, 0);
+	p(meterec);
+	
+	find_rm_events(meterec, 3, 0);
+	p(meterec);
+	
+	free(meterec);
+
+}
+
+
+
+/*
 int main(int argc, char *argv[])
 {
 	struct time_s time;
@@ -85,3 +161,4 @@ int main(int argc, char *argv[])
 	
 	return 0;
 }
+*/

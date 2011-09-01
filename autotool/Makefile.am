@@ -7,5 +7,5 @@ AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@
 meterec_SOURCES = conf.c ports.c position.c display.c queue.c disk.c meterec.c
 meterec_LDADD = @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@
 
-test_SOURCES = position.c test.c
+test_SOURCES = queue.c test.c
 test_LDADD = @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@

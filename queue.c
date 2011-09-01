@@ -30,7 +30,7 @@
 #include "meterec.h"
 #include "conf.h"
 
-void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
+void add_event(struct meterec_s *meterec, unsigned int queue, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
 	
 	struct event_s *event;
 	
@@ -61,21 +61,6 @@ void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue,
 	event->new_playhead = new_playhead;
 	event->buffer_pos = buffer_pos;
 	
-}
-
-struct event_s * last_event(struct meterec_s *meterec) {
-	
-	struct event_s *event;
-	
-	if (meterec->event == NULL)
-		return NULL;
-		
-	event = meterec->event;
-	
-	while (event->next)
-		event = event->next;
-	
-	return event;
 }
 
 struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
@@ -117,40 +102,28 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 	return NULL;
 }
 
-void rm_last_event(struct meterec_s *meterec) {
-	
+void find_rm_events(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
+		
 	struct event_s *event;
 	
-	if (meterec->event == NULL)
-		return;
+	event = meterec->event;
 	
-	event = last_event(meterec);
-	
-	if (event->prev) {
-		event->prev->next = NULL;
-	}
-	else {
-		meterec->event = NULL;
+	while (event) {
+		event = find_first_event(meterec, queue, type);
+		rm_event(meterec, event);
 	}
 	
-	free(event);
-}
-
-void rm_all_event(struct meterec_s *meterec) {
-		
-	if (meterec->event == NULL)
-		return;
-	
-	while (meterec->event)
-		rm_last_event(meterec);
-		
 }
 
 void rm_event(struct meterec_s *meterec, struct event_s *event) {
 
+	if (event == NULL)
+		return;
 	
 	if (event->prev)
 		event->prev->next = event->next ;
+	else 
+		meterec->event = event->next ;
 	
 	if (event->next)
 		event->next->prev = event->prev ;
@@ -159,6 +132,5 @@ void rm_event(struct meterec_s *meterec, struct event_s *event) {
 		meterec->event = NULL;
 		
 	free(event);
-	event = NULL;
 	
 }

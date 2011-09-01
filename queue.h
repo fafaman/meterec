@@ -33,9 +33,7 @@
 #define JACK 3
 
 
-void add_event(struct meterec_s *meterec, unsigned int type, unsigned int queue, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
-void find_last_event(struct meterec_s *meterec) ;
-void rm_last_event(struct meterec_s *meterec) ;
-struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type);
-void clear_event(struct meterec_s *meterec);
-void rm_event(struct meterec_s *meterec, struct event_s *event);
+void             add_event        (struct meterec_s *meterec, unsigned int queue, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
+struct event_s * find_first_event (struct meterec_s *meterec, unsigned int queue, unsigned int type);
+void             find_rm_events   (struct meterec_s *meterec, unsigned int queue, unsigned int type);
+void             rm_event         (struct meterec_s *meterec, struct event_s *event);

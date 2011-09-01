@@ -452,7 +452,7 @@ int reader_thread(void *d)
 				playhead = meterec->loop.low;
 				
 				pthread_mutex_lock(&meterec->event_mutex);
-				add_event(meterec, LOOP, JACK, meterec->loop.low, meterec->loop.high, 0);
+				add_event(meterec, JACK, LOOP, meterec->loop.low, meterec->loop.high, 0);
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		
