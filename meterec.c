@@ -656,7 +656,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		
 	if (event) {
 		switch (event->type) {
-		
+			
 			case LOCK:
 				meterec->read_disk_buffer_process_pos = event->buffer_pos;
 				
@@ -1563,6 +1563,16 @@ int main(int argc, char *argv[])
 		else if (view==PORT) {
 			display_ports(meterec);
 		}
+		
+		struct event_s *event;
+		
+		event = meterec->event ;
+		
+		while (event) {
+			printw("\nqueue %d - type %d - old %d - new %d - buf %d", event->queue , event->type,event->old_playhead, event->new_playhead, event->buffer_pos);
+			event = event->next;
+		}
+		
 		
 		refresh();
 		

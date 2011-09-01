@@ -63,10 +63,33 @@ void add_event(struct meterec_s *meterec, unsigned int queue, unsigned int type,
 	
 }
 
+int event_match(struct event_s *event, unsigned int queue, unsigned int type) {
+	
+	int match_type, match_queue;
+	
+	if (type)
+		if (event->type == type)
+			match_type = 1;
+		else 
+			match_type = 0;
+	else 
+		match_type = 1;
+	
+	if (queue)
+		if (event->queue == queue)
+			match_queue = 1;
+		else 
+			match_queue = 0;
+	else 
+		match_queue = 1;
+	
+	return (match_type && match_queue);
+
+}
+
 struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
 	
 	struct event_s *event;
-	int match_type, match_queue;
 	
 	if (meterec->event == NULL)
 		return NULL;
@@ -75,48 +98,40 @@ struct event_s * find_first_event(struct meterec_s *meterec, unsigned int queue,
 	
 	while (event) {
 		
-		if (type)
-			if (event->type == type)
-				match_type = 1;
-			else 
-				match_type = 0;
-		else 
-			match_type = 1;
-		
-		
-		if (queue)
-			if (event->queue == queue)
-				match_queue = 1;
-			else 
-				match_queue = 0;
-		else 
-			match_queue = 1;
-		
-		
-		if (match_type && match_queue) 
+		if (event_match(event, queue, type)) 
 			return event;
-
+		
 		event = event->next;
 	}
 	
 	return NULL;
 }
 
-void find_rm_events(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
-		
+struct event_s * find_last_event(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
+	
 	struct event_s *event;
 	
+	if (meterec->event == NULL)
+		return NULL;
+		
 	event = meterec->event;
 	
+	while (event->next)
+		event = event->next;
+	
 	while (event) {
-		event = find_first_event(meterec, queue, type);
-		rm_event(meterec, event);
+		
+		if (event_match(event, queue, type)) 
+			return event;
+		
+		event = event->prev;
 	}
 	
+	return NULL;
 }
 
 void rm_event(struct meterec_s *meterec, struct event_s *event) {
-
+	
 	if (event == NULL)
 		return;
 	
@@ -134,3 +149,17 @@ void rm_event(struct meterec_s *meterec, struct event_s *event) {
 	free(event);
 	
 }
+
+void find_rm_events(struct meterec_s *meterec, unsigned int queue, unsigned int type) {
+		
+	struct event_s *event;
+	
+	event = meterec->event;
+	
+	while (event) {
+		event = find_first_event(meterec, queue, type);
+		rm_event(meterec, event);
+	}
+	
+}
+

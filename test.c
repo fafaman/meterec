@@ -114,6 +114,8 @@ int main(int argc, char *argv[])
 	p(meterec);
 	
 	free(meterec);
+	
+	return 0;
 
 }
 

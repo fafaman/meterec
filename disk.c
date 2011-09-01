@@ -369,13 +369,44 @@ int reader_thread(void *d)
 	meterec->playback_sts=ONGOING;
 	
 	/* Start reading disk to fill the RT ringbuffer */
-	while ( meterec->playback_cmd==START )  {
+	while ( meterec->playback_cmd==START ) {
 		
-		event = find_first_event(meterec, DISK, ALL);
+		event = find_last_event(meterec, DISK, ALL);
 		
 		if (event) {
 			switch (event->type) {
 			
+			case LOCK:
+				
+				read_disk_close_fd(meterec);
+				compute_takes_to_playback(meterec);
+				read_disk_open_fd(meterec);
+				
+			case SEEK:
+				
+				/* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
+				meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - (2*BUF_SIZE) - 1;
+				meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
+				
+				read_disk_seek(meterec, event->new_playhead);
+				
+				opos = 0;
+				
+				event->buffer_pos  = meterec->read_disk_buffer_thread_pos - 1;
+				event->buffer_pos &= (DISK_SIZE - 1);
+				
+				playhead = event->new_playhead;
+				
+				event->queue = DISK_PENDING;
+				
+				pthread_mutex_lock(&meterec->event_mutex);
+				find_rm_events(meterec, JACK, ALL);
+				find_rm_events(meterec, DISK, ALL);
+				pthread_mutex_unlock(&meterec->event_mutex);
+				
+				break;
+				
+				
 			case LOOP:
 				
 				/* Is next loop event already in the buffer */
@@ -404,31 +435,6 @@ int reader_thread(void *d)
 				
 				break;
 			
-			case LOCK:
-				
-				read_disk_close_fd(meterec);
-				compute_takes_to_playback(meterec);
-				read_disk_open_fd(meterec);
-				
-			case SEEK:
-				
-				/* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
-				meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - BUF_SIZE - 1;
-				meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
-				
-				read_disk_seek(meterec, event->new_playhead);
-				
-				opos = 0;
-				
-				event->buffer_pos  = meterec->read_disk_buffer_thread_pos;
-				event->buffer_pos -= 1;
-				event->buffer_pos &= (DISK_SIZE - 1);
-				
-				playhead = event->new_playhead;
-				
-				event->queue = DISK_PENDING;
-				
-				break;
 			}	
 		}
 		
@@ -452,7 +458,7 @@ int reader_thread(void *d)
 				playhead = meterec->loop.low;
 				
 				pthread_mutex_lock(&meterec->event_mutex);
-				add_event(meterec, JACK, LOOP, meterec->loop.low, meterec->loop.high, 0);
+				add_event(meterec, JACK, LOOP, meterec->loop.low, meterec->loop.high, i);
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		
@@ -461,6 +467,8 @@ int reader_thread(void *d)
 			if (event->type == SEEK || event->type == LOCK) 
 				if (meterec->read_disk_buffer_thread_pos != i)
 					event->queue = JACK;
+//				if ( (meterec->read_disk_buffer_thread_pos - event->buffer_pos) & (DISK_SIZE - 1) >  (DISK_SIZE/2) )
+//					event->queue = JACK;
 		
 		meterec->read_disk_buffer_thread_pos = i;
 		
