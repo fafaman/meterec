@@ -1546,7 +1546,6 @@ int main(int argc, char *argv[])
 	signal(SIGINT, halt);
 	
 	meterec->pos.take = meterec->n_takes;
-		char dq[400] = "" ;
 	
 	while (running) {
 		

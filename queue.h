@@ -29,8 +29,13 @@
 /* queuees */
 #define ALL 0
 #define DISK 1
-#define DISK_PENDING 2
+#define PEND 2
 #define JACK 3
+
+/* print*/
+#define CURSES 1
+#define STDOUT 2
+#define LOG 3
 
 
 void             add_event        (struct meterec_s *meterec, unsigned int queue, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos);
@@ -38,4 +43,7 @@ struct event_s * find_first_event (struct meterec_s *meterec, unsigned int queue
 struct event_s * find_last_event  (struct meterec_s *meterec, unsigned int queue, unsigned int type);
 void             rm_event         (struct meterec_s *meterec, struct event_s *event);
 void             find_rm_events   (struct meterec_s *meterec, unsigned int queue, unsigned int type);
-int event_match(struct event_s *event, unsigned int queue, unsigned int type);
+int              event_match      (struct event_s *event, unsigned int queue, unsigned int type);
+
+void             event_queue_print(struct meterec_s *meterec, unsigned int where);
+void             event_print      (struct meterec_s *meterec, unsigned int where, struct event_s *event);

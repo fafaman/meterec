@@ -26,13 +26,16 @@
 
 #include <sndfile.h>
 #include <jack/jack.h>
+#include <curses.h>
 
 #include "meterec.h"
+#include "queue.h"
 #include "conf.h"
 
 void add_event(struct meterec_s *meterec, unsigned int queue, unsigned int type, jack_nframes_t old_playhead, jack_nframes_t new_playhead, unsigned int buffer_pos) {
 	
 	struct event_s *event;
+	static unsigned int id=0;
 	
 	event = meterec->event;
 	
@@ -55,6 +58,7 @@ void add_event(struct meterec_s *meterec, unsigned int queue, unsigned int type,
 		event = event->next;
 	}
 	
+	event->id = id;
 	event->type = type;
 	event->queue = queue;
 	event->old_playhead = old_playhead;
@@ -162,4 +166,69 @@ void find_rm_events(struct meterec_s *meterec, unsigned int queue, unsigned int 
 	}
 	
 }
+
+void event_queue_print(struct meterec_s *meterec, unsigned int where) {
+	
+	struct event_s *event;
+	
+	if (where == CURSES) 
+		printw(">-------------------------------------------------------\n");
+		
+	if (where == STDOUT) 
+		printf(">-------------------------------------------------------\n");
+		
+	if (where == LOG) 
+		fprintf(meterec->fd_log, ">-------------------------------------------------------\n");
+	
+	event = meterec->event ;
+	while (event) {
+		event_print(meterec, where, event);
+		event = event->next;
+	}
+	
+	if (where == CURSES) 
+		printw("^-------------------------------------------------------\n");
+		
+	if (where == STDOUT) 
+		printf("^-------------------------------------------------------\n");
+		
+	if (where == LOG) 
+		fprintf(meterec->fd_log, "^-------------------------------------------------------\n");
+	
+}
+
+void event_print(struct meterec_s *meterec, unsigned int where, struct event_s *event) {
+	
+	const char *stype = NULL;
+	const char *squeue = NULL;
+	char out[100] = "";
+	
+	switch (event->type) {
+		case ALL:  stype = "ALL"; break;
+		case SEEK: stype = "SEEK"; break;
+		case LOCK: stype = "LOCK"; break;
+		case LOOP: stype = "LOOP"; break;
+	}
+	
+	switch (event->queue) {
+		case ALL:  squeue = "ALL"; break;
+		case DISK: squeue = "DISK"; break;
+		case JACK: squeue = "JACK"; break;
+		case PEND: squeue = "PEND"; break;
+	}
+	
+	sprintf(out, "id %d - queue %s - type %s - old %d - new %d - buf %d", event->id, squeue, stype, event->old_playhead, event->new_playhead, event->buffer_pos);
+	
+	if (where == CURSES) 
+		printw("%s\n", out);
+		
+	if (where == STDOUT) 
+		printf("%s\n", out);
+		
+	if (where == LOG) 
+		fprintf(meterec->fd_log, "%s\n", out);
+		
+}
+
+
 

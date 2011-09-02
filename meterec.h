@@ -198,6 +198,7 @@ struct seek_s
 
 struct event_s {
 	
+	unsigned int id;
 	unsigned int type;
 	unsigned int queue;
 	jack_nframes_t old_playhead;
