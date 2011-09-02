@@ -65,6 +65,7 @@ void add_event(struct meterec_s *meterec, unsigned int queue, unsigned int type,
 	event->new_playhead = new_playhead;
 	event->buffer_pos = buffer_pos;
 	
+	id++;
 }
 
 int event_match(struct event_s *event, unsigned int queue, unsigned int type) {
@@ -217,7 +218,7 @@ void event_print(struct meterec_s *meterec, unsigned int where, struct event_s *
 		case PEND: squeue = "PEND"; break;
 	}
 	
-	sprintf(out, "id %d - queue %s - type %s - old %d - new %d - buf %d", event->id, squeue, stype, event->old_playhead, event->new_playhead, event->buffer_pos);
+	sprintf(out, "id %2d |queue %s |type %s |old %d |new %d |buf %d", event->id, squeue, stype, event->old_playhead, event->new_playhead, event->buffer_pos);
 	
 	if (where == CURSES) 
 		printw("%s\n", out);

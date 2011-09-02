@@ -663,6 +663,10 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				/* if we seek because of a file re-open, compensate for what played since re-open request */
 				meterec->read_disk_buffer_process_pos += (playhead  - event->new_playhead);
 				meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
+				
+				event_print(meterec, LOG, event);
+				fprintf(meterec->fd_log, "jack:                            playhead %d |max %d |nframes %d\n", playhead, meterec->read_disk_buffer_process_pos+ nframes, nframes);
+				
 				pthread_mutex_lock(&meterec->event_mutex);
 				rm_event(meterec, event);
 				event = NULL;
@@ -1568,7 +1572,7 @@ int main(int argc, char *argv[])
 		event = meterec->event ;
 		
 		while (event) {
-			printw("\nqueue %d - type %d - old %d - new %d - buf %d", event->queue , event->type,event->old_playhead, event->new_playhead, event->buffer_pos);
+			event_print(meterec, CURSES, event);
 			event = event->next;
 		}
 		
