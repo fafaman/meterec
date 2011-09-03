@@ -417,9 +417,12 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->pos.inout = 0;
 	meterec->pos.con_in = 0;
 	meterec->pos.con_out = 0;
-
+	
 	meterec->jack.sample_rate = 0;
-			
+	meterec->jack.playhead = 0;
+	
+	meterec->disk.playhead = 0;
+	
 	meterec->all_input_ports = NULL;
 	meterec->all_output_ports = NULL;
 	
@@ -434,18 +437,9 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->read_disk_buffer_process_pos = 0;
 	meterec->read_disk_buffer_overflow = 0;
 	
-	pthread_mutex_init(&meterec->seek.mutex, NULL);
-	
 	for (index=0; index<MAX_INDEX; index++)
-		meterec->seek.index[index] = MAX_UINT;
+		meterec->seek_index[index] = MAX_UINT;
 	
-	meterec->seek.disk_playhead_target = MAX_UINT;
-	meterec->seek.jack_buffer_target = MAX_UINT;
-	meterec->seek.playhead_target = MAX_UINT;
-	
-	meterec->seek.files_reopen = 0;
-	meterec->seek.keyboard_lock = 0;
-
 	meterec->loop.low = MAX_UINT;
 	meterec->loop.high = MAX_UINT;
 	meterec->loop.enable = 0;
@@ -1276,18 +1270,18 @@ int keyboard_thread(void *arg) {
 		
 		/* set index using SHIFT */
 		if ( KEY_F(13) <= key && key <= KEY_F(24) ) 
-			meterec->seek.index[key - KEY_F(13)] = meterec->jack.playhead ;
+			meterec->seek_index[key - KEY_F(13)] = meterec->jack.playhead ;
 		
 		/* set loop using CONTROL */
 		if ( KEY_F(25) <= key && key <= KEY_F(36) ) {
-			set_loop(meterec, meterec->seek.index[key - KEY_F(25)]);
+			set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
 		}
 		/* seek to index */
 		if (!meterec->record_sts && meterec->playback_sts ) {
 			
 			if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
 				pthread_mutex_lock( &meterec->event_mutex );
-				add_event(meterec, DISK, SEEK, MAX_UINT, meterec->seek.index[key - KEY_F(1)], MAX_UINT);
+				add_event(meterec, DISK, SEEK, MAX_UINT, meterec->seek_index[key - KEY_F(1)], MAX_UINT);
 				pthread_mutex_unlock( &meterec->event_mutex );
 			}
 			

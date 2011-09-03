@@ -74,7 +74,7 @@ void parse_time_index(struct meterec_s *meterec, FILE *fd_conf, unsigned int ind
 		time.rate = jack_get_sample_rate(meterec->client);
 		time_frm(&time);
 		
-		meterec->seek.index[index] = time.frm;
+		meterec->seek_index[index] = time.frm;
 	}
 	else {
 		/* consume this line */
@@ -298,7 +298,7 @@ void save_conf(struct meterec_s *meterec) {
 	
 	fprintf(fd_conf, "indexes=\n{\n");
 	for (index=0; index<MAX_INDEX; index++) {
-		time.frm = meterec->seek.index[index] ;
+		time.frm = meterec->seek_index[index] ;
 		if ( time.frm != (unsigned int)(-1) ) {
 			time_hms(&time);
 			time_sprint(&time, time_str);
@@ -345,7 +345,7 @@ void parse_time(struct meterec_s *meterec, unsigned int index, const char *time_
 	time.rate = jack_get_sample_rate(meterec->client);
 	time_frm(&time);
 	
-	meterec->seek.index[index] = time.frm;
+	meterec->seek_index[index] = time.frm;
 	
 }
 

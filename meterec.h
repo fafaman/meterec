@@ -179,21 +179,6 @@ struct port_s
 
 struct seek_s 
 {
-	pthread_mutex_t mutex ;
-	
-	jack_nframes_t index[MAX_INDEX];
-	
-	/* request from keyboard thread to disk thread */
-	jack_nframes_t disk_playhead_target;
-	int files_reopen; 
-	
-	/* request of disk thread to jack process */
-	unsigned int jack_buffer_target;
-	jack_nframes_t playhead_target;
-	
-	/* do not allow severeal pending seek requests */
-	unsigned int keyboard_lock;
-	
 };
 
 struct event_s {
@@ -227,6 +212,11 @@ struct pos_s
 struct jack_s
 {
 	unsigned int sample_rate;
+	unsigned long playhead;
+};
+
+struct disk_s
+{
 	unsigned long playhead;
 };
 
@@ -274,11 +264,13 @@ struct meterec_s
 	
 	jack_port_t *monitor;
 	
+	jack_nframes_t seek_index[MAX_INDEX];
+	
 	struct jack_s jack;
 	
-	struct loop_s loop;
+	struct disk_s disk;
 	
-	struct seek_s seek;
+	struct loop_s loop;
 	
 	struct pos_s pos;
 	
