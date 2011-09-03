@@ -1587,15 +1587,15 @@ int main(int argc, char *argv[])
 			display_ports(meterec);
 		}
 		
+		/*
 		struct event_s *event;
-		
 		event = meterec->event ;
 		printw("\n");
 		while (event) {
 			event_print(meterec, CURSES, event);
 			event = event->next;
 		}
-		
+		*/
 		
 		refresh();
 		
