@@ -374,8 +374,6 @@ int reader_thread(void *d)
 		
 		if (event) {
 			
-			event_print(meterec, LOG, event);
-			
 			switch (event->type) {
 			
 			case LOCK:
@@ -436,8 +434,8 @@ int reader_thread(void *d)
 				
 				break;
 			
-			}	
-			event_print(meterec, LOG, event);
+			}
+			
 		}
 		
 		
