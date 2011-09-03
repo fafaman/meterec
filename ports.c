@@ -70,7 +70,7 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 	free(meterec->all_input_ports);
 	free(meterec->all_output_ports);
 	
-	meterec->all_input_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsInput);
+	meterec->all_input_ports = jack_get_ports(meterec->client,NULL, NULL, JackPortIsInput);
 	meterec->all_output_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsOutput);
 	
 };

@@ -343,14 +343,14 @@ void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 	unsigned int size, i;
 	static unsigned int peak=0;
 	
-	width -= (29 + 3*13);
+	width -= (31 + 3*13);
 	
 	size = width * jack_cpu_load(meterec->client) / 100.0f;
 	
 	if (size > peak) 
 		peak = size;
 		
-	printw(" '");
+	printw("  .");
 	
 	for (i=0; i<width; i++) {
 		if (i < size-1)
@@ -361,7 +361,7 @@ void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 			printw(" ");
 	}
 	
-	printw("' ");
+	printw("'  ");
 	
 }
 
@@ -536,10 +536,9 @@ void display_ports(struct meterec_s *meterec)
 	
 	out=meterec->all_input_ports;
 	in=meterec->all_output_ports;
-		
-	printw("  Port %2d ", meterec->pos.port+1);
-	display_port_info( &meterec->ports[meterec->pos.port] );
-	printw("\n\n");
+	
+	
+	printw("\n\n\n");
 	
 	while (*in || *out || port < meterec->n_ports) {
 		
