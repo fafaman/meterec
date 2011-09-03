@@ -118,91 +118,100 @@ static int iec_scale(float db, int size) {
   return (int)( (def / 100.0f) * ((float) size) );
 }
 
+static void color_port(struct meterec_s *meterec, unsigned int port) {
+	
+	if ( meterec->ports[port].record ) 
+		if (meterec->record_sts == ONGOING)
+			color_set(RED, NULL);
+		else 
+			color_set(YELLOW, NULL);
+	else 
+		if (meterec->ports[port].mute)
+			color_set(DEFAULT, NULL);
+		else 
+			color_set(GREEN, NULL);
+}
+
 void display_meter(struct meterec_s *meterec, int display_names, int width, int decay_len)
 {
-  int size_out, size_in, i;
-  unsigned int port ;
-  
-  width -= 3;
-  
-  printw("%s\n", scale);
-  printw("%s\n", line);
-  
-  for ( port=0 ; port < meterec->n_ports ; port++) {
-        
-    if ( meterec->ports[port].record ) 
-      if (meterec->record_sts == ONGOING)
-        color_set(RED, NULL);
-      else 
-        color_set(YELLOW, NULL);
-    else 
-      color_set(GREEN, NULL);
+	int size_out, size_in, i;
+	unsigned int port ;
 	
-    if (meterec->pos.port == port) 
-       attron(A_REVERSE);
-    else 
-       attroff(A_REVERSE);
+	width -= 3;
 	
-    
-    printw("%02d",port+1);
-    display_port_recmode(&meterec->ports[port]);
-
-    size_in = iec_scale( meterec->ports[port].db_in, width );
-    size_out = iec_scale( meterec->ports[port].db_out, width );
-    
-    if (size_in > meterec->ports[port].dkmax_in)
-      meterec->ports[port].dkmax_in = size_in;
-      
-    if (size_in > meterec->ports[port].dkpeak_in) {
-      meterec->ports[port].dkpeak_in = size_in;
-      meterec->ports[port].dktime_in = 0;
-    } else if (meterec->ports[port].dktime_in++ > decay_len) {
-      meterec->ports[port].dkpeak_in = size_in;
-    }
+	printw("%s\n", scale);
+	printw("%s\n", line);
 	
-    for ( i=0; i<width; i++) {
-
-      if (display_names)
-	    if (i == width/5) 
-	      if (meterec->ports[port].name) {
-		    printw("%s",meterec->ports[port].name);
-		    i += strlen(meterec->ports[port].name);
-	      }
-	  
-      if (i < size_in-1) {
-        printw("#");
-      }
-      else if ( i==meterec->ports[port].dkpeak_in-1 ) {
-        printw("I");
-      }
-      else if ( i==meterec->ports[port].dkmax_in-1 ) {
-        if (i>width-3)
-	  printw("X");
-	else
-	  printw(":");
-      }
-      else if ( i < size_out-1 ) {
-        printw("-");
-      }
-      else {
-        printw(" ");
-      }
-      
-    }
+	for ( port=0 ; port < meterec->n_ports ; port++) {
+		
+		color_port(meterec, port);
+		
+		if (meterec->pos.port == port) 
+			attron(A_REVERSE);
+		else 
+			attroff(A_REVERSE);
+		
+		
+		printw("%02d",port+1);
+		display_port_recmode(&meterec->ports[port]);
+		
+		size_in = iec_scale( meterec->ports[port].db_in, width );
+		size_out = iec_scale( meterec->ports[port].db_out, width );
+		
+		if (size_in > meterec->ports[port].dkmax_in)
+			meterec->ports[port].dkmax_in = size_in;
+		
+		if (size_in > meterec->ports[port].dkpeak_in) {
+			meterec->ports[port].dkpeak_in = size_in;
+			meterec->ports[port].dktime_in = 0;
+		} 
+		else if (meterec->ports[port].dktime_in++ > decay_len) {
+			meterec->ports[port].dkpeak_in = size_in;
+		}
+		
+		for ( i=0; i<width; i++) {
+			
+			if (display_names)
+				if (i == width/5) 
+					if (meterec->ports[port].name) {
+						printw("%s",meterec->ports[port].name);
+						i += strlen(meterec->ports[port].name);
+					}
+			
+			if (i < size_in-1) {
+				printw("#");
+			}
+			else if ( i==meterec->ports[port].dkpeak_in-1 ) {
+				printw("I");
+			}
+			else if ( i==meterec->ports[port].dkmax_in-1 ) {
+				if (i>width-3)
+					printw("X");
+				else
+					printw(":");
+			}
+			else if ( i < size_out-1 ) {
+				printw("-");
+			}
+			else {
+				printw(" ");
+			}
+		
+		}
+		
+		printw("\n");
+		
+	}
 	
-    printw("\n");
-
-  }
-  
-  attroff(A_REVERSE);
-  color_set(DEFAULT, NULL);
-  printw("%s\n", line);
-  printw("%s\n", scale);
-  
-  printw("  Port %2d ", meterec->pos.port+1);
-  display_port_info( &meterec->ports[meterec->pos.port] );
-   
-
+	attroff(A_REVERSE);
+	color_set(DEFAULT, NULL);
+	printw("%s\n", line);
+	printw("%s\n", scale);
+	
+	printw("  Port %2d ", meterec->pos.port+1);
+	display_port_info( &meterec->ports[meterec->pos.port] );
+	
+	
 }
 
 void free_scale(void) {
@@ -282,7 +291,7 @@ void display_rd_buffer(struct meterec_s *meterec) {
 			printw(" ");
 	}
 	printw("%s", pedale);
-
+	
 	if (meterec->playback_sts==ONGOING) {
 		if      (*pedale=='/')
 			pedale = "-";
@@ -316,7 +325,7 @@ void display_wr_buffer(struct meterec_s *meterec) {
 		else 
 			printw(" ");
 	}
-
+	
 	if (meterec->record_sts==ONGOING) {
 		if      (*pedale=='/')
 			pedale = "-";
@@ -330,16 +339,19 @@ void display_wr_buffer(struct meterec_s *meterec) {
 	
 }
 
-void display_cpu_load(struct meterec_s *meterec) {
-	int size, i;
-	static int peak=0;
-	const int width = 10;
+void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
+	unsigned int size, i;
+	static unsigned int peak=0;
+	
+	width -= (29 + 3*13);
 	
 	size = width * jack_cpu_load(meterec->client) / 100.0f;
 	
 	if (size > peak) 
 		peak = size;
 		
+	printw(" '");
+	
 	for (i=0; i<width; i++) {
 		if (i < size-1)
 			printw("|");
@@ -348,6 +360,8 @@ void display_cpu_load(struct meterec_s *meterec) {
 		else 
 			printw(" ");
 	}
+	
+	printw("' ");
 	
 }
 
@@ -435,33 +449,17 @@ void display_wr_status(struct meterec_s *meterec) {
 }
 
 void display_header(struct meterec_s *meterec, unsigned int width) {
-
-	unsigned int i;
 	
 	display_rd_status(meterec);
 	display_rd_buffer(meterec);
-	display_cpu_load(meterec);
-	
-	for (i = width - 34 - 3*13; i; i--)
-		printw(" ");
+	display_cpu_load(meterec, width);
 	
 	display_loop(meterec);
-		
+	
 	display_wr_status(meterec);
 	
 	printw("\n");
-		
-}
-
-static void color_port(struct meterec_s *meterec, unsigned int port) {
-
-	if (meterec->ports[port].record) 
-		if (meterec->record_sts == ONGOING)
-			color_set(RED, NULL);
-		else 
-			color_set(YELLOW, NULL);
-	else 
-		color_set(GREEN, NULL);
+	
 }
 
 void display_session(struct meterec_s *meterec) 

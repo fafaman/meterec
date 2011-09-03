@@ -741,7 +741,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					meterec->ports[port].peak_in = s;
 				
 				/* compute peak of output (playback) data */
-				s = fabs(out[i] * 1.0f) ;
+				s = fabs(meterec->ports[port].read_disk_buffer[read_pos] * 1.0f) ;
 				if (s > meterec->ports[port].peak_out) 
 					meterec->ports[port].peak_out = s;
 			}
