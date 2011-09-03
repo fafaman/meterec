@@ -20,8 +20,8 @@
 
 */
 
-void display_header(struct meterec_s *meterec, unsigned int playhead, unsigned int width);
-void display_loop(struct meterec_s *meterec, unsigned int playhead);
+void display_header(struct meterec_s *meterec, unsigned int width);
+void display_loop(struct meterec_s *meterec);
 void display_ports(struct meterec_s *meterec);
 void display_session(struct meterec_s *meterec);
 void display_port_info(struct port_s *port_p);

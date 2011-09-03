@@ -352,7 +352,7 @@ void display_cpu_load(struct meterec_s *meterec) {
 }
 
 
-void display_loop(struct meterec_s *meterec, unsigned int playhead) {
+void display_loop(struct meterec_s *meterec) {
 	
 	struct time_s low, high, now;
 	
@@ -365,7 +365,7 @@ void display_loop(struct meterec_s *meterec, unsigned int playhead) {
 		printw("[%d:%02d:%02d.%03d]", low.h, low.m, low.s, low.ms);
 	}
 	
-	now.frm = playhead;
+	now.frm = meterec->jack.playhead;
 	now.rate = meterec->jack.sample_rate ;
 	time_hms(&now);
 	printw(" %d:%02d:%02d.%03d ", now.h, now.m, now.s, now.ms);
@@ -434,7 +434,7 @@ void display_wr_status(struct meterec_s *meterec) {
 	color_set(DEFAULT, NULL);
 }
 
-void display_header(struct meterec_s *meterec, unsigned int playhead, unsigned int width) {
+void display_header(struct meterec_s *meterec, unsigned int width) {
 
 	unsigned int i;
 	
@@ -445,7 +445,7 @@ void display_header(struct meterec_s *meterec, unsigned int playhead, unsigned i
 	for (i = width - 34 - 3*13; i; i--)
 		printw(" ");
 	
-	display_loop(meterec,playhead);
+	display_loop(meterec);
 		
 	display_wr_status(meterec);
 	

@@ -57,8 +57,22 @@ void p(struct meterec_s *meterec) {
 
 int main(int argc, char *argv[])
 {
+	int opt;
 	struct event_s *event;
 	struct meterec_s *meterec;
+	
+	while ((opt = getopt(argc, argv, "hv")) != -1) {
+		switch (opt) {
+				
+			case 'h':
+			case 'v':
+			default:
+				/* Show usage/version information */
+				printf( "%s: No options available!", argv[0] );
+				break;
+		}
+	}
+	
 	
 	meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
 	

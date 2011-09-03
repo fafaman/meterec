@@ -227,6 +227,7 @@ struct pos_s
 struct jack_s
 {
 	unsigned int sample_rate;
+	unsigned long playhead;
 };
 
 
