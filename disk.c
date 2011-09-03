@@ -57,7 +57,7 @@ SNDFILE* write_disk_open_fd(struct meterec_s *meterec) {
 	
 	info.format = meterec->output_fmt;
 	info.channels = meterec->n_tracks;
-	info.samplerate = jack_get_sample_rate(meterec->client);
+	info.samplerate = meterec->jack.sample_rate;
 	
 	take_file = meterec->takes[meterec->n_takes + 1].take_file;
 	
@@ -93,7 +93,7 @@ int writer_thread(void *d) {
 	
 	fprintf(meterec->fd_log, "Writer thread: Started.\n");
 	
-	thread_delay = set_thread_delay(meterec->client);
+	thread_delay = set_thread_delay(meterec);
 	
 	/* Open the output file */
 	out = write_disk_open_fd(meterec);
@@ -347,7 +347,7 @@ int reader_thread(void *d)
 	
 	fprintf(meterec->fd_log, "Reader thread: started.\n");
 	
-	thread_delay = set_thread_delay(meterec->client);
+	thread_delay = set_thread_delay(meterec);
 	
 	/* empty buffer ( reposition thread position in order to refill where process will first read) */
 	meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);
@@ -521,10 +521,10 @@ float write_disk_buffer_level(struct meterec_s *meterec) {
 	return  (float)(level / DISK_SIZE);
 }
 
-unsigned int set_thread_delay(jack_client_t *client) {
+unsigned int set_thread_delay(struct meterec_s *meterec) {
 	
 	/* How long should we wait to read 10 times faster than data goes away */
-	return 1000000ul * BUF_SIZE / jack_get_sample_rate(client) / 10; 
+	return 1000000ul * BUF_SIZE / meterec->jack.sample_rate / 10; 
 	
 }
 
