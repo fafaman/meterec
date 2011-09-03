@@ -338,7 +338,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 int reader_thread(void *d)
 {
 	unsigned int i, opos, thread_delay, may_loop;
-	struct event_s *event;
+	struct event_s *event, *event_kill;
 	struct meterec_s *meterec ;
 	
 	meterec = (struct meterec_s *)d ;
@@ -410,9 +410,9 @@ int reader_thread(void *d)
 			case LOOP:
 				
 				/* Is next loop event already in the buffer */
-				if (meterec->loop.enable && meterec->disk.playhead > meterec->loop.high) {
+				if (meterec->loop.enable) {
 					
-					if (meterec->jack.playhead < meterec->loop.high) {
+					if (meterec->disk.playhead > meterec->loop.high && meterec->jack.playhead < meterec->loop.high) {
 					
 						/*we need to empty buffer up to the loop point */
 						meterec->read_disk_buffer_thread_pos -= meterec->loop.high;
@@ -424,14 +424,27 @@ int reader_thread(void *d)
 						
 						meterec->disk.playhead = meterec->loop.low;
 					}
+					
+					pthread_mutex_lock(&meterec->event_mutex);
+					rm_event(meterec, event);
+					event = NULL;
+					pthread_mutex_unlock(&meterec->event_mutex);
 				
+				} else {
+					/* we are trying to cancel all ongoing loops */
+					event_kill = find_first_event(meterec, JACK, LOOP);
+					
+					if (event_kill) {
+						/* rewind to the oldest event loop */
+						meterec->read_disk_buffer_thread_pos = event_kill->buffer_pos ;
+					}
+					
+					pthread_mutex_lock(&meterec->event_mutex);
+					find_rm_events(meterec, ALL, LOOP);
+					event = NULL;
+					pthread_mutex_unlock(&meterec->event_mutex);
 				}
-				
-				pthread_mutex_lock(&meterec->event_mutex);
-				rm_event(meterec, event);
-				event = NULL;
-				pthread_mutex_unlock(&meterec->event_mutex);
-				
+								
 				break;
 			
 			}
@@ -463,19 +476,22 @@ int reader_thread(void *d)
 			}
 		
 		event = find_first_event(meterec, PEND, ALL);
-		if (event) 
-			if (event->type == SEEK || event->type == LOCK) 
-				if (meterec->disk.playhead > meterec->jack.playhead + BUF_SIZE) {
-					fprintf(meterec->fd_log, "disk:                                            |buf %d\n", i);
-					event->queue = JACK;
-				}
-/*
-				if (meterec->read_disk_buffer_thread_pos != i) {
-					fprintf(meterec->fd_log, "disk:                                            |buf %d\n", i);
-					event->queue = JACK;
-				}
-*/
 		
+		if (event) 
+			switch (event->type) {
+				case SEEK:
+				
+					if (meterec->read_disk_buffer_thread_pos != i) 
+						event->queue = JACK;
+					break;
+					
+				case LOCK:
+					if (meterec->disk.playhead > meterec->jack.playhead + BUF_SIZE)
+						event->queue = JACK;
+					break;
+						
+			}
+			
 		meterec->read_disk_buffer_thread_pos = i;
 		
 		usleep(thread_delay);

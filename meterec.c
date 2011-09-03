@@ -210,6 +210,18 @@ void set_loop(struct meterec_s *meterec, unsigned int loophead) {
 
 }
 
+void clr_loop(struct meterec_s *meterec) {
+	
+	meterec->loop.enable = 0;
+	meterec->loop.low = MAX_UINT;
+	meterec->loop.high = MAX_UINT;
+	
+	pthread_mutex_lock( &meterec->event_mutex );
+	add_event(meterec, DISK, LOOP, MAX_UINT, MAX_UINT, MAX_UINT);
+	pthread_mutex_unlock( &meterec->event_mutex );
+
+}
+
 /******************************************************************************
 ** Takes and ports
 */
@@ -1163,7 +1175,7 @@ int keyboard_thread(void *arg) {
 			case 't' : /* toggle pass thru on this port */
 				meterec->ports[y_pos].thru = !meterec->ports[y_pos].thru;
 				break;
-
+			
 			case 'M' : /* toggle mute on all ports */
 				if ( meterec->ports[y_pos].mute ) 
 					for ( port=0 ; port < meterec->n_ports ; port++) 
@@ -1260,6 +1272,14 @@ int keyboard_thread(void *arg) {
 					roll(meterec);
 				break;
 			
+			case '-': /* SUPR */
+				clr_loop(meterec);
+				break;
+			
+			case '+': 
+				set_loop(meterec, meterec->jack.playhead);
+				break;
+			
 			case 'Q':
 			case 'q':
 				meterec->keyboard_cmd = STOP;
@@ -1274,15 +1294,21 @@ int keyboard_thread(void *arg) {
 		
 		/* set loop using CONTROL */
 		if ( KEY_F(25) <= key && key <= KEY_F(36) ) {
+			/* store index before setting loop if index is free */
+			if (meterec->seek_index[key - KEY_F(25)] == MAX_UINT) 
+				meterec->seek_index[key - KEY_F(25)] = meterec->jack.playhead ;
+			
 			set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
 		}
 		/* seek to index */
 		if (!meterec->record_sts && meterec->playback_sts ) {
 			
 			if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
-				pthread_mutex_lock( &meterec->event_mutex );
-				add_event(meterec, DISK, SEEK, MAX_UINT, meterec->seek_index[key - KEY_F(1)], MAX_UINT);
-				pthread_mutex_unlock( &meterec->event_mutex );
+				if (meterec->seek_index[key - KEY_F(1)] != MAX_UINT) {
+					pthread_mutex_lock( &meterec->event_mutex );
+					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->seek_index[key - KEY_F(1)], MAX_UINT);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				}
 			}
 			
 			if ( key == KEY_HOME ) {
@@ -1564,7 +1590,7 @@ int main(int argc, char *argv[])
 		struct event_s *event;
 		
 		event = meterec->event ;
-		
+		printw("\n");
 		while (event) {
 			event_print(meterec, CURSES, event);
 			event = event->next;
