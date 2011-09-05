@@ -34,60 +34,62 @@ char *scale ;
 char *line ;
 
 void display_port_info(struct port_s *port_p) {
-
-  if (port_p->record==REC)
-     printw("[REC]");
-  else if (port_p->record==OVR)
-     printw("[OVR]");
-  else if (port_p->record==DUB)
-     printw("[DUB]");
-  else 
-     printw("[   ]");
-     
-  if (port_p->mute)
-     printw("[MUTED]");
-  else 
-     printw("[     ]");
-
-   if (port_p->thru)
-     printw("[THRU]");
-  else 
-     printw("[    ]");
-
-   if ( port_p->playback_take ) 
-    printw(" PLAYING take %2d", port_p->playback_take);
-  else 
-    printw(" PLAYING no take");
-  
-  printw(" | %5.1fdB", port_p->db_in);
-  printw(" (%5.1fdB)", port_p->db_max_in);
-
-  if (port_p->name)
-    printw(" | %s", port_p->name);
-
+	
+	if (port_p->record==REC)
+		printw("[REC]");
+	else if (port_p->record==OVR)
+		printw("[OVR]");
+	else if (port_p->record==DUB)
+		printw("[DUB]");
+	else 
+		printw("[   ]");
+	
+	if (port_p->mute)
+		printw("[MUTED]");
+	else 
+		printw("[     ]");
+	
+	if (port_p->thru)
+		printw("[THRU]");
+	else 
+		printw("[    ]");
+	
+	if ( port_p->playback_take ) 
+		printw(" PLAYING take %2d", port_p->playback_take);
+	else 
+		printw(" PLAYING no take");
+	
+	printw(" | %5.1fdB", port_p->db_in);
+	printw(" (%5.1fdB)", port_p->db_max_in);
+	
+	if (port_p->name)
+		printw(" | %s", port_p->name);
+	
 }
 
 void display_port_recmode(struct port_s *port_p) {
-  if ( port_p->record == REC )
-    if ( port_p->mute )
-      printw("r");
-    else
-      printw("R");
-  else if ( port_p->record == DUB )
-    if ( port_p->mute )
-      printw("d");
-    else
-      printw("D");
-  else if ( port_p->record == OVR )
-    if ( port_p->mute )
-      printw("o");
-    else
-      printw("O");
-  else 
-    if ( port_p->mute )
-      printw("~");
-    else
-      printw("=");
+	
+	if ( port_p->record == REC )
+		if ( port_p->mute )
+			printw("r");
+		else
+			printw("R");
+	else if ( port_p->record == DUB )
+		if ( port_p->mute )
+			printw("d");
+		else
+			printw("D");
+	else if ( port_p->record == OVR )
+		if ( port_p->mute )
+			printw("o");
+		else
+			printw("O");
+	else 
+		if ( port_p->mute )
+			printw("~");
+		else
+			printw("=");
+	
 }
 
 /*
@@ -95,27 +97,27 @@ void display_port_recmode(struct port_s *port_p) {
   width: the size of the meter
 */
 static int iec_scale(float db, int size) {
-  float def = 0.0f; /* Meter deflection %age */
-  
-  if (db < -70.0f) {
-    def = 0.0f;
-  } else if (db < -60.0f) {
-    def = (db + 70.0f) * 0.25f;
-  } else if (db < -50.0f) {
-    def = (db + 60.0f) * 0.5f + 2.5f;
-  } else if (db < -40.0f) {
-    def = (db + 50.0f) * 0.75f + 7.5f;
-  } else if (db < -30.0f) {
-    def = (db + 40.0f) * 1.5f + 15.0f;
-  } else if (db < -20.0f) {
-    def = (db + 30.0f) * 2.0f + 30.0f;
-  } else if (db < 0.0f) {
-    def = (db + 20.0f) * 2.5f + 50.0f;
-  } else {
-    def = 100.0f;
-  }
-  
-  return (int)( (def / 100.0f) * ((float) size) );
+	
+	float def = 0.0f; /* Meter deflection %age */
+	
+	if (db < -70.0f) 
+		def = 0.0f;
+	else if (db < -60.0f) 
+		def = (db + 70.0f) * 0.25f;
+	else if (db < -50.0f) 
+		def = (db + 60.0f) * 0.5f + 2.5f;
+	else if (db < -40.0f) 
+		def = (db + 50.0f) * 0.75f + 7.5f;
+	else if (db < -30.0f) 
+		def = (db + 40.0f) * 1.5f + 15.0f;
+	else if (db < -20.0f) 
+		def = (db + 30.0f) * 2.0f + 30.0f;
+	else if (db < 0.0f) 
+		def = (db + 20.0f) * 2.5f + 50.0f;
+	else 
+		def = 100.0f;
+	
+	return (int)((def / 100.0f) * ((float) size));
 }
 
 static void color_port(struct meterec_s *meterec, unsigned int port) {
@@ -219,55 +221,54 @@ void free_scale(void) {
 	free(line);
 }
 
-void init_display_scale( unsigned int width )
-{
-
-  unsigned int i=0;
-  const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
-  
-  char * scale0 ;
-  char * line0 ;
-  
-  width -= 3;
-  
-  scale0 = (char *) malloc( width+1+2 );
-  line0  = (char *) malloc( width+1+2 );
-
-  scale = (char *) malloc( width+1+2 );
-  line  = (char *) malloc( width+1+2 );
-
-  // Initialise the scale
-  for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='_'; }
-  scale0[width] = 0;
-  line0[width] = 0;
-
-
-  // 'draw' on each of the db marks
-  for(i=0; i < 12; i++) {
-    char mark[5];
-    int pos = iec_scale( marks[i], width )-1;
-    int spos, slen;
-
-    // Create string of the db value
-    snprintf(mark, 4, "%d", marks[i]);
-
-    // Position the label string
-    slen = strlen(mark);
-    spos = pos-(slen/2);
-    if (spos<0) spos=0;
-    if (spos+strlen(mark)>width) spos=width-slen;
-    memcpy( scale0+spos, mark, slen );
-
-    // Position little marker
-    line0[pos] = '|';
-  }
-
-  sprintf(scale,"  %s",scale0);
-  sprintf(line,"  %s",line0);
-
-  free(scale0);
-  free(line0);
-  
+void init_display_scale( unsigned int width ) {
+	
+	unsigned int i=0;
+	const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
+	
+	char * scale0 ;
+	char * line0 ;
+	
+	width -= 3;
+	
+	scale0 = (char *) malloc( width+1+2 );
+	line0  = (char *) malloc( width+1+2 );
+	
+	scale = (char *) malloc( width+1+2 );
+	line  = (char *) malloc( width+1+2 );
+	
+	// Initialise the scale
+	for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='_'; }
+	scale0[width] = 0;
+	line0[width] = 0;
+	
+	
+	// 'draw' on each of the db marks
+	for(i=0; i < 12; i++) {
+		char mark[5];
+		int pos = iec_scale( marks[i], width )-1;
+		int spos, slen;
+		
+		// Create string of the db value
+		snprintf(mark, 4, "%d", marks[i]);
+		
+		// Position the label string
+		slen = strlen(mark);
+		spos = pos-(slen/2);
+		if (spos<0) spos=0;
+		if (spos+strlen(mark)>width) spos=width-slen;
+		memcpy( scale0+spos, mark, slen );
+		
+		// Position little marker
+		line0[pos] = '|';
+	}
+	
+	sprintf(scale,"  %s",scale0);
+	sprintf(line,"  %s",line0);
+	
+	free(scale0);
+	free(line0);
+ 	 
 }
 
 void display_rd_buffer(struct meterec_s *meterec) {
