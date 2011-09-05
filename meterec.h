@@ -292,6 +292,7 @@ struct meterec_s
 
 void start_playback(void);
 void stop(struct meterec_s *meterec);
+void halt(int sig);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void compute_tracks_to_record(struct meterec_s *meterec);

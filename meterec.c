@@ -31,6 +31,7 @@
 
 #include <sndfile.h>
 #include <jack/jack.h>
+#include <jack/session.h>
 #include <getopt.h>
 #include <curses.h>
 
@@ -42,6 +43,7 @@
 #include "conf.h"
 #include "ports.h"
 #include "queue.h"
+#include "session.h"
 
 
 
@@ -114,11 +116,12 @@ void cleanup_curse(void) {
 	
 }
 
-static void halt(int sig) {
-
+void halt(int sig) {
+	
 	running = 0;
-
-	(void) signal(sig, SIG_DFL);
+	
+	if (sig)
+		(void) signal(sig, SIG_DFL);
 }
 
 /* Close down JACK when exiting */
@@ -1338,6 +1341,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       -s      is session name [%s]\n",session);
 	fprintf(stderr, "       -j      is the jack client name [%s]\n",meterec->jack_name);
 	fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
+	fprintf(stderr, "       -u      is the uuid value to be restored [none]\n");
 	fprintf(stderr, "       -t      record a new take at start\n");
 	fprintf(stderr, "       -p      no playback at start\n");
 	fprintf(stderr, "       -c      do not connect to jack ports listed in .mrec file\n");
@@ -1347,6 +1351,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       q       quit\n");
 	fprintf(stderr, "       <SPACE> start playback; stop playback\n");
 	fprintf(stderr, "       <ENTER> start record; stop all\n");
+	fprintf(stderr, "       -i      do not interact with jack transport\n");
 	fprintf(stderr, "       <BKSPS> create new take while record is ongoing\n");
 	fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
 	fprintf(stderr, "       n       toggle port names display\n");
@@ -1373,6 +1378,7 @@ static int usage( const char * progname ) {
 int main(int argc, char *argv[])
 {
 	int console_width = 0; 
+	int uuid = 0; 
 	jack_status_t status;
 	float ref_lev = 0;
 	int rate = 24;
@@ -1387,7 +1393,7 @@ int main(int argc, char *argv[])
 	
 	pre_option_init(meterec);
 	
-	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:ptchvi")) != -1) {
+	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:u:ptchvi")) != -1) {
 		switch (opt) {
 			case 'r':
 				ref_lev = atof(optarg);
@@ -1414,6 +1420,9 @@ int main(int argc, char *argv[])
 				output_ext = optarg ;
 				break;
 				
+			case 'u':
+				uuid = atoi(optarg);
+				break;
 			case 't':
 				meterec->record_cmd = START;
 				break;
@@ -1460,7 +1469,13 @@ int main(int argc, char *argv[])
 	
 	/* Register with Jack */
 	fprintf(meterec->fd_log, "Connecting to jackd...\n");
-	if ((meterec->client = jack_client_open(meterec->jack_name, JackNullOption, &status)) == 0) {
+	
+	if (uuid)
+		meterec->client = jack_client_open(meterec->jack_name, JackNullOption, &status, uuid);
+	else 
+		meterec->client = jack_client_open(meterec->jack_name, JackNullOption, &status);
+		
+	if (meterec->client == 0) {
 		fprintf(meterec->fd_log, "Failed to start '%s' jack client: %d\n", meterec->jack_name, status);
 		fprintf(stderr,"Failed to start '%s' jack client: %d - Is jackd running?\n", meterec->jack_name, status);
 		exit(1);
@@ -1481,6 +1496,9 @@ int main(int argc, char *argv[])
 	
 	/* Register function to handle new ports */
 	jack_set_port_registration_callback(meterec->client, process_port_register, meterec);
+	
+	/* Register session save callback */
+	jack_set_session_callback(meterec->client, session_callback, meterec);
 	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);
