@@ -409,7 +409,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->connect_ports = 1;
 	
 	meterec->jack_name = "meterec";
-	meterec->session = "meterec";
+	meterec->session = NULL;
+	meterec->conf_file = NULL;
 	
 	meterec->monitor = NULL;
 	
@@ -535,9 +536,6 @@ void post_option_init(struct meterec_s *meterec) {
 	
 	meterec->setup_file = (char *) malloc( strlen(session) + strlen(".conf") + 1 );
 	sprintf(meterec->setup_file,"%s.conf",session);
-	
-	meterec->conf_file = (char *) malloc( strlen(session) + strlen(".mrec") + 1 );
-	sprintf(meterec->conf_file,"%s.mrec",session);
 	
 	meterec->log_file = (char *) malloc( strlen(session) + strlen(".log") + 1 );
 	sprintf(meterec->log_file,"%s.log",session);
@@ -1385,6 +1383,36 @@ static int usage( const char * progname ) {
 	exit(1);
 }
 
+void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
+	
+	char *conf_file_test;
+	
+	if ( file_exists(conf_file) ) {
+		meterec->conf_file = conf_file ;
+		
+		meterec->session = (char *) malloc( strlen(conf_file) + 1 );
+		strcpy(meterec->session, conf_file);
+		meterec->session[strlen(conf_file) - strlen(".mrec")]= '\0';
+		
+		return;
+	}
+	
+	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen(".mrec") + 2 );
+	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
+	meterec->session = (char *) malloc( strlen(conf_file) + 1 );
+	
+	sprintf(conf_file_test, "%s/%s.mrec", conf_file, conf_file);
+	if ( file_exists(conf_file_test) ) 
+		chdir(conf_file);
+	
+	sprintf(meterec->conf_file, "%s.mrec", conf_file);
+	sprintf(meterec->session, "%s", conf_file);
+	
+	free(conf_file_test);
+	return;
+	
+}
+
 int main(int argc, char *argv[])
 {
 	int console_width = 0; 
@@ -1395,6 +1423,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int decay_len;
 	float bias = 1.0f;
+	char *conf_file = "meterec";
 	
 	meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
 	
@@ -1419,7 +1448,7 @@ int main(int argc, char *argv[])
 				break;
 				
 			case 's':
-				meterec->session = optarg ;
+				conf_file = optarg ;
 				break;
 				
 			case 'j':
@@ -1457,6 +1486,8 @@ int main(int argc, char *argv[])
 				break;
 		}
 	}
+	
+	resolve_conf_file(meterec, conf_file);
 	
 	post_option_init(meterec);
 	
