@@ -31,7 +31,9 @@
 
 #include <sndfile.h>
 #include <jack/jack.h>
+#ifdef HAVE_JACK_SESSION_H
 #include <jack/session.h>
+#endif
 #include <getopt.h>
 #include <curses.h>
 
@@ -51,6 +53,7 @@ WINDOW * mainwin;
 
 int view=VU, display_names=1;
 int running = 1;
+char *conf_file = "meterec";
 
 #if defined(HAVE_W64)
 char *output_ext = "w64" ;
@@ -151,7 +154,9 @@ static void cleanup() {
 
 void exit_on_error(char * reason) {
 	
-	fprintf(meterec->fd_log, "Error: %s\n", reason);
+	if (meterec->fd_log)
+		fprintf(meterec->fd_log, "Error: %s\n", reason);
+	
 	printf("Error: %s\n", reason);
 	cleanup();
 	exit(1);
@@ -1399,14 +1404,18 @@ void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
 	
 	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen(".mrec") + 2 );
 	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
-	meterec->session = (char *) malloc( strlen(conf_file) + 1 );
 	
 	sprintf(conf_file_test, "%s/%s.mrec", conf_file, conf_file);
+	
 	if ( file_exists(conf_file_test) ) 
 		chdir(conf_file);
+	else  {
+		printf("Nor '%s' nor '%s' exists\n",conf_file ,conf_file_test);
+		exit_on_error("Configuration file not found");
+	}
 	
 	sprintf(meterec->conf_file, "%s.mrec", conf_file);
-	sprintf(meterec->session, "%s", conf_file);
+	meterec->session = conf_file;
 	
 	free(conf_file_test);
 	return;
@@ -1423,7 +1432,6 @@ int main(int argc, char *argv[])
 	int opt;
 	int decay_len;
 	float bias = 1.0f;
-	char *conf_file = "meterec";
 	
 	meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
 	
@@ -1538,9 +1546,10 @@ int main(int argc, char *argv[])
 	/* Register function to handle new ports */
 	jack_set_port_registration_callback(meterec->client, process_port_register, meterec);
 	
+#ifdef HAVE_JACK_SESSION_H
 	/* Register session save callback */
 	jack_set_session_callback(meterec->client, session_callback, meterec);
-	
+#endif	
 	/* get initial buffer size */
 	meterec->jack_buffsize = jack_get_buffer_size(meterec->client);
 	

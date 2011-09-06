@@ -1,5 +1,5 @@
 bin_PROGRAMS = meterec test
-bin_SCRIPTS = meterec-init-conf meterec-pass-thru
+bin_SCRIPTS = meterec-init-conf
 
 AM_CFLAGS = -g -Wall -Wextra @JACK_CFLAGS@ @SNDFILE_CFLAGS@ @LIBCONFIG_CFLAGS@
 AM_LDFLAGS = -lm @JACK_LIBS@ @SNDFILE_LIBS@ @LIBCONFIG_LIBS@
