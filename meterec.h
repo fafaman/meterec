@@ -225,6 +225,8 @@ struct meterec_s
 {
 	FILE *fd_log ;
 	
+	char *session;
+	
 	char *session_file;
 	char *setup_file;
 	char *conf_file;

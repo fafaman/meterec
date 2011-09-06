@@ -52,7 +52,6 @@ WINDOW * mainwin;
 int view=VU, display_names=1;
 int running = 1;
 
-char *session = "meterec";
 #if defined(HAVE_W64)
 char *output_ext = "w64" ;
 #else
@@ -410,6 +409,7 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->connect_ports = 1;
 	
 	meterec->jack_name = "meterec";
+	meterec->session = "meterec";
 	
 	meterec->monitor = NULL;
 	
@@ -524,7 +524,11 @@ int file_exists(char *file) {
 	
 }
 
-void post_option_init(struct meterec_s *meterec, char *session) {
+void post_option_init(struct meterec_s *meterec) {
+
+	char *session;
+	
+	session = meterec->session;
 	
 	meterec->session_file = (char *) malloc( strlen(session) + strlen("..sess") + 1 );
 	sprintf(meterec->session_file,".%s.sess",session);
@@ -567,18 +571,18 @@ void post_option_init(struct meterec_s *meterec, char *session) {
 	
 }
 
-void find_existing_takes(struct meterec_s *meterec, char *session) {
+void find_existing_takes(struct meterec_s *meterec) {
 	
 	unsigned int take;
 	
 	/* this needs to be moved at config file reading time and file creation time */
 	for (take=1; take<MAX_TAKES; take++) {
 		
-		if ( find_take_name(session, take, &meterec->takes[take].take_file) ) 
+		if ( find_take_name(meterec->session, take, &meterec->takes[take].take_file) ) 
 			fprintf(meterec->fd_log, "Found existing file '%s' for take %d\n", meterec->takes[take].take_file, take);
 		else {
-			meterec->takes[take].take_file = (char *) malloc( strlen(session) + strlen("_0000.????") + 1 );
-			sprintf(meterec->takes[take].take_file, "%s_%04d.%s", session, take, meterec->output_ext);
+			meterec->takes[take].take_file = (char *) malloc( strlen(meterec->session) + strlen("_0000.????") + 1 );
+			sprintf(meterec->takes[take].take_file, "%s_%04d.%s", meterec->session, take, meterec->output_ext);
 		}
 	}
 	
@@ -1334,11 +1338,11 @@ int keyboard_thread(void *arg) {
 /* Display how to use this program */
 static int usage( const char * progname ) {
 	fprintf(stderr, "version %s\n\n", VERSION);
-	fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-t][-p][-c]\n\n", progname);
+	fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]\n\n", progname);
 	fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
 	fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
 	fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
-	fprintf(stderr, "       -s      is session name [%s]\n",session);
+	fprintf(stderr, "       -s      is session name [%s]\n",meterec->session);
 	fprintf(stderr, "       -j      is the jack client name [%s]\n",meterec->jack_name);
 	fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
 	fprintf(stderr, "       -u      is the uuid value to be restored [none]\n");
@@ -1351,27 +1355,33 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       q       quit\n");
 	fprintf(stderr, "       <SPACE> start playback; stop playback\n");
 	fprintf(stderr, "       <ENTER> start record; stop all\n");
-	fprintf(stderr, "       -i      do not interact with jack transport\n");
 	fprintf(stderr, "       <BKSPS> create new take while record is ongoing\n");
 	fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
 	fprintf(stderr, "       n       toggle port names display\n");
+	fprintf(stderr, "       i       insert name\n");
 	fprintf(stderr, "       m       mute that port playback\n");
 	fprintf(stderr, "       M       mute all ports playback\n");
 	fprintf(stderr, "       s       mute all but that port playback (solo)\n");
 	fprintf(stderr, "       S       unmute all ports playback\n");
 	fprintf(stderr, "       r       toggle REC record mode for that port - record without listening playback\n");
+	fprintf(stderr, "       R       toggle REC record mode for all ports\n");
 	fprintf(stderr, "       d       toggle DUB record mode for that port - record listening playback\n");
+	fprintf(stderr, "       D       toggle DUB record mode for all ports\n");
 	fprintf(stderr, "       o       toggle OVR record mode for that port - record listening and mixing playback\n");
+	fprintf(stderr, "       O       toggle OVR record mode for all ports\n");
 	fprintf(stderr, "<SHIFT>F1-F12  set time index\n");
-	fprintf(stderr, "       F1-F12  Jump to time index\n");
-	fprintf(stderr, "       =>      seek forward 5sec\n");
-	fprintf(stderr, "       <=      seek backward 5sec\n");
+	fprintf(stderr, "       F1-F12  jump to time index\n");
+	fprintf(stderr, " <CTRL>F1-F12  use time index as loop boundary\n");
+	fprintf(stderr, "       +       use current time as loop boundary\n");
+	fprintf(stderr, "       -       clear loop boundaries\n");
+	fprintf(stderr, "       =>      seek forward 5 seconds\n");
+	fprintf(stderr, "       <=      seek backward 5 seconds\n");
 	fprintf(stderr, "       <HOME>  be kind, rewind\n");
 	fprintf(stderr, "       <TAB>   edit mode\n");
-	fprintf(stderr, "       l       toggle lock for that position\n");
-	fprintf(stderr, "       L       clear all locks for that port, toggle lock for that position\n");
-	fprintf(stderr, "       a       toggle lock for all ports for that take\n");
-	fprintf(stderr, "       A       clear all locks, toggle lock for all ports for that take\n");
+	fprintf(stderr, "       l       lock selected track for playback\n");
+	fprintf(stderr, "       L       lock only selected track for playback (clear all other locks on this port)\n");
+	fprintf(stderr, "       a       lock selected take for playback\n");
+	fprintf(stderr, "       A       lock only selected tack for playback  (clear all other locks)\n");
 	exit(1);
 }
 
@@ -1409,7 +1419,7 @@ int main(int argc, char *argv[])
 				break;
 				
 			case 's':
-				session = optarg ;
+				meterec->session = optarg ;
 				break;
 				
 			case 'j':
@@ -1448,7 +1458,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	post_option_init(meterec, session);
+	post_option_init(meterec);
 	
 	if ( (meterec->fd_log = fopen(meterec->log_file,"w")) == NULL ) {
 		fprintf(stderr,"Error: could not open '%s' for writing\n", meterec->log_file);
@@ -1459,7 +1469,7 @@ int main(int argc, char *argv[])
 	fprintf(meterec->fd_log,"Reference level: %.1fdB\n", ref_lev);
 	fprintf(meterec->fd_log,"Updates per second: %d\n", rate);
 	fprintf(meterec->fd_log,"Console Width: %d\n", console_width);
-	fprintf(meterec->fd_log,"Session name: %s\n", session);
+	fprintf(meterec->fd_log,"Session name: %s\n", meterec->session);
 	fprintf(meterec->fd_log,"Jack client name: %s\n", meterec->jack_name);
 	fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
 	fprintf(meterec->fd_log,"%slayback at startup.\n",meterec->playback_cmd?"P":"No p");
@@ -1569,7 +1579,7 @@ int main(int argc, char *argv[])
 	
 	pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
 	
-	find_existing_takes(meterec, session);
+	find_existing_takes(meterec);
 	
 	/* Start threads doing disk accesses */
 	if (meterec->record_cmd==START) {
