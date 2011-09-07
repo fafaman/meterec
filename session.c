@@ -49,7 +49,8 @@ void session_callback(jack_session_event_t *event, void *arg) {
 	
 	sprintf(link, "%s/%s", event->session_dir, meterec->session);
 	 
-	if ( symlink(pwd,link) ) {} /* do not adress errors for now */
+	/* qjack ctl is dumb and will remove content of all directories (even under symlinks) when saving session... */
+	//if ( symlink(pwd,link) ) {} /* do not adress errors for now */
 	
 	snprintf (retval, 100, 
 		"meterec -s %s -j %s -u %s", 
