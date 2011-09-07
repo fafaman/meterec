@@ -31,9 +31,6 @@
 
 #include <sndfile.h>
 #include <jack/jack.h>
-#ifdef HAVE_JACK_SESSION_H
-#include <jack/session.h>
-#endif
 #include <getopt.h>
 #include <curses.h>
 
@@ -45,8 +42,11 @@
 #include "conf.h"
 #include "ports.h"
 #include "queue.h"
-#include "session.h"
 
+#ifdef HAVE_JACK_SESSION_H
+#include <jack/session.h>
+#include "session.h"
+#endif
 
 
 WINDOW * mainwin;
@@ -473,6 +473,7 @@ void free_options(struct meterec_s *meterec) {
 	
 	free(meterec->all_input_ports);
 	free(meterec->all_output_ports);
+	free(meterec->session);
 	free(meterec->session_file);
 	free(meterec->setup_file);
 	free(meterec->conf_file);
@@ -481,6 +482,74 @@ void free_options(struct meterec_s *meterec) {
 	
 }
 
+int file_exists(char *file) {
+	
+	FILE *fd_conf;
+	
+	if ( (fd_conf = fopen(file,"r")) == NULL )
+		return 0;
+	
+	fclose(fd_conf);
+	return 1;
+	
+}
+
+void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
+	
+	char *conf_file_test;
+	
+	meterec->session = (char *) malloc( strlen(conf_file) + 1 );
+	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
+	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen("/.mrec") + 1 );
+	
+	if (strcmp(conf_file + strlen(conf_file) - strlen(".mrec"), ".mrec" )) {
+		
+		/* conf_file does not end with .mrec */
+		
+		sprintf(conf_file_test, "%s.mrec", conf_file);
+		if (file_exists(conf_file_test)) {
+			/* a configuration file exists in current dir */
+			strcpy(meterec->session, conf_file);
+			strcpy(meterec->conf_file, conf_file_test);
+			
+			free(conf_file_test);
+			return;
+		}
+		
+		sprintf(conf_file_test, "%s/%s.mrec", conf_file, conf_file);
+		if (file_exists(conf_file_test)) {
+			/* a configuration file exists in sub-dir */
+			if (chdir(conf_file)) {}
+			
+			strcpy(meterec->session, conf_file);
+			sprintf(meterec->conf_file, "%s.mrec", conf_file);
+			
+			free(conf_file_test);
+			return;
+		} 
+		
+		exit_on_error("No configuration found based on session name supplied");
+		
+	}
+	else {
+		/* conf_file ends with .mrec */
+		
+		if (file_exists(conf_file)) {
+			/* a configuration file exists in current dir */
+			strcpy(meterec->conf_file, conf_file);
+			strcpy(meterec->session, conf_file);
+			meterec->session[strlen(conf_file) - strlen(".mrec")]= '\0';
+			
+			free(conf_file_test);
+			return;
+		}
+		
+		exit_on_error("Configuration file does not exists");
+		
+		
+	}
+	
+}
 
 int find_take_name(char *session, unsigned int take, char **name) {
 	
@@ -515,18 +584,6 @@ int find_take_name(char *session, unsigned int take, char **name) {
 	free(pattern);
 	
 	return 0;
-	
-}
-
-int file_exists(char *file) {
-	
-	FILE *fd_conf;
-	
-	if ( (fd_conf = fopen(file,"r")) == NULL )
-		return 0;
-	
-	fclose(fd_conf);
-	return 1;
 	
 }
 
@@ -1386,40 +1443,6 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       a       lock selected take for playback\n");
 	fprintf(stderr, "       A       lock only selected tack for playback  (clear all other locks)\n");
 	exit(1);
-}
-
-void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
-	
-	char *conf_file_test;
-	
-	if ( file_exists(conf_file) ) {
-		meterec->conf_file = conf_file ;
-		
-		meterec->session = (char *) malloc( strlen(conf_file) + 1 );
-		strcpy(meterec->session, conf_file);
-		meterec->session[strlen(conf_file) - strlen(".mrec")]= '\0';
-		
-		return;
-	}
-	
-	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen(".mrec") + 2 );
-	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
-	
-	sprintf(conf_file_test, "%s/%s.mrec", conf_file, conf_file);
-	
-	if ( file_exists(conf_file_test) ) 
-		chdir(conf_file);
-	else  {
-		printf("Nor '%s' nor '%s' exists\n",conf_file ,conf_file_test);
-		exit_on_error("Configuration file not found");
-	}
-	
-	sprintf(meterec->conf_file, "%s.mrec", conf_file);
-	meterec->session = conf_file;
-	
-	free(conf_file_test);
-	return;
-	
 }
 
 int main(int argc, char *argv[])

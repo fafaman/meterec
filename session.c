@@ -19,8 +19,6 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#ifdef HAVE_JACK_SESSION_H
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -29,6 +27,9 @@
 #include <jack/jack.h>
 #include <jack/session.h>
 
+#include "config.h"
+
+#ifdef HAVE_JACK_SESSION_H
 #include "meterec.h"
 
 void session_callback(jack_session_event_t *event, void *arg) {
@@ -39,12 +40,20 @@ void session_callback(jack_session_event_t *event, void *arg) {
 	
 	char retval[100];
 	struct meterec_s *meterec;
-	
+	char *link, *pwd ;
 	
 	meterec = (struct meterec_s *)arg ;
 	
+	pwd = getcwd(NULL, 0) ;
+	link = (char *) malloc( strlen(event->session_dir) + strlen(meterec->session) + 2 );
+	
+	sprintf(link, "%s/%s", event->session_dir, meterec->session);
+	 
+	if ( symlink(pwd,link) ) {} /* do not adress errors for now */
+	
 	snprintf (retval, 100, 
-		"meterec -j %s -u %s", 
+		"meterec -s %s -j %s -u %s", 
+		meterec->session, 
 		meterec->jack_name, 
 		event->client_uuid
 		);
@@ -55,7 +64,7 @@ void session_callback(jack_session_event_t *event, void *arg) {
 	jack_session_reply( meterec->client, event );
 	
 	if (event->type == JackSessionSaveAndQuit) {
-		jack_session_event_free (event);
+		jack_session_event_free(event);
 		halt(0);
 	}
 	

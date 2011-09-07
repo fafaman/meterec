@@ -19,6 +19,4 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#ifdef HAVE_JACK_SESSION_H
 void session_callback(jack_session_event_t * event, void * arg);
-#endif
