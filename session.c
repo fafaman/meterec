@@ -25,11 +25,11 @@
 
 #include <sndfile.h>
 #include <jack/jack.h>
-#include <jack/session.h>
 
 #include "config.h"
 
 #ifdef HAVE_JACK_SESSION_H
+#include <jack/session.h>
 #include "meterec.h"
 
 void session_callback(jack_session_event_t *event, void *arg) {
