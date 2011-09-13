@@ -38,22 +38,17 @@ void session_callback(jack_session_event_t *event, void *arg) {
 	// in a gtk app we would forward the event to the gui thread
 	// using g_idle_add() and execute similar code there.
 	
-	char retval[100];
+	char retval[200];
 	struct meterec_s *meterec;
-	char *link, *pwd ;
+	char *pwd ;
 	
 	meterec = (struct meterec_s *)arg ;
 	
 	pwd = getcwd(NULL, 0) ;
-	link = (char *) malloc( strlen(event->session_dir) + strlen(meterec->session) + 2 );
 	
-	sprintf(link, "%s/%s", event->session_dir, meterec->session);
-	 
-	/* qjack ctl is dumb and will remove content of all directories (even under symlinks) when saving session... */
-	//if ( symlink(pwd,link) ) {} /* do not adress errors for now */
-	
-	snprintf (retval, 100, 
-		"meterec -s %s -j %s -u %s", 
+	snprintf (retval, 200, 
+		"meterec -s %s/%s.mrec -j %s -u %s", 
+		pwd, 
 		meterec->session, 
 		meterec->jack_name, 
 		event->client_uuid

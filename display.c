@@ -346,7 +346,7 @@ void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 	
 	width -= (31 + 3*13);
 	
-	size = width * jack_cpu_load(meterec->client) / 100.0f;
+	size = (width * jack_cpu_load(meterec->client)) / 100;
 	
 	if (size > peak) 
 		peak = size;
@@ -354,7 +354,7 @@ void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 	printw("  .");
 	
 	for (i=0; i<width; i++) {
-		if (i < size-1)
+		if (i < size)
 			printw("|");
 		else if (i == peak-1)
 			printw(":");

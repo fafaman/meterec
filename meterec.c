@@ -49,7 +49,7 @@
 #endif
 
 
-WINDOW * mainwin;
+WINDOW * mainwin = NULL;
 
 int view=VU, display_names=1;
 int running = 1;
@@ -69,7 +69,7 @@ struct meterec_s * meterec ;
 ** UTILs
 */
 
-void cleanup_jack(void) {
+void cleanup_jack(struct meterec_s * meterec) {
 	
 	const char **all_ports;
 	unsigned int i, port;
@@ -128,8 +128,9 @@ void halt(int sig) {
 
 /* Close down JACK when exiting */
 static void cleanup() {
-	
-	stop(meterec);
+		
+	if (meterec->jack_sts)
+		stop(meterec);
 	
 	running = 0;
 	
@@ -144,11 +145,12 @@ static void cleanup() {
 		
 	if (wr_dt)
 		pthread_join(wr_dt, NULL);
-
-	if (meterec->jack_sts)
-		cleanup_jack();
 	
-	fclose(meterec->fd_log);
+	if (meterec->jack_sts)
+		cleanup_jack(meterec);
+	
+	if (meterec->fd_log)
+		fclose(meterec->fd_log);
 	
 }
 
@@ -497,10 +499,24 @@ int file_exists(char *file) {
 void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
 	
 	char *conf_file_test;
+	unsigned int i;
 	
 	meterec->session = (char *) malloc( strlen(conf_file) + 1 );
 	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
 	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen("/.mrec") + 1 );
+	
+	/* is configuration in sub directories */
+	for (i = strlen(conf_file); i; i--) 
+		if ( conf_file[i] == '/' )
+			break;
+	
+	if (i) {
+		strcpy(conf_file_test, conf_file);
+		conf_file_test[i] = '\0';
+		printf("Changing to session directory '%s'\n",conf_file_test);
+		if (chdir(conf_file_test)) {}
+		conf_file += i + 1;
+	}
 	
 	if (strcmp(conf_file + strlen(conf_file) - strlen(".mrec"), ".mrec" )) {
 		
@@ -527,8 +543,8 @@ void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
 			free(conf_file_test);
 			return;
 		} 
-		
-		exit_on_error("No configuration found based on session name supplied");
+		free(conf_file_test);
+		exit_on_error("No configuration found based on session name supplied\n");
 		
 	}
 	else {
@@ -543,12 +559,12 @@ void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
 			free(conf_file_test);
 			return;
 		}
-		
-		exit_on_error("Configuration file does not exists");
+		free(conf_file_test);
+		exit_on_error("Configuration file does not exists\n");
 		
 		
 	}
-	
+	free(conf_file_test);
 }
 
 int find_take_name(char *session, unsigned int take, char **name) {
@@ -937,7 +953,8 @@ void cancel_record() {
 
 void stop(struct meterec_s *meterec) {
 		
-	fprintf(meterec->fd_log, "Stop requested.\n");
+	if (meterec->fd_log)
+		fprintf(meterec->fd_log, "Stop requested.\n");
 	
 	if (meterec->jack_transport)
 		jack_transport_stop(meterec->client);
