@@ -54,6 +54,7 @@
 
 /* status */
 #define OFF 0
+#define ON 1
 #define STARTING 1
 #define READY 2
 #define ONGOING 3
@@ -127,58 +128,54 @@ take 7 contains 2 tracks that are mapped on port 8 and 3
 
 struct take_s
 {
-  unsigned int ntrack; /* number of tracks in this take */
-  
-  unsigned int track_port_map[MAX_TRACKS]; /* track maps to a port : track_port_map[track] = port */
-  unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */ 
-  unsigned int port_has_lock[MAX_PORTS]; /* port is marked locked for playback on this take : port_has_lock[port] = 1/0 */
-
-  char *take_file;
-  SNDFILE *take_fd;
-  SF_INFO info;
-  
-  float *buf ;
- 
+	unsigned int ntrack; /* number of tracks in this take */
+	
+	unsigned int track_port_map[MAX_TRACKS]; /* track maps to a port : track_port_map[track] = port */
+	unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */ 
+	unsigned int port_has_lock[MAX_PORTS]; /* port is marked locked for playback on this take : port_has_lock[port] = 1/0 */
+	
+	char *take_file;
+	SNDFILE *take_fd;
+	SF_INFO info;
+	
+	float *buf ;
+	
 };
 
 struct port_s
 {
-
-  jack_port_t *input;
-  jack_port_t *output;
-  
-  unsigned int n_cons;
-  const char **input_connected;
-  const char **output_connected;
-  char *connections[MAX_CONS];
-  char *name;
-  
-  float *write_disk_buffer;
-  float *read_disk_buffer;
-  
-  float peak_in;
-  float max_in;
-  float peak_out;
-
-  float db_in;
-  float db_max_in;
-  float db_out;
-  
-  int dkmax_in;
-  int dkpeak_in;
-  int dktime_in;
-  
-  int record;
-  int mute;
-  int monitor;
-  int thru;
-
-  unsigned int playback_take;
-
-};
-
-struct seek_s 
-{
+	
+	jack_port_t *input;
+	jack_port_t *output;
+	
+	unsigned int n_cons;
+	const char **input_connected;
+	const char **output_connected;
+	char *connections[MAX_CONS];
+	char *name;
+	
+	float *write_disk_buffer;
+	float *read_disk_buffer;
+	
+	float peak_in;
+	float max_in;
+	float peak_out;
+	
+	float db_in;
+	float db_max_in;
+	float db_out;
+	
+	int dkmax_in;
+	int dkpeak_in;
+	int dktime_in;
+	
+	int record;
+	int mute;
+	int monitor;
+	int thru;
+	
+	unsigned int playback_take;
+	
 };
 
 struct event_s {
@@ -218,6 +215,13 @@ struct jack_s
 struct disk_s
 {
 	unsigned long playhead;
+};
+
+
+struct display_s
+{
+	unsigned long view;
+	unsigned long names;
 };
 
 
@@ -276,6 +280,8 @@ struct meterec_s
 	
 	struct pos_s pos;
 	
+	struct display_s display;
+	
 	struct event_s *event;
 	pthread_mutex_t event_mutex ;
 	
@@ -292,9 +298,18 @@ struct meterec_s
 	
 };
 
-void start_playback(void);
-void stop(struct meterec_s *meterec);
 void halt(int sig);
 void exit_on_error(char * reason);
 void compute_takes_to_playback(struct meterec_s *meterec);
 void compute_tracks_to_record(struct meterec_s *meterec);
+int changed_takes_to_playback(struct meterec_s *meterec);
+
+void stop(struct meterec_s *meterec);
+void roll(struct meterec_s *meterec);
+unsigned int seek(struct meterec_s *meterec, int seek_sec);
+void start_playback(struct meterec_s *meterec);
+void start_record(struct meterec_s *meterec) ;
+void cancel_record(struct meterec_s *meterec) ;
+
+void set_loop(struct meterec_s *meterec, unsigned int loophead);
+void clr_loop(struct meterec_s *meterec);
