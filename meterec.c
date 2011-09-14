@@ -1161,11 +1161,15 @@ int keyboard_thread(void *arg) {
 					meterec->pos.inout --;
 					if (meterec->pos.inout < CON_IN)
 						meterec->pos.inout = CON_OUT;
+					if ( meterec->pos.inout == CON_IN )
+						meterec->pos.con_in = meterec->pos.port ;
 					break;
 				case KEY_RIGHT:
 					meterec->pos.inout ++;
 					if (meterec->pos.inout > CON_OUT)
 						meterec->pos.inout = CON_IN;
+					if ( meterec->pos.inout == CON_OUT )
+						meterec->pos.con_out = meterec->pos.port ;
 					break;
 				case 'c':
 					if (meterec->pos.inout == CON_IN)
