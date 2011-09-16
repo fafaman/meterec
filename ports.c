@@ -67,10 +67,14 @@ void retreive_connected_ports(struct meterec_s *meterec) {
 
 void retreive_existing_ports(struct meterec_s *meterec) {
 	
-	free(meterec->all_input_ports);
-	free(meterec->all_output_ports);
+	if (meterec->all_input_ports)
+		free(meterec->all_input_ports);
+	if (meterec->all_output_ports)
+		free(meterec->all_output_ports);
 	
-	meterec->all_input_ports = jack_get_ports(meterec->client,NULL, NULL, JackPortIsInput);
+	meterec->all_input_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsInput);
+//	meterec->all_input_ports = jack_get_ports(meterec->client,"meterec", NULL, JackPortIsInput);
+//	meterec->all_input_ports = jack_get_ports(meterec->client,"^[^m][^e][^t][^e][^r][^e][^c]:", NULL, JackPortIsInput);
 	meterec->all_output_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsOutput);
 	
 };

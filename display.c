@@ -541,11 +541,11 @@ void display_ports(struct meterec_s *meterec)
 	
 	printw("\n\n\n");
 	
-	while (*in || *out || port < meterec->n_ports) {
+	while ((in && *in) || (out && *out) || port < meterec->n_ports) {
 		
 		printw("  ");
 		
-		if (*in) {
+		if (in && *in) {
 		
 			if (meterec->pos.inout == CON_IN)
 				if (meterec->pos.con_in == line)
@@ -618,7 +618,7 @@ void display_ports(struct meterec_s *meterec)
 		else 
 			printw(" ");
 		
-		if (*out) {
+		if (out && *out) {
 			if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *out)) {
 				printw("+-");
 				attron(A_BOLD);
