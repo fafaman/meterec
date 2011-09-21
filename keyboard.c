@@ -376,6 +376,8 @@ int keyboard_thread(void *arg) {
 					meterec->display.view=PORT;
 					retreive_connected_ports(meterec);
 					retreive_existing_ports(meterec);
+					filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
+					filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
 				}
 				else if (meterec->display.view==PORT)
 					meterec->display.view=VU;

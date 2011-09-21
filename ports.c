@@ -79,6 +79,55 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 	
 };
 
+void filter_existing_ports(const char **port_list, const char *port_name_pattern ) {
+	
+	const char **tmp, **port;
+	char *copy, *pattern;
+	unsigned int len;
+	
+	if (!port_name_pattern) 
+		return;
+	
+	if (!port_name_pattern[0]) 
+		return;
+	
+	len = strlen(port_name_pattern);
+	pattern = (char *) malloc(len + 2);
+	strcpy(pattern, port_name_pattern);
+	pattern[len]   = ':';
+	pattern[len+1] = '\0';
+	
+	port = port_list;
+	
+	if (!port)
+		return;
+	
+	while (*port) {
+		
+		len = strlen(*port);
+		
+		copy = (char *) malloc(len + 1);
+		strcpy(copy, *port);
+		
+		if (strlen(pattern) < len) {
+			copy[strlen(pattern)] = '\0';
+		}
+		
+		if ( strcmp(copy, pattern) == 0) {
+			tmp = port;
+			while ( *port ) {
+				*port = *(port+1);
+				port++;
+			}
+			port = tmp - 1;
+		}
+		free(copy);
+		
+		port++;
+	}
+	
+}
+
 void create_input_port(struct meterec_s *meterec, unsigned int port) {
 	
 	char port_name[10] ;
