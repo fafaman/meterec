@@ -39,16 +39,21 @@ void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	
 	meterec = (struct meterec_s *)arg ;
 	
+	if (!meterec->connect_ports)
+		return;
+	
 	/* check if this is a port we would have liked to connect to */
 	jack_port = jack_port_by_id(meterec->client, port_id);
 	
 	port_name = jack_port_name(jack_port);
 	
+	
 	for (port=0; port<meterec->n_ports; port++)
 		for (con=0; con<meterec->ports[port].n_cons; con++)
 			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 )
-				if (meterec->connect_ports)
-					connect_any_port(meterec, (char*) port_name, port);
+				connect_any_port(meterec, (char*) port_name, port);
+	
+	
 }
 
 void retreive_connected_ports(struct meterec_s *meterec) {
@@ -208,6 +213,7 @@ void register_port_old(struct meterec_s *meterec, char *port_name, unsigned int 
 void register_port(struct meterec_s *meterec, char *port_name, unsigned int port) {
 
 	jack_port_t *jack_port;
+	unsigned int con = meterec->ports[port].n_cons;
 	
 	// Get the port we are connecting to
 	jack_port = jack_port_by_name(meterec->client, port_name);
@@ -216,8 +222,9 @@ void register_port(struct meterec_s *meterec, char *port_name, unsigned int port
 	if (jack_port == NULL) 
 		fprintf(meterec->fd_log, "Can't find port '%s' will connect later if port becomes available.\n", port_name);
 		
-	meterec->ports[port].connections[meterec->ports[port].n_cons] = (char *) malloc( strlen(port_name) + 1 );
-	strcpy(meterec->ports[port].connections[meterec->ports[port].n_cons], port_name);
+	meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
+	strcpy(meterec->ports[port].connections[con], port_name);
+	
 	meterec->ports[port].n_cons += 1;
 	
 }
@@ -271,17 +278,18 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 	/* check port flags */
 	jack_flags = jack_port_flags(jack_port);
 	
+	
 	if ( jack_flags & JackPortIsInput ) {
 		
 		// Connect the port to our output port
-		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
-
+		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), port_name);
+		
 		if (jack_port_connected_to(meterec->ports[port].output, port_name)) {
 			fprintf(meterec->fd_log, "Ports '%s' and '%s' already connected\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
 			return;
 		}
 		
-		if (jack_connect(meterec->client, jack_port_name(meterec->ports[port].output), jack_port_name(jack_port))) {
+		if (jack_connect(meterec->client, jack_port_name(meterec->ports[port].output), port_name)) {
 			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
 			exit_on_error("Cannot connect ports");
 		}
@@ -291,14 +299,14 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 	if ( jack_flags & JackPortIsOutput ) {
 		
 		// Connect the port to our input port
-		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
-
+		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", port_name, jack_port_name(meterec->ports[port].input));
+		
 		if (jack_port_connected_to(meterec->ports[port].input, port_name)) {
 			fprintf(meterec->fd_log, "Ports '%s' and '%s' already connected\n", jack_port_name(meterec->ports[port].input), jack_port_name(jack_port));
 			return;
 		}
 		
-		if (jack_connect(meterec->client, jack_port_name(jack_port), jack_port_name(meterec->ports[port].input))) {
+		if (jack_connect(meterec->client, port_name, jack_port_name(meterec->ports[port].input))) {
 			fprintf(meterec->fd_log, "Cannot connect port '%s' to '%s'\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
 			exit_on_error("Cannot connect ports");
 		}
