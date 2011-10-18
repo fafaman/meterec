@@ -444,7 +444,7 @@ int reader_thread(void *d)
 					event = NULL;
 					pthread_mutex_unlock(&meterec->event_mutex);
 				}
-								
+				
 				break;
 			
 			}
@@ -460,7 +460,7 @@ int reader_thread(void *d)
 		i = fill_buffer(meterec, &opos);
 		
 		if (may_loop)
-			if (meterec->disk.playhead > meterec->loop.high) {
+			if (meterec->disk.playhead >= meterec->loop.high) {
 				
 				read_disk_seek(meterec, meterec->loop.low);
 				opos = 0;
@@ -491,7 +491,7 @@ int reader_thread(void *d)
 					break;
 						
 			}
-			
+		
 		meterec->read_disk_buffer_thread_pos = i;
 		
 		usleep(thread_delay);
