@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RELEASE=0.8
+RELEASE=0.9
 
 echo Relasing meterec-$RELEASE
 echo =====================
@@ -29,7 +29,6 @@ meterec-$RELEASE/missing \
 meterec-$RELEASE/install-sh \
 meterec-$RELEASE/config.h.in \
 meterec-$RELEASE/aclocal.m4 \
-meterec-$RELEASE/autom4te.cache/* 
 
 mv meterec-$RELEASE meterec-dev
 
