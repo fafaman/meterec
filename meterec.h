@@ -81,9 +81,9 @@
 #define PORT 2
 
 /* port selection */
-#define CON_IN -1
+#define CON_IN (-1)
 #define CON 0
-#define CON_OUT 1
+#define CON_OUT (1)
 
 #define MAX_UINT ((unsigned int)(-1))
 
@@ -122,7 +122,7 @@ take 3 contains 2 tracks that are mapped on port 5 and 6
 take 4 contains 2 tracks that are mapped on port 5 and 6
 take 5 contains 1 track that is mapped on port 7
 take 6 contains 1 track that is mapped on port 8
-take 7 contains 2 tracks that are mapped on port 8 and 3
+take 7 contains 2 tracks that are mapped on port 3 and 8
 
 */
 
@@ -202,8 +202,10 @@ struct pos_s
 	unsigned int port;
 	unsigned int take;
 	int inout;
-	unsigned int con_in;
-	unsigned int con_out;
+	int con_in;
+	int con_out;
+	int n_con_in;
+	int n_con_out;
 };
 
 struct jack_s

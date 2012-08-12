@@ -212,6 +212,8 @@ int keyboard_thread(void *arg) {
 						meterec->pos.inout = CON_OUT;
 					if ( meterec->pos.inout == CON_IN )
 						meterec->pos.con_in = meterec->pos.port ;
+					if ( meterec->pos.con_in > meterec->pos.n_con_in )
+						meterec->pos.con_in = meterec->pos.n_con_in;
 					break;
 				case KEY_RIGHT:
 					meterec->pos.inout ++;
@@ -219,6 +221,8 @@ int keyboard_thread(void *arg) {
 						meterec->pos.inout = CON_IN;
 					if ( meterec->pos.inout == CON_OUT )
 						meterec->pos.con_out = meterec->pos.port ;
+					if ( meterec->pos.con_out > meterec->pos.n_con_out )
+						meterec->pos.con_out = meterec->pos.n_con_out;
 					break;
 				case 'c':
 					if (meterec->pos.inout == CON_IN)
@@ -341,8 +345,12 @@ int keyboard_thread(void *arg) {
 				if (meterec->display.view == PORT && meterec->pos.inout) {
 					if (meterec->pos.inout == CON_IN)
 						meterec->pos.con_in --;
+					if (meterec->pos.con_in < 0)
+						meterec->pos.con_in = meterec->pos.n_con_in;
 					if (meterec->pos.inout == CON_OUT)
 						meterec->pos.con_out --;
+					if (meterec->pos.con_out < 0)
+						meterec->pos.con_out = meterec->pos.n_con_out;
 				} else {
 					meterec->ports[meterec->pos.port].monitor = 0;
 					if ( meterec->pos.port == 0 )
@@ -357,8 +365,12 @@ int keyboard_thread(void *arg) {
 				if (meterec->display.view == PORT && meterec->pos.inout) {
 					if (meterec->pos.inout == CON_IN)
 						meterec->pos.con_in ++;
+					if (meterec->pos.con_in > meterec->pos.n_con_in)
+						meterec->pos.con_in = 0;
 					if (meterec->pos.inout == CON_OUT)
 						meterec->pos.con_out ++;
+					if (meterec->pos.con_out > meterec->pos.n_con_out)
+						meterec->pos.con_out = 0;
 				} else {
 					meterec->ports[meterec->pos.port].monitor = 0;
 					if ( meterec->pos.port == meterec->n_ports - 1 )
@@ -378,6 +390,7 @@ int keyboard_thread(void *arg) {
 					retreive_existing_ports(meterec);
 					filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
 					filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
+					count_all_io_ports(meterec);
 				}
 				else if (meterec->display.view==PORT)
 					meterec->display.view=VU;

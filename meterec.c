@@ -440,6 +440,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->pos.inout = 0;
 	meterec->pos.con_in = 0;
 	meterec->pos.con_out = 0;
+	meterec->pos.n_con_in = 0;
+	meterec->pos.n_con_out = 0;
 	
 	meterec->jack.sample_rate = 0;
 	meterec->jack.playhead = 0;

@@ -78,10 +78,20 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 		free(meterec->all_output_ports);
 	
 	meterec->all_input_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsInput);
-//	meterec->all_input_ports = jack_get_ports(meterec->client,"meterec", NULL, JackPortIsInput);
-//	meterec->all_input_ports = jack_get_ports(meterec->client,"^[^m][^e][^t][^e][^r][^e][^c]:", NULL, JackPortIsInput);
 	meterec->all_output_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsOutput);
 	
+};
+
+void count_all_io_ports(struct meterec_s *meterec) {
+
+	meterec->pos.n_con_in = 0;
+	while (meterec->all_input_ports[meterec->pos.n_con_in + 1])
+		meterec->pos.n_con_in ++;
+		
+	meterec->pos.n_con_out = 0;
+	while (meterec->all_output_ports[meterec->pos.n_con_out + 1])
+		meterec->pos.n_con_out ++;
+
 };
 
 void filter_existing_ports(const char **port_list, const char *port_name_pattern ) {

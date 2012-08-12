@@ -1,5 +1,5 @@
 BUG
-- store/load of index time not reliable (index drift load after load) - sample to time conversion problem.
+x store/load of index time not reliable (index drift load after load) - sample to time conversion problem.
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does ot start playback if transport already rolling due to a first instance of meterec.
 - OVR record mode seams to need lock to perform properly. observed bounce in audio recorded without lock...

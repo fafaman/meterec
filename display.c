@@ -532,7 +532,8 @@ void display_session(struct meterec_s *meterec)
 
 void display_ports(struct meterec_s *meterec) 
 {
-	unsigned int port=0, line=0, i;
+	unsigned int port=0, i;
+	int line=0;
 	const char **in, **out;
 	
 	out=meterec->all_input_ports;
