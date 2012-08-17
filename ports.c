@@ -54,7 +54,7 @@ void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	for (port=0; port<meterec->n_ports; port++)
 		for (con=0; con<meterec->ports[port].n_cons; con++)
 			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 ) {
-				fprintf(meterec->fd_log,"Found new port(s) '%s' to be connected to port No %d.\n", port_name, port);
+				fprintf(meterec->fd_log,"Found new port '%s' to be connected to port No %d.\n", port_name, port);
 				needs_connection ++;
 			}
 	
@@ -91,11 +91,11 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 void count_all_io_ports(struct meterec_s *meterec) {
 
 	meterec->pos.n_con_in = 0;
-	while (meterec->all_input_ports[meterec->pos.n_con_in + 1])
+	while (meterec->all_output_ports[meterec->pos.n_con_in + 1])
 		meterec->pos.n_con_in ++;
 		
 	meterec->pos.n_con_out = 0;
-	while (meterec->all_output_ports[meterec->pos.n_con_out + 1])
+	while (meterec->all_input_ports[meterec->pos.n_con_out + 1])
 		meterec->pos.n_con_out ++;
 
 };
