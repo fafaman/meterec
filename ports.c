@@ -27,12 +27,15 @@
 #include "meterec.h"
 #include "ports.h"
 
+pthread_t cn_dt=(pthread_t)NULL;
+
 void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 
 	struct meterec_s *meterec ;
 	unsigned int port, con;
 	const char *port_name;
 	jack_port_t *jack_port;
+	int needs_connection=0;
 	
 	if (!new) 
 		return;
@@ -50,10 +53,13 @@ void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 	
 	for (port=0; port<meterec->n_ports; port++)
 		for (con=0; con<meterec->ports[port].n_cons; con++)
-			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 )
-				connect_any_port(meterec, (char*) port_name, port);
+			if ( strcmp(port_name, meterec->ports[port].connections[con]) == 0 ) {
+				fprintf(meterec->fd_log,"Found new port(s) '%s' to be connected to port No %d.\n", port_name, port);
+				needs_connection ++;
+			}
 	
-	
+	if (needs_connection) 
+		pthread_create(&cn_dt, NULL, (void *)&connect_all_ports, (void *) meterec);
 }
 
 void retreive_connected_ports(struct meterec_s *meterec) {
@@ -263,14 +269,15 @@ void deregister_port(struct meterec_s *meterec, char *port_name, unsigned int po
 	
 }
 
-void connect_all_ports(struct meterec_s *meterec) {
+int connect_all_ports(struct meterec_s *meterec) {
 
 	unsigned int port, con;
 	
 	for (port=0; port<meterec->n_ports; port++)
 		for (con=0; con<meterec->ports[port].n_cons; con++)
 			connect_any_port(meterec, meterec->ports[port].connections[con], port);
-
+	
+	return 0;
 }
 
 /* Connect the chosen port to ours */

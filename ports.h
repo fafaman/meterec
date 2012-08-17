@@ -27,7 +27,7 @@ void create_output_port(struct meterec_s *meterec, unsigned int port);
 void create_monitor_port(struct meterec_s *meterec) ;
 void register_port_old(struct meterec_s *meterec, char *port_name, unsigned int port);
 void register_port(struct meterec_s *meterec, char *port_name, unsigned int port);
-void connect_all_ports(struct meterec_s *meterec);
+int connect_all_ports(struct meterec_s *meterec);
 void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int port);
 void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned int port);
 void retreive_connected_ports(struct meterec_s *meterec);
