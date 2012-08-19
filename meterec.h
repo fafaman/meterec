@@ -313,5 +313,5 @@ void start_playback(struct meterec_s *meterec);
 void start_record(struct meterec_s *meterec) ;
 void cancel_record(struct meterec_s *meterec) ;
 
-void set_loop(struct meterec_s *meterec, unsigned int loophead);
+int set_loop(struct meterec_s *meterec, unsigned int loophead);
 void clr_loop(struct meterec_s *meterec);

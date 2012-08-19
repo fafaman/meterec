@@ -429,7 +429,12 @@ int keyboard_thread(void *arg) {
 				break;
 			
 			case '+': 
-				set_loop(meterec, meterec->jack.playhead);
+				if (set_loop(meterec, meterec->jack.playhead)) {
+					// The disk tread cannot be aware of this loop as it is already processing the data, so let's seek to the begining of the loop ourselves
+					pthread_mutex_lock( &meterec->event_mutex );
+					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->loop.low, MAX_UINT);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				}
 				break;
 			
 			case 'Q':

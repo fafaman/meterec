@@ -197,11 +197,11 @@ void read_peak(float bias) {
 	
 }
 
-void set_loop(struct meterec_s *meterec, unsigned int loophead) {
+int set_loop(struct meterec_s *meterec, unsigned int loophead) {
 	
 	if (meterec->loop.low == MAX_UINT) {
 		meterec->loop.low = loophead;
-		return;
+		return 0;
 	}
 	else if (loophead > meterec->loop.low) {
 		meterec->loop.high = loophead;
@@ -216,7 +216,8 @@ void set_loop(struct meterec_s *meterec, unsigned int loophead) {
 	pthread_mutex_lock( &meterec->event_mutex );
 	add_event(meterec, DISK, LOOP, meterec->loop.high, meterec->loop.low, MAX_UINT);
 	pthread_mutex_unlock( &meterec->event_mutex );
-
+	
+	return 1;
 }
 
 void clr_loop(struct meterec_s *meterec) {
@@ -1027,6 +1028,8 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
 	fprintf(stderr, "       n       toggle port names display\n");
 	fprintf(stderr, "       i       insert name\n");
+	fprintf(stderr, "       t       toggle pass thru for this port\n");
+	fprintf(stderr, "       T       toggle pass thru for all ports\n");
 	fprintf(stderr, "       m       mute that port playback\n");
 	fprintf(stderr, "       M       mute all ports playback\n");
 	fprintf(stderr, "       s       mute all but that port playback (solo)\n");
@@ -1042,14 +1045,21 @@ static int usage( const char * progname ) {
 	fprintf(stderr, " <CTRL>F1-F12  use time index as loop boundary\n");
 	fprintf(stderr, "       +       use current time as loop boundary\n");
 	fprintf(stderr, "       -       clear loop boundaries\n");
+	fprintf(stderr, "       <HOME>  be kind, rewind\n");
+	fprintf(stderr, "       <TAB>   vu-meter view ---------------------------------------------------\n");
 	fprintf(stderr, "       =>      seek forward 5 seconds\n");
 	fprintf(stderr, "       <=      seek backward 5 seconds\n");
-	fprintf(stderr, "       <HOME>  be kind, rewind\n");
-	fprintf(stderr, "       <TAB>   edit mode\n");
+	fprintf(stderr, "       <TAB>   edit view -------------------------------------------------------\n");
+	fprintf(stderr, "       =>      select next take\n");
+	fprintf(stderr, "       <=      select previous take\n");
 	fprintf(stderr, "       l       lock selected track for playback\n");
 	fprintf(stderr, "       L       lock only selected track for playback (clear all other locks on this port)\n");
 	fprintf(stderr, "       a       lock selected take for playback\n");
 	fprintf(stderr, "       A       lock only selected tack for playback  (clear all other locks)\n");
+	fprintf(stderr, "       <TAB>   connections view ------------------------------------------------\n");
+	fprintf(stderr, "       <= =>   select port column\n");
+	fprintf(stderr, "       c       connect ports\n");
+	fprintf(stderr, "       x       disconnect ports\n");
 	exit(1);
 }
 
