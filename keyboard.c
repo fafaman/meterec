@@ -452,10 +452,17 @@ int keyboard_thread(void *arg) {
 		/* set loop using CONTROL */
 		if ( KEY_F(25) <= key && key <= KEY_F(36) ) {
 			/* store index before setting loop if index is free */
-			if (meterec->seek_index[key - KEY_F(25)] == MAX_UINT) 
+			if (meterec->seek_index[key - KEY_F(25)] == MAX_UINT) {
 				meterec->seek_index[key - KEY_F(25)] = meterec->jack.playhead ;
-			
-			set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
+				if (set_loop(meterec, meterec->jack.playhead)) {
+					// The disk tread cannot be aware of this loop as it is already processing the data, so let's seek to the begining of the loop ourselves
+					pthread_mutex_lock( &meterec->event_mutex );
+					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->loop.low, MAX_UINT);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				}
+			}
+			else
+				set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
 		}
 		/* seek to index */
 		if (!meterec->record_sts && meterec->playback_sts ) {
