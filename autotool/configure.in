@@ -1,7 +1,7 @@
 
 C_PREREQ(2.59)
 
-AC_INIT([meterec], [0.9], [fabrice.lebas@gmail.com])
+AC_INIT([meterec], [0.9.1], [fabrice.lebas@gmail.com])
 
 AM_CONFIG_HEADER(config.h)
 
@@ -9,19 +9,19 @@ AM_INIT_AUTOMAKE([1.9 foreign])
 
 AC_PROG_CC
 
-AC_CHECK_FUNCS( atexit usleep )
+AC_CHECK_FUNCS(atexit usleep)
 
-AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(You need libpthread installed)])
-AC_CHECK_LIB([m], [sqrt], , [AC_MSG_ERROR(Can't find libm)])
-AC_CHECK_LIB([mx], [powf])
-AC_CHECK_LIB([curses], [initscr],, [AC_MSG_ERROR(Can't find libcurses)])
+AC_CHECK_LIB([mx],      [powf])
+AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm installed)])
+AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
+AC_CHECK_LIB([curses],  [initscr],      , [AC_MSG_ERROR(Can't find libcurses installed)])
 
-PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
-PKG_CHECK_MODULES(SNDFILE, [sndfile >= 1.0.0])
-PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.3.2])
+PKG_CHECK_MODULES(JACK,      [jack >= 0.100.0])
+PKG_CHECK_MODULES(SNDFILE,   [sndfile >= 1.0.0])
+PKG_CHECK_MODULES(LIBCONFIG, [libconfig >= 1.3.2])
 
 PACKAGE_CFLAGS="-g -Wall $SNDFILE_CFLAGS $JACK_CFLAGS $LIBCONFIG_CFLAGS"
-PACKAGE_LIBS="-g $SNDFILE_LIBS $JACK_LIBS $LIBCONFIG_LIBS"
+PACKAGE_LIBS="$SNDFILE_LIBS $JACK_LIBS $LIBCONFIG_LIBS"
 
 CFLAGS="$CFLAGS $PACKAGE_CFLAGS "
 CPPFLAGS="$CFLAGS $PACKAGE_CFLAGS "
@@ -30,22 +30,22 @@ AC_CHECK_HEADERS(jack/session.h)
 
 AC_CHECK_DECL(
  SF_FORMAT_W64,
- [AC_DEFINE(HAVE_W64, [], [Do we have the WAV64 format])],
+ [AC_DEFINE(HAVE_W64, [], [Do we have WAV64 file format support in libsndfile])],
  [
-  AC_MSG_WARN([Your version of libsndfile does not support the WAV64])
-  AC_MSG_WARN([format. This means that you will be unable to record])
-  AC_MSG_WARN([files > 2GB. The default output format will be set to WAV.])
+  AC_MSG_WARN([Your version of libsndfile does not support the WAV64 format.])
+  AC_MSG_WARN([This means that you will be unable to playback or record .w64 files.])
+  AC_MSG_WARN([The default output format will be set to WAV.])
+  AC_MSG_WARN([Note that WAV format is unable to record files > 2GB.])
  ],
  [#include <sndfile.h>]
 )
 
 AC_CHECK_DECL(
  SF_FORMAT_VORBIS,
- [AC_DEFINE(HAVE_VORBIS, [], [Do we have the vorbis encoding support])],
+ [AC_DEFINE(HAVE_VORBIS, [], [Do we have VORBIS file format support in libsndfile])],
  [
-  AC_MSG_WARN([Your version of libsndfile does not support the vorbis])
-  AC_MSG_WARN([encoder. This means that you will be unable to record])
-  AC_MSG_WARN([ogg/vorbis files])
+  AC_MSG_WARN([Your version of libsndfile does not support the VORBIS format.])
+  AC_MSG_WARN([This means that you will be unable to playback or record .ogg .oga .flac files.])
  ],
  [#include <sndfile.h>]
 )
