@@ -416,8 +416,12 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->n_tracks = 0;
 	meterec->connect_ports = 1;
 	
-	meterec->jack_name = "meterec";
+	meterec->jack_name = PACKAGE_NAME;
+
 	meterec->session = NULL;
+	meterec->session = (char *) malloc( strlen(PACKAGE_NAME) + 1 );
+	strcpy(meterec->session, PACKAGE_NAME);
+	
 	meterec->conf_file = NULL;
 	
 	meterec->monitor = NULL;
@@ -507,6 +511,7 @@ void resolve_conf_file(struct meterec_s *meterec, char *conf_file) {
 	char *conf_file_test;
 	unsigned int i;
 	
+	free(meterec->session);
 	meterec->session = (char *) malloc( strlen(conf_file) + 1 );
 	meterec->conf_file = (char *) malloc( strlen(conf_file) + strlen(".mrec") + 1 );
 	conf_file_test = (char *) malloc( 2*strlen(conf_file) + strlen("/.mrec") + 1 );
@@ -1024,7 +1029,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       q       quit\n");
 	fprintf(stderr, "       <SPACE> start playback; stop playback\n");
 	fprintf(stderr, "       <ENTER> start record; stop all\n");
-	fprintf(stderr, "       <BKSPS> create new take while record is ongoing\n");
+	fprintf(stderr, "       <BKSPS> create new take while record is ongoing; toggle record state when stopped\n");
 	fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
 	fprintf(stderr, "       n       toggle port names display\n");
 	fprintf(stderr, "       i       insert name\n");
@@ -1046,17 +1051,17 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       +       use current time as loop boundary\n");
 	fprintf(stderr, "       -       clear loop boundaries\n");
 	fprintf(stderr, "       <HOME>  be kind, rewind\n");
-	fprintf(stderr, "       <TAB>   vu-meter view ---------------------------------------------------\n");
+	fprintf(stderr, "       <TAB>   vu-meter view (special keys) ------------------------------------\n");
 	fprintf(stderr, "       =>      seek forward 5 seconds\n");
 	fprintf(stderr, "       <=      seek backward 5 seconds\n");
-	fprintf(stderr, "       <TAB>   edit view -------------------------------------------------------\n");
+	fprintf(stderr, "       <TAB>   edit view (special keys) ----------------------------------------\n");
 	fprintf(stderr, "       =>      select next take\n");
 	fprintf(stderr, "       <=      select previous take\n");
-	fprintf(stderr, "       l       lock selected track for playback\n");
-	fprintf(stderr, "       L       lock only selected track for playback (clear all other locks on this port)\n");
-	fprintf(stderr, "       a       lock selected take for playback\n");
-	fprintf(stderr, "       A       lock only selected tack for playback  (clear all other locks)\n");
-	fprintf(stderr, "       <TAB>   connections view ------------------------------------------------\n");
+	fprintf(stderr, "       l       lock/unlock selected track for playback\n");
+	fprintf(stderr, "       L       lock/unlock selected track for playback and clear all other locks for this port\n");
+	fprintf(stderr, "       a       lock/unlock selected take for playback\n");
+	fprintf(stderr, "       A       lock/unlock selected take for playback and clear all other locks in the session)\n");
+	fprintf(stderr, "       <TAB>   connections view (special keys)----------------------------------\n");
 	fprintf(stderr, "       <= =>   select port column\n");
 	fprintf(stderr, "       c       connect ports\n");
 	fprintf(stderr, "       x       disconnect ports\n");

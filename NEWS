@@ -1,51 +1,78 @@
+Thu Aug 30 11:16:08 CEST 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
+	
+	NEW release 0.9.1
+	* Fixed autoconf problem where cflags where not available for some checks
+	* Fixed --help option not showing all possible paramters and keys
+	* Fixed on the fly loop key '+' that was setting the loop but not jumping into it right away
+	
+	KNONW BUGS
+	* see TODO file
+
+Sat Aug 18 16:03:25 UTC 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
+	
+	NEW release 0.9
+	* Added connection view to manage jack ports connections
+	* Added automatic connection to newly registered ports
+	* Added loop support using <+> <-> <Fn><CTRL> keys
+	* Added support for jack sessions
+	* Added support for jack transport
+	* Added check on sample rate session vs jack sample rate
+	* Added use <i> key to rename ports
+	* Added use <t> key to toggle audio pass thru on ports
+	* Changed display organisation
+	* Fixed <BKSP> behavior: now toggles record on/off when transport is stopped
+	
+	KNONW BUGS
+	* see TODO file
+
 Mon Jul 25 04:36:08 EDT 2011 - Fabrice Lebas <fabrice.lebas@gmail.com>
+	
+	NEW Release 0.8
+	* support W64, WAV, OGG, FLAC take file recording and playback
+	* new session file .mrec
+	* old configuration (.sess/.conf) files will be converted to .mrec on first run
+	* use <BKSP> to create a new take on the fly
+	* monitor output reproduces audio input of the selected port
+	* removed problematic memory allocations as reported by valgrind --tool=memcheck --leak-check=full --track-origins=yes --log-file=/tmp/vlg ./meterec
+	* report clicks by showing a X in the vu-meter (not fully accurate)
+	* option to control playback state at startup
+	* Up/Down keys wrap
+	* Tested during a 3 hours live show.
+	
+	FIXED BUGS
+	* port names with spaces not supported - FIXED (NOT TESTED) when using new configuration file.
+	
+	KNONW BUGS
+	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+	playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
+	
 
-  NEW Release 0.8
-  * support W64, WAV, OGG, FLAG take file recording and playback
-  * new session file .mrec
-  * old configuration (.sess/.conf) files will be converted to .mrec on first run
-  * use <BKSP> to create a new take on the fly
-  * monitor output reproduces audio input of the selected port
-  * removed problematic memory allocations as reported by valgrind --tool=memcheck --leak-check=full --track-origins=yes --log-file=/tmp/vlg ./meterec
-  * report clicks by showing a X in the vu-meter (not fully accurate)
-  * option to control playback state at startup
-  * Up/Down keys wrap
-  * Tested during a 3 hours live show.
-  
-  FIXED BUGS
-  * port names with spaces not supported - FIXED (NOT TESTED) when using new configuration file.
-  
-  KNONW BUGS
-  * in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
-playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
-
-  
 Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
- 
-  NEW Release 0.7
-  * seek back and forth 5 seconds using arrow keys
-  * set time indexes using <SHIFT>-<Fn> keys
-  * jump to time index using <Fn> keys
-  * jump to time 0 using <HOME> key
-  * changed meter maximum reset key to be <v> (VU) instead of <m>
-  * (un)mute using <m> key
-  * (un)mute all ports usgin <M> key
-  * unmute all ports using <S> key
-  * mute all but selected port (solo) using <s> key
-  * change record mode (<r>, <d>, <o>) also in meter view
-  * display port status also in meter view
-  * display numeric signal level and maximum in port status
-  * changes in edit mode take effect without restarting
-  * port names can be defined in <session>.conf file
-  * display/hide port names in meter view using <n> key
-  * stop recoding is <RETURN> instead of <SPACE> or <RETURN>
-
-  KNOWN BUGS
-  * in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
-playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
-
+	
+	NEW Release 0.7
+	* seek back and forth 5 seconds using arrow keys
+	* set time indexes using <SHIFT>-<Fn> keys
+	* jump to time index using <Fn> keys
+	* jump to time 0 using <HOME> key
+	* changed meter maximum reset key to be <v> (VU) instead of <m>
+	* (un)mute using <m> key
+	* (un)mute all ports usgin <M> key
+	* unmute all ports using <S> key
+	* mute all but selected port (solo) using <s> key
+	* change record mode (<r>, <d>, <o>) also in meter view
+	* display port status also in meter view
+	* display numeric signal level and maximum in port status
+	* changes in edit mode take effect without restarting
+	* port names can be defined in <session>.conf file
+	* display/hide port names in meter view using <n> key
+	* stop recoding is <RETURN> instead of <SPACE> or <RETURN>
+	
+	KNOWN BUGS
+	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+	playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
+	
 
 Mon Oct 12 18:28:54 CEST 2009 - Fabrice Lebas <fabrice.lebas@gmail.com>
-
-  * Initial version
-  * Package creation
+	
+	* Initial version
+	* Package creation

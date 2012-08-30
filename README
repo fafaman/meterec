@@ -1,79 +1,125 @@
-<pre>
                                     METEREC
 
 Screen shots
 ============
 
-Vu mode:
---------
+Vu-meter view
+-------------
 
-48000Hz 0:00:10.24  1.2% (10.4%) [> ONGOING ][O ONGOING ]
-  ++++++++:+++++++++++++++++++++++++++++++++++++++++++++++++++++\RD
-WR\++++       :
-  -6050  -40  -35  -30    -25   -20     -15     -10     -5  -3    0
-  |__|____|____|____|______|_____|_______|_______|_______|___|____|
-01##I                                                        :
-02##I                                                       :
-03#####################################I               :
-04###########################################I
-05##I                                                           :
-06###############################I                             :
-07##I:--------------------------------------------
-08##I:-----------------------------------------------------------
-  |__|____|____|____|______|_____|_______|_______|_______|___|____|
-  -6050  -40  -35  -30    -25   -20     -15     -10     -5  -3    0
-
-
+[> ONGOING ]IIIIIIIIIII\  .|||   :  '  [0:00:08.125] 0:00:10.244 [0:00:16.962]
+[O OFF     ]|
+  -60-50   -40   -35  -30     -25     -20      -15       -10      -5  -3     0
+  |___|_____|_____|____|_______|_______|________|_________|________|___|_____|
+01R##I                                         :
+02R##I            :
+03=#####################################I          :
+04=###########################################I
+05~##I                                                               :
+06=###############################I                                      :
+07=##I----------:----------------------------------   :
+08=##I------------------------------------------------------------:
+  |___|_____|_____|____|_______|_______|________|_________|________|___|_____|
+  -60-50   -40   -35  -30     -25     -20      -15       -10      -5  -3     0
+  Port  5 [   ][MUTE][    ] PLAYING no take |  -53.1dB ( -4.1dB) | 
 
 
-edit mode:
-----------
+Edit view
+---------
 
-48000Hz 0:00:24.83  1.3% (15.5%) [> ONGOING ][O ONGOING ]
-  ++++++++:+++++++++++++++++++++++++++++++++++++++++++++++++++++\RD
-WR\++         :
-  Port  1 [REC] PLAYING take 15
-  Take 18 [CONTENT][      ][       ]
-01R----------XXXXLXXX
-02=--------------L---
-03O--------------L-XX
-04D--------------L-XX
-05=--------------L---
-06=--------------L---
-07=--------------L---
-08=--------------L---
+[> OFF     ]IIIIIIIIIII\  .         '  [-:--:--.---] 0:00:22.453 [-:--:--.---]
+[O OFF     ]|
+  Take  5 [CONTENT][LOCKED][PLAYING]
+
+01RXXXXLX--
+02RXXXXLX--
+03=----L-XX
+04=----L-XX
+05=----L---
+06=----L---
+07=----L---
+08=----L---
 
 
+  Port  1 [REC][     ][THRU] PLAYING no take |  -55.9dB ( -15.8dB) ) | 
+
+
+Connections view
+----------------
+
+[> ONGOING ]IIIIIIII   -  .         '  [-:--:--.---] 0:00:02.965 [-:--:--.---]
+[O ONGOING ]/
+
+
+      system:capture_1-+-meterec:in_1 -> meterec:out_1 -+-system:playback_1
+      system:capture_2 | meterec:in_2 -> meterec:out_2  | system:playback_2
+      system:capture_3 | meterec:in_3 -> meterec:out_3  | system:playback_3
+      system:capture_4 | meterec:in_4    meterec:out_4  | system:playback_4
+      system:capture_5 | meterec:in_5    meterec:out_5  | system:playback_5
+      system:capture_6 | meterec:in_6 -> meterec:out_6  | system:playback_6
+      system:capture_7 | meterec:in_7 -> meterec:out_7  | system:playback_7
+      system:capture_8 | meterec:in_8    meterec:out_8  | system:playback_8
 
 Help
 ====
 
-% ./meterec -h
-meterec version 0.6
+% meterec -h
+version 0.9.1
 
-./meterec [-f freqency] [-r ref-level] [-w width] [-s sessionname] [-j jackname] [-t]
+meterec [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]
 
 where  -f      is how often to update the meter per second [24]
        -r      is the reference signal level for 0dB on the meter [0]
        -w      is how wide to make the meter [auto]
        -s      is session name [meterec]
        -j      is the jack client name [meterec]
+       -o      is the record output format (w64, wav, flac, ogg) [w64]
+       -u      is the uuid value to be restored [none]
        -t      record a new take at start
+       -p      no playback at start
+       -c      do not connect to jack ports listed in .mrec file
+       -i      do not interact with jack transport
 
 
 Command keys:
-       <SPACE> start playback; stop
-       <ENTER> start record; stop
-       m       reset maximum level vu-meter markers
        q       quit
-       <TAB>   edit mode
-       l       toggle lock for that position
-       a       toggle lock for all ports for that take
-       L       clear all locks for that port, toggle lock for that position
-       A       clear all locks, toggle lock for all ports for that take
+       <SPACE> start playback; stop playback
+       <ENTER> start record; stop all
+       <BKSPS> create new take while record is ongoing; toggle record state when stopped
+       v       reset maximum level vu-meter markers
+       n       toggle port names display
+       i       insert name
+       t       toggle pass thru for this port
+       T       toggle pass thru for all ports
+       m       mute that port playback
+       M       mute all ports playback
+       s       mute all but that port playback (solo)
+       S       unmute all ports playback
        r       toggle REC record mode for that port - record without listening playback
+       R       toggle REC record mode for all ports
        d       toggle DUB record mode for that port - record listening playback
+       D       toggle DUB record mode for all ports
        o       toggle OVR record mode for that port - record listening and mixing playback
+       O       toggle OVR record mode for all ports
+<SHIFT>F1-F12  set time index
+       F1-F12  jump to time index
+ <CTRL>F1-F12  use time index as loop boundary
+       +       use current time as loop boundary
+       -       clear loop boundaries
+       <HOME>  be kind, rewind
+       <TAB>   vu-meter view (special keys) ------------------------------------
+       =>      seek forward 5 seconds
+       <=      seek backward 5 seconds
+       <TAB>   edit view (special keys) ----------------------------------------
+       =>      select next take
+       <=      select previous take
+       l       lock/unlock selected track for playback
+       L       lock/unlock selected track for playback and clear all other locks for this port
+       a       lock/unlock selected take for playback
+       A       lock/unlock selected take for playback and clear all other locks in the session)
+       <TAB>   connections view (special keys)----------------------------------
+       <= =>   select port column
+       c       connect ports
+       x       disconnect ports
 
 Why is it so basic?
 ===================
@@ -88,17 +134,16 @@ and master your instrument. Good news is previous takes are kept in take history
 and if in the end, the first one was the best you could play, you can choose it 
 in your final mix.
 
+
 A typical session:
 ==================
 
+hardware setup example
+----------------------
 
-hardware setup
---------------
+A 16 ports mixer has all it's inserts plugged to a 16in+16out channels sound card. 
 
-A 16 track mixer has all it's inserts plugged to a 16in+16out channels sound card. 
-
-
-Example for the first track of the mixer:
+Example for the first port of the mixer:
 +--- 1 ---+
 |         |
 | MIC/LINE|
@@ -110,20 +155,11 @@ Example for the first track of the mixer:
 |         |
 |         |
 
+
 jack setup
 ----------
 
-jackd is running on the above card. all inputs are redirected to corresponding output so we
-get to hear Instrument/Mic when the insert cable is plugged in the mixer.
-
-system:capture_1 ---> system:playback_1
-system:capture_2 ---> system:playback_2
-system:capture_3 ---> system:playback_3
-...
-
-You can use the following to set this up:
-
-%jack_connect system:capture_1 system:playback_1
+jackd is running on the above card. 
 
 Jack system internal delay should be kept small by 
 Maximising sample rate
@@ -131,477 +167,129 @@ Minimising periods/buffer
 Minimising frames/period
 
 To avoid Xruns (more frequent with shorter delays), Real-Time priority may be setup for
-jackd..
+jackd...
 
 
 software setup
 --------------
 
-% mkdir la_session_de_demo
-% cd la_session_de_demo
+% mkdir sessions
+% cd sessions
 
 Now create a basic session configuration file we will call 'demo':
 % meterec-init-conf demo
 
-This will create 2 files:
-.demo.sess - not to be edited (empty at first)
-demo.conf - status/configuration file for this session
+This will create file:
+demo.mrec - status/configuration file for this session
 
-Initial content of demo.conf:
-=|1 system:capture_1 system:playback_1
-=|2 system:capture_2 system:playback_2
-=|3 system:capture_3 system:playback_3
-=|4 system:capture_4 system:playback_4
-=|5 system:capture_5 system:playback_5
-=|6 system:capture_6 system:playback_6
-=|7 system:capture_7 system:playback_7
-=|8 system:capture_8 system:playback_8
-=|9 system:capture_9 system:playback_9
-=|10 system:capture_10 system:playback_10
-=|11 system:capture_11 system:playback_11
-=|12 system:capture_12 system:playback_12
-=|13 system:capture_13 system:playback_13
-=|14 system:capture_14 system:playback_14
-=|15 system:capture_15 system:playback_15
-=|16 system:capture_16 system:playback_16
-
-This file can be edited when meterec is NOT RUNNING. If you keep your editor open,
-make sure it/you refresh editor content after each meterec run.
-
-What this file says is:
-meterec track 1 input is system:capture_1, output is system:playback_1
-meterec track 2 input is system:capture_2, output is system:playback_2
-
-You can edit this file to add more inputs and/or outputs for each meterec track
-i.e
-=|1 system:capture_1 system:playback_1 jack_metro:120_bpm
-=|2 system:capture_1 system:playback_1 tunit:in_0
+All options of the configuration file can be modified from meterec, but you can
+also edit this file when meterec is NOT RUNNING. If you keep your editor open,
+make sure you refresh editor content after each meterec run.
 
 
 The band
 --------
 
-Paul plays guitar on track 1
-Yoanna sings on track 2
-Hakim plays bass on track 4
-Iris plays drums on tracks 6+7(overhead) 8(kick) 9(snare) 10+11(toms)
-Igor plays electric piano on tracks 14+15 
+Hakim plays bass on port 4
+Iris plays drums on ports 6,7(overhead) 8(kick) 9(snare) 10,11(toms)
+Igor plays electric piano on ports 14,15 
+Paul plays guitar on port 1
 
-Balance
--------
 
-%meterec
+Sound check
+-----------
 
-Will show all tracks vu-meter. you may adjust meter behavior with -f -r -w options
+% meterec -s demo
+
+Meterec starts in vu-meter view. This shows vue meter for all ports declared in the session file. The view meters 
+display input level in DB using bar graph as well as numerical for the selected port.
 
 Make sure no instrument reaches the 0dB by adjusting gain on the mixer console or in
 the sound card mixer.
 
-Stop meterec with CTRL+c 
+You may not whant to have some instruments live audio coming back to your mixing console because they are already 
+loud enough. Browse to corresponding ports with the <UP> and <DOWN> arrow keys and hit <t> key to toggle 
+pass thru for these ports.
 
-Session base
-------------
+Exit meterec with CTRL+c or <q> key.
 
-Hakim plays bass on track 4
-Iris plays drums on tracks 6+7(overhead) 8(kick) 9(snare) 10+11(toms)
 
-Iris+Hakim will make a nice bass+drum base first
+Adding rithm section
+--------------------
 
-Lets update demo.conf to the following
-=|1 system:capture_1 system:playback_1
-=|2 system:capture_2 system:playback_2
-=|3 system:capture_3 system:playback_3
-R|4 system:capture_4 system:playback_4
-=|5 system:capture_5 system:playback_5
-R|6 system:capture_6 system:playback_6
-R|7 system:capture_7 system:playback_7
-R|8 system:capture_8 system:playback_8
-R|9 system:capture_9 system:playback_9
-R|10 system:capture_10 system:playback_10
-R|11 system:capture_11 system:playback_11
-=|12 system:capture_12 system:playback_12
-=|13 system:capture_13 system:playback_13
-=|14 system:capture_14 system:playback_14
-=|15 system:capture_15 system:playback_15
-=|16 system:capture_16 system:playback_16
+Hakim plays bass on port 4
+Iris plays drums on ports 6,7(overhead) 8(kick) 9(snare) 10,11(toms)
 
-We are ready for first take... Let's go
+Iris and Hakim will make a nice bass and drum base first
 
-hit ENTER key
 
-...Time for pleasure and concentration...
+Browse to ports with the <UP> and <DOWN> arrow keys. Hit <r> key to toggle 
+REC record mode for the selected port.
 
-Once Iris+Hakim are done, Stop meterec with ENTER or SPACE key.
+You can name ports at your convinience using the <i> key.
 
-demo.conf now looks like this: 
-=-|1 system:capture_1 system:playback_1
-=-|2 system:capture_2 system:playback_2
-=-|3 system:capture_3 system:playback_3
-RX|4 system:capture_4 system:playback_4
-=-|5 system:capture_5 system:playback_5
-RX|6 system:capture_6 system:playback_6
-RX|7 system:capture_7 system:playback_7
-RX|8 system:capture_8 system:playback_8
-RX|9 system:capture_9 system:playback_9
-RX|10 system:capture_10 system:playback_10
-RX|11 system:capture_11 system:playback_11
-=-|12 system:capture_12 system:playback_12
-=-|13 system:capture_13 system:playback_13
-=-|14 system:capture_14 system:playback_14
-=-|15 system:capture_15 system:playback_15
-=-|16 system:capture_16 system:playback_16
-01
+now you have ports 4,6,7,8,9,10,11 in REC mode.
 
-You can listen to what was done right away
+We are ready for first take... Let's go! hit <ENTER> key, once Iris and Hakim are done, 
+stop meterec with <ENTER> key again.
 
-hit SPACE key
+You can listen to what was done right away using <SPACE> key to start playback 
+and <SPACE> or <ENTER> to stop playback.
 
-You can repeat take to make sure Iris+Hakim where recoreded at their best 
+You can create several takes to make sure Iris and Hakim where recorded at their best.
 
-hit ENTER key
-hit ENTER key
-hit ENTER key
-hit ENTER key
 
-demo.conf now looks like this: 
-=-----|1 system:capture_1 system:playback_1
-=-----|2 system:capture_2 system:playback_2
-=-----|3 system:capture_3 system:playback_3
-RXXXXX|4 system:capture_4 system:playback_4
-=-----|5 system:capture_5 system:playback_5
-RXXXXX|6 system:capture_6 system:playback_6
-RXXXXX|7 system:capture_7 system:playback_7
-RXXXXX|8 system:capture_8 system:playback_8
-RXXXXX|9 system:capture_9 system:playback_9
-RXXXXX|10 system:capture_10 system:playback_10
-RXXXXX|11 system:capture_11 system:playback_11
-=-----|12 system:capture_12 system:playback_12
-=-----|13 system:capture_13 system:playback_13
-=-----|14 system:capture_14 system:playback_14
-=-----|15 system:capture_15 system:playback_15
-=-----|16 system:capture_16 system:playback_16
-012345
+Selecting the best takes
+------------------------
 
-When you start meterec, you get to hear the latest take of each track, now you may
-find out that take 4 what the best for Iris+Hakim. 
+When you start playback, you get to hear the latest take for each port, now you may
+find out that take 4 whas the best for Iris and Hakim. 
 
-Let's use TAB key to edit demo.conf so it looks like this:
-=-----|1 system:capture_1 system:playback_1
-=-----|2 system:capture_2 system:playback_2
-=-----|3 system:capture_3 system:playback_3
-RXXXLX|4 system:capture_4 system:playback_4
-=-----|5 system:capture_5 system:playback_5
-RXXXLX|6 system:capture_6 system:playback_6
-RXXXLX|7 system:capture_7 system:playback_7
-RXXXLX|8 system:capture_8 system:playback_8
-RXXXLX|9 system:capture_9 system:playback_9
-RXXXLX|10 system:capture_10 system:playback_10
-RXXXLX|11 system:capture_11 system:playback_11
-=-----|12 system:capture_12 system:playback_12
-=-----|13 system:capture_13 system:playback_13
-=-----|14 system:capture_14 system:playback_14
-=-----|15 system:capture_15 system:playback_15
-=-----|16 system:capture_16 system:playback_16
-012345
+use <TAB> key to switch to 'EDIT' view. 
+
+Browse thru takes using the <RIGHT> and <LEFT> arrow keys. Once you are on take 4 hit
+the <A> key to place a 'lock' on all the tracks recorded during take 4.
+
+Now when you playback only tracks of take 4 will be played.
 
 Now every time you get to start meterec you will hear Iris+Hakim performance as it
-was when they played the for the 4th time. We have "Locked" tracks 4,6,7,8,9,10,11 on
-take 4.
+was when they played the for the 4th time. We have "Locked" ports 4,6,7,8,9,10,11 on
+tracks recoded during 4th take.
 
-Session melodie
----------------
+Keys <a>, <A>, <l>, <L> are used to toggle locks. with different behaviors
+
+You can lock a port on several tracks. In that case, tracks of the most recent take will be played.
+
+
+Adding melodie
+--------------
 
 Paul plays guitar on track 1
-Igor plays electric piano on tracks 14+15 
+Igor plays electric piano on tracks 14,15 
 
-Paul+Igor will now play over take 4 of Iris+Hakim and recod their parts.
+Paul and Igor will now play over take 4 of Iris and Hakim and recod their parts.
 
-Let's use TAB key to edit demo.conf so it looks like this:
-R-----|1 system:capture_1 system:playback_1
-=-----|2 system:capture_2 system:playback_2
-=-----|3 system:capture_3 system:playback_3
-=XXXLX|4 system:capture_4 system:playback_4
-=-----|5 system:capture_5 system:playback_5
-=XXXLX|6 system:capture_6 system:playback_6
-=XXXLX|7 system:capture_7 system:playback_7
-=XXXLX|8 system:capture_8 system:playback_8
-=XXXLX|9 system:capture_9 system:playback_9
-=XXXLX|10 system:capture_10 system:playback_10
-=XXXLX|11 system:capture_11 system:playback_11
-=-----|12 system:capture_12 system:playback_12
-=-----|13 system:capture_13 system:playback_13
-R-----|14 system:capture_14 system:playback_14
-R-----|15 system:capture_15 system:playback_15
-=-----|16 system:capture_16 system:playback_16
-012345
+change the record mode of the ports so 1, 14 and 15 are in REC mode.
 
-You may let them warm-up by starting playback with SPACE key
-
-This gives a good chance to adjust input gain again (trying to get the best dynamic)
-
-SPACE to stop and once Paul+Igor are ready...
-
-ENTER to start recording
-
-... Enjoy the groove and feel of your mates ...
-
-Stop meterec with ENTER or SPACE
-
-As you have guessed, demo.conf now looks like this
-R-----X|1 system:capture_1 system:playback_1
-=------|2 system:capture_2 system:playback_2
-=------|3 system:capture_3 system:playback_3
-=XXXLX-|4 system:capture_4 system:playback_4
-=------|5 system:capture_5 system:playback_5
-=XXXLX-|6 system:capture_6 system:playback_6
-=XXXLX-|7 system:capture_7 system:playback_7
-=XXXLX-|8 system:capture_8 system:playback_8
-=XXXLX-|9 system:capture_9 system:playback_9
-=XXXLX-|10 system:capture_10 system:playback_10
-=XXXLX-|11 system:capture_11 system:playback_11
-=------|12 system:capture_12 system:playback_12
-=------|13 system:capture_13 system:playback_13
-R-----X|14 system:capture_14 system:playback_14
-R-----X|15 system:capture_15 system:playback_15
-=------|16 system:capture_16 system:playback_16
-0123456
+You may let them warm-up by starting playback with <SPACE> key, this gives a good chance to 
+adjust input gain again (trying to get the best dynamic).
 
 Well, it appears that Paul is still suffuring from hangover while Igor's performance
 was sharp and still...
 
-Let's use TAB key to edit demo.conf to give an other chance to Paul:
-R-----X|1 system:capture_1 system:playback_1
-=------|2 system:capture_2 system:playback_2
-=------|3 system:capture_3 system:playback_3
-=XXXLX-|4 system:capture_4 system:playback_4
-=------|5 system:capture_5 system:playback_5
-=XXXLX-|6 system:capture_6 system:playback_6
-=XXXLX-|7 system:capture_7 system:playback_7
-=XXXLX-|8 system:capture_8 system:playback_8
-=XXXLX-|9 system:capture_9 system:playback_9
-=XXXLX-|10 system:capture_10 system:playback_10
-=XXXLX-|11 system:capture_11 system:playback_11
-=------|12 system:capture_12 system:playback_12
-=------|13 system:capture_13 system:playback_13
-=-----X|14 system:capture_14 system:playback_14
-=-----X|15 system:capture_15 system:playback_15
-=------|16 system:capture_16 system:playback_16
-0123456
+you can remove REC mode for tracks 14, 15, so Igor can give extra tries on his own.
 
-Give a glass of water to you friend and run meterec
+Give a glass of water to you friend and run meterec... If needed, make sure he gets some 
+fresh air and keep on hiting the <ENTER> key util everybody is happy (fed-up?) with Paul's guitar riffs
 
-ENTER 
-ENTER 
-ENTER 
+Igor Just had and idea and would like to add a few notes to his previous take. 
 
-If needed, make sure he gets some fresh air and
+you can use the overdub OVR record mode to create a new track that contains previous
+content plus new content... make sure you lock the correct previous track when doing so.
 
-ENTER 
+BEWARE: when you will playback again the locked tracks will keep on playing, and you will not 
+listen to the added audio. make sure you remove locks for these ports to hear the latest recording
 
-Great, everybody is happy (fed-up?) with Paul's guitar riffs
-
-edit mode view now looks like this:
-R-----XXXXX|1 system:capture_1 system:playback_1
-=----------|2 system:capture_2 system:playback_2
-=----------|3 system:capture_3 system:playback_3
-=XXXLX-----|4 system:capture_4 system:playback_4
-=----------|5 system:capture_5 system:playback_5
-=XXXLX-----|6 system:capture_6 system:playback_6
-=XXXLX-----|7 system:capture_7 system:playback_7
-=XXXLX-----|8 system:capture_8 system:playback_8
-=XXXLX-----|9 system:capture_9 system:playback_9
-=XXXLX-----|10 system:capture_10 system:playback_10
-=XXXLX-----|11 system:capture_11 system:playback_11
-=----------|12 system:capture_12 system:playback_12
-=----------|13 system:capture_13 system:playback_13
-=-----X----|14 system:capture_14 system:playback_14
-=-----X----|15 system:capture_15 system:playback_15
-=----------|16 system:capture_16 system:playback_16
-01234567890
-          1
-
-Igor Just had and Idea and would like to add a few notes to his previous take. He can
-use the Overdub feature of meterec to create a new track that contains previous
-content plus new content...
-
-Let's use TAB key to edit demo.conf so it looks like this:
-=-----XXXXX|1 system:capture_1 system:playback_1
-=----------|2 system:capture_2 system:playback_2
-=----------|3 system:capture_3 system:playback_3
-=XXXLX-----|4 system:capture_4 system:playback_4
-=----------|5 system:capture_5 system:playback_5
-=XXXLX-----|6 system:capture_6 system:playback_6
-=XXXLX-----|7 system:capture_7 system:playback_7
-=XXXLX-----|8 system:capture_8 system:playback_8
-=XXXLX-----|9 system:capture_9 system:playback_9
-=XXXLX-----|10 system:capture_10 system:playback_10
-=XXXLX-----|11 system:capture_11 system:playback_11
-=----------|12 system:capture_12 system:playback_12
-=----------|13 system:capture_13 system:playback_13
-O-----X----|14 system:capture_14 system:playback_14
-O-----X----|15 system:capture_15 system:playback_15
-=----------|16 system:capture_16 system:playback_16
-01234567890
-          1
-
-Ready, steady, go!
-
-ENTER
-
-... hummm does not sound that good ...
-
-ENTER or SPACE
-
-edit mode view looks like this
-=-----XXXXX-|1 system:capture_1 system:playback_1
-=-----------|2 system:capture_2 system:playback_2
-=-----------|3 system:capture_3 system:playback_3
-=XXXLX------|4 system:capture_4 system:playback_4
-=-----------|5 system:capture_5 system:playback_5
-=XXXLX------|6 system:capture_6 system:playback_6
-=XXXLX------|7 system:capture_7 system:playback_7
-=XXXLX------|8 system:capture_8 system:playback_8
-=XXXLX------|9 system:capture_9 system:playback_9
-=XXXLX------|10 system:capture_10 system:playback_10
-=XXXLX------|11 system:capture_11 system:playback_11
-=-----------|12 system:capture_12 system:playback_12
-=-----------|13 system:capture_13 system:playback_13
-O-----X----X|14 system:capture_14 system:playback_14
-O-----X----X|15 system:capture_15 system:playback_15
-=-----------|16 system:capture_16 system:playback_16
-012345678901
-          1
-
-Now tracks 14+15 contains both take 6 and take 11 performance. If we are not happy
-with content added during take 11 and want to do it again, we have to Lock track 14+15
-on take 6 to create take 12. Take 12 will then contain notes played during take 6 and
-take 12.
-
-Let's use TAB key to edit demo.conf
-=-----XXXXX-|1 system:capture_1 system:playback_1
-=-----------|2 system:capture_2 system:playback_2
-=-----------|3 system:capture_3 system:playback_3
-=XXXLX------|4 system:capture_4 system:playback_4
-=-----------|5 system:capture_5 system:playback_5
-=XXXLX------|6 system:capture_6 system:playback_6
-=XXXLX------|7 system:capture_7 system:playback_7
-=XXXLX------|8 system:capture_8 system:playback_8
-=XXXLX------|9 system:capture_9 system:playback_9
-=XXXLX------|10 system:capture_10 system:playback_10
-=XXXLX------|11 system:capture_11 system:playback_11
-=-----------|12 system:capture_12 system:playback_12
-=-----------|13 system:capture_13 system:playback_13
-O-----L----X|14 system:capture_14 system:playback_14
-O-----L----X|15 system:capture_15 system:playback_15
-=-----------|16 system:capture_16 system:playback_16
-012345678901
-          1
-
-Ready for recording...
-
-ENTER
-
-... This sounds far better ...
-
-ENTER to stop
-
-Now if we want to listen to the result a little update in demo.conf is needed...
-=-----XXXXX--|1 system:capture_1 system:playback_1
-=------------|2 system:capture_2 system:playback_2
-=------------|3 system:capture_3 system:playback_3
-=XXXLX-------|4 system:capture_4 system:playback_4
-=------------|5 system:capture_5 system:playback_5
-=XXXLX-------|6 system:capture_6 system:playback_6
-=XXXLX-------|7 system:capture_7 system:playback_7
-=XXXLX-------|8 system:capture_8 system:playback_8
-=XXXLX-------|9 system:capture_9 system:playback_9
-=XXXLX-------|10 system:capture_10 system:playback_10
-=XXXLX-------|11 system:capture_11 system:playback_11
-=------------|12 system:capture_12 system:playback_12
-=------------|13 system:capture_13 system:playback_13
-O-----L----XL|14 system:capture_14 system:playback_14
-O-----L----XL|15 system:capture_15 system:playback_15
-=------------|16 system:capture_16 system:playback_16
-0123456789012
-          1
-
-You can lock a track several times. Take played back will be the most reent of the
-locked takes.
-
-Lead singer
------------
-
-Yoanna sings on track 2
-
-Lets use TAB key to edit demo.conf so it looks like this:
-=-----XXXXX--|1 system:capture_1 system:playback_1
-R------------|2 system:capture_2 system:playback_2
-=------------|3 system:capture_3 system:playback_3
-=XXXLX-------|4 system:capture_4 system:playback_4
-=------------|5 system:capture_5 system:playback_5
-=XXXLX-------|6 system:capture_6 system:playback_6
-=XXXLX-------|7 system:capture_7 system:playback_7
-=XXXLX-------|8 system:capture_8 system:playback_8
-=XXXLX-------|9 system:capture_9 system:playback_9
-=XXXLX-------|10 system:capture_10 system:playback_10
-=XXXLX-------|11 system:capture_11 system:playback_11
-=------------|12 system:capture_12 system:playback_12
-=------------|13 system:capture_13 system:playback_13
-=-----L----XL|14 system:capture_14 system:playback_14
-=-----L----XL|15 system:capture_15 system:playback_15
-=------------|16 system:capture_16 system:playback_16
-0123456789012
-          1
-
-ENTER to start recording
-
-Now Yoanna would like to listen to her previous take and sing over it without ending
-with both takes mixed together. In meterec this is called Dubbing.
-
-Lets use TAB key to edit demo.conf so it looks like this:
-=-----XXXXX---|1 system:capture_1 system:playback_1
-D------------X|2 system:capture_2 system:playback_2
-=-------------|3 system:capture_3 system:playback_3
-=XXXLX--------|4 system:capture_4 system:playback_4
-=-------------|5 system:capture_5 system:playback_5
-=XXXLX--------|6 system:capture_6 system:playback_6
-=XXXLX--------|7 system:capture_7 system:playback_7
-=XXXLX--------|8 system:capture_8 system:playback_8
-=XXXLX--------|9 system:capture_9 system:playback_9
-=XXXLX--------|10 system:capture_10 system:playback_10
-=XXXLX--------|11 system:capture_11 system:playback_11
-=-------------|12 system:capture_12 system:playback_12
-=-------------|13 system:capture_13 system:playback_13
-=-----L----XL-|14 system:capture_14 system:playback_14
-=-----L----XL-|15 system:capture_15 system:playback_15
-=-------------|16 system:capture_16 system:playback_16
-01234567890123
-          1
-
-ENTER
-
-Now demo.conf looks like this
-=-----XXXXX----|1 system:capture_1 system:playback_1
-D------------XX|2 system:capture_2 system:playback_2
-=--------------|3 system:capture_3 system:playback_3
-=XXXLX---------|4 system:capture_4 system:playback_4
-=--------------|5 system:capture_5 system:playback_5
-=XXXLX---------|6 system:capture_6 system:playback_6
-=XXXLX---------|7 system:capture_7 system:playback_7
-=XXXLX---------|8 system:capture_8 system:playback_8
-=XXXLX---------|9 system:capture_9 system:playback_9
-=XXXLX---------|10 system:capture_10 system:playback_10
-=XXXLX---------|11 system:capture_11 system:playback_11
-=--------------|12 system:capture_12 system:playback_12
-=--------------|13 system:capture_13 system:playback_13
-=-----L----XL--|14 system:capture_14 system:playback_14
-=-----L----XL--|15 system:capture_15 system:playback_15
-=--------------|16 system:capture_16 system:playback_16
-012345678901234
-          1
-
-Yonna's take 14 only contains what she sang during take 14, althoug she coule listen
-to her previous recording during that take.
 
 
 Why does it goes wrong?
@@ -623,18 +311,4 @@ Internal delays in jack+meterec cannot be avoided completely. look for help on h
 to minimise delays in jackd. Make sure you do not have a cascading aproach in you
 recording session, but rather stick to one of the first takes as a reference for
 playing other instruments.
-
-
-
-Bugs?
-=====
-
-See TODO file for known bugs.
-
-Please use sourceforge to report new bugs. 
-
-
-</pre>
-
-
 
