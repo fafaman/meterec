@@ -2,12 +2,14 @@
 
 RELEASE=`grep AC_INIT autotool/configure.in | awk -F"," '{print $2}' | sed 's/.*\[\([0-9.]*\)\]/\1/'`
 
+DEVAREA=`pwd | xargs basename`
+
 echo Relasing meterec-$RELEASE
 echo =====================
 
 pushd ../
 
-mv meterec-dev meterec-$RELEASE
+mv $DEVAREA meterec-$RELEASE
 
 tar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/*.c \
@@ -29,7 +31,7 @@ meterec-$RELEASE/missing \
 meterec-$RELEASE/install-sh \
 meterec-$RELEASE/aclocal.m4 \
 
-mv meterec-$RELEASE meterec-dev
+mv meterec-$RELEASE $DEVAREA 
 
 popd
 
@@ -43,7 +45,8 @@ echo "./configure && make"
 echo "./meterec-init-conf meterec"
 echo "./meterec"
 echo =====================
-echo "scp README fafaman,meterec@web.sourceforge.net:/home/project-web/meterec/htdocs/index.txt"
 echo "cd ../"
 echo "scp meterec-$RELEASE.tgz fafaman,meterec@frs.sourceforge.net:/home/frs/project/m/me/meterec"
+echo "cd $DEVAREA"
+echo "scp README fafaman,meterec@web.sourceforge.net:/home/project-web/meterec/htdocs/index.txt"
 
