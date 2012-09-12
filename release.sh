@@ -48,5 +48,6 @@ echo =====================
 echo "cd ../"
 echo "scp meterec-$RELEASE.tgz fafaman,meterec@frs.sourceforge.net:/home/frs/project/m/me/meterec"
 echo "cd $DEVAREA"
-echo "scp README fafaman,meterec@web.sourceforge.net:/home/project-web/meterec/htdocs/index.txt"
-
+echo "scp index.html fafaman,meterec@web.sourceforge.net:/home/project-web/meterec/htdocs/index.html"
+echo "scp README fafaman,meterec@web.sourceforge.net:/home/project-web/meterec/htdocs/english.txt"
+echo "scp NEWS fafaman,meterec@frs.sourceforge.net:/home/frs/project/m/me/meterec/README.txt"
