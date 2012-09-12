@@ -1268,17 +1268,11 @@ int main(int argc, char *argv[])
 	find_existing_takes(meterec);
 	
 	/* Start threads doing disk accesses */
-	if (meterec->record_cmd==START) {
-		
+	if (meterec->record_cmd==START)
 		start_record(meterec);
+	
+	if (meterec->playback_cmd==START)
 		roll(meterec);
-		
-	}
-	else if (meterec->playback_cmd==START) {
-		
-		roll(meterec);
-		
-	}
 	
 	/* Register the cleanup function to be called when C-c */
 	signal(SIGINT, halt);

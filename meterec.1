@@ -1,0 +1,149 @@
+.\" Process this file with
+.\" groff -man -Tascii meterec.1
+.\"
+.TH meterec 1 "September 12th 2012" "Fabrice Lebas" "Meterec"
+
+.SH NAME
+meterec \- console multitrack audio recorder
+
+.SH SYNOPSIS
+.B meterec
+[
+.B -tpcih 
+] [
+.B -r
+.I ref-level 
+] [
+.B -o
+.I output-format 
+] [
+.B -s
+.I session-name 
+] [
+.B -j
+.I jack-name 
+] [
+.B -f
+.I frequency 
+] [
+.B -w
+.I width
+] [
+.B -u
+.I uuid
+] 
+
+.SH DESCRIPTION
+.B meterec
+real-time jack ports vu-meter, records specified ports to take file and replays selected take(s).
+
+
+.SH OPTIONS
+.IP "-r ref-level"
+Adjust the 0dB reference level of the port vu-meter.
+.IP "-o output-format"
+\'w64\', 'wav', 'ogg' or 'flac'. Format of the take files produced when recording. The same 
+session can use different formats subsequently. Defaults to 'w64' or 'wav'.
+.IP "-s <session-name>, -s <session-file>"
+Name of the session beeing recorded. If a file called \<session-name\>.mrec 
+exists, 
+.B meterec 
+will execute from the current directory. 
+if a file called \<session-file\> exists, 
+.B meterec 
+will change to it's base 
+directory before executing. 
+defaults to \'./meterec.mrec\'.
+.IP "-j jack-name"
+Name of the 
+.B meterec 
+client in the jack graph. This name should be specified 
+if using several 
+.B meterec 
+instances on the same jack server. Using the same \<jack-name\>
+for multiple 
+.B meterec 
+instances is not supported.
+Defaults to \'meterec\'
+.IP "-f frequency"
+Set the display refresh rate in frames per second. This setting does not affects
+the pace at wich command keys can be used, nor the meter peak value fall time.
+.IP "-w width"
+Set the number of columns for the display . Defaults to the current console width.
+.IP "-u uuid"
+Universal unique identifyer used by jack-session save/restore managers. 
+.B WARNING: 
+jack-session requests that directory holding session restore data is erased before 
+session is saved! Make sure you do not use the meterec-session directory or a parent
+directory to save your jack-session: this would erase all previously recoded audio 
+as well as configuration data for this meterec-session.
+.IP "-t"
+Start recording at startup. Default is to start in playback mode. With this option 
+a new take will be captured at startup. This allows to call 
+.B meterec 
+from a script or do a quick take right from the shell. If the recording should only be starting 
+upon user action or when jack-transport go to roll state, use this option along with 
+.I -p 
+option.
+.IP "-p"
+Do not playback at startup. Default is to start in playback mode. Use this option
+if you want meterec to wait for user input of jack-transport to start playback.
+.IP "-i"
+Do not interact with jack-transport state. By default 
+.B meterec 
+will set jack-transport state when user start or stop playback and playback will
+start or stop when jack-transport state changes.
+.IP "-c"
+Do not connect automatically to jack ports. By default meterec will use the list 
+of connections stored in \<jack-session\>.mrec to connect it's ports to other jack
+clients at startup as well as when these ports becomes available.
+.IP "-h"
+Show options and commands summary.
+
+.SH COMMAND KEYS
+
+.IP "q"
+quit.
+.IP "<SPACE>"
+Start/stop playback
+
+
+.SH INTERRUPT
+You can abort
+.B meterec
+at any time by pressing Ctrl-C.  The current state will be saved to \<session-name\>.mrec before
+.B meterec exits.
+
+.SH FILES
+
+.TP
+\<session-file\>, \<session-name\>.mrec
+Contains current state of session: list of ports with connections, record mode, 
+mute state, name, takes map. List of time indexes. Sampling rate.
+
+.TP
+\<session-name\>.log
+Activity log of latest meterec run for session \<session-name\>.
+
+.TP
+\<session-name\>_\<nnnn\>.[ogg|wav|w64|flac]
+Take file. \<nnnn\> is the take number. This file contains audio for all the ports 
+that where selected for record during take \<nnnn\>. You can open/edit this file in an
+audio editor if it supports multitrack audio files.
+
+.PP
+
+.SH BUGS
+
+tbd
+
+.SH SEE ALSO
+.BR meterec-init-conf(1)
+.BR jackd(1)
+
+.SH AUTHORS
+
+.TP
+Program Author:
+.br
+Fabrice Lebas <fabrice@kotoubas.net>
