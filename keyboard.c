@@ -425,7 +425,15 @@ int keyboard_thread(void *arg) {
 				break;
 			
 			case '-': /* SUPR */
-				clr_loop(meterec);
+				clr_loop(meterec, BOUND_ALL);
+				break;
+			
+			case '/': /* SUPR */
+				clr_loop(meterec, BOUND_LOW);
+				break;
+			
+			case '*': /* SUPR */
+				clr_loop(meterec, BOUND_HIGH);
 				break;
 			
 			case '+': 

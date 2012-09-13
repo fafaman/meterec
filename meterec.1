@@ -178,6 +178,12 @@ and stored for this time index.
 Use current time as loop boundary. Usefull for setting a loop quickly.
 .IP "-"
 Clear loop boundaries. Playback will keep on reading once the former loop upper bound is reached.
+.IP "/"
+Clear loop lower bound. Programming a new bound will move the remaining bound to lower bound if it is upper than
+remaingin upper bound.
+.IP "*"
+Clear loop upper bound. Programming a new bound will move the remaining bound to upper bound if it is lower than
+remaingin lower bound.
 .IP "\<HOME\>"
 Be kind, rewind.
 

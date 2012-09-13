@@ -17,8 +17,7 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
-- use '/' and '*' to clear upper or lower loop bound.
-
+x use '/' and '*' to clear upper or lower loop bound.
 x ability to edit names from the interface.
 x rework port connections so self connect does not need to be ordered
 x allow ports to be connected when they get available

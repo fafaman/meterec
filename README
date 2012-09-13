@@ -105,6 +105,8 @@ Command keys:
  <CTRL>F1-F12  use time index as loop boundary
        +       use current time as loop boundary
        -       clear loop boundaries
+       /       clear loop lower bound
+       *       clear loop upper bound
        <HOME>  be kind, rewind
        <TAB>   vu-meter view (special keys) ------------------------------------
        =>      seek forward 5 seconds

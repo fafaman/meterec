@@ -200,8 +200,14 @@ void read_peak(float bias) {
 int set_loop(struct meterec_s *meterec, unsigned int loophead) {
 	
 	if (meterec->loop.low == MAX_UINT) {
-		meterec->loop.low = loophead;
-		return 0;
+		if (meterec->loop.high == MAX_UINT) {
+			meterec->loop.low = loophead;
+			return 0;
+		}
+		if (loophead > meterec->loop.high) {
+			meterec->loop.low = meterec->loop.high;
+			meterec->loop.high = loophead;
+		}
 	}
 	else if (loophead > meterec->loop.low) {
 		meterec->loop.high = loophead;
@@ -220,11 +226,15 @@ int set_loop(struct meterec_s *meterec, unsigned int loophead) {
 	return 1;
 }
 
-void clr_loop(struct meterec_s *meterec) {
+void clr_loop(struct meterec_s *meterec, unsigned int bound) {
 	
 	meterec->loop.enable = 0;
-	meterec->loop.low = MAX_UINT;
-	meterec->loop.high = MAX_UINT;
+	
+	if (bound & BOUND_LOW)
+		meterec->loop.low = MAX_UINT;
+	
+	if (bound & BOUND_HIGH)
+		meterec->loop.high = MAX_UINT;
 	
 	pthread_mutex_lock( &meterec->event_mutex );
 	add_event(meterec, DISK, LOOP, MAX_UINT, MAX_UINT, MAX_UINT);
@@ -1050,6 +1060,8 @@ static int usage( const char * progname ) {
 	fprintf(stderr, " <CTRL>F1-F12  use time index as loop boundary\n");
 	fprintf(stderr, "       +       use current time as loop boundary\n");
 	fprintf(stderr, "       -       clear loop boundaries\n");
+	fprintf(stderr, "       /       clear loop lower bound\n");
+	fprintf(stderr, "       *       clear loop upper bound\n");
 	fprintf(stderr, "       <HOME>  be kind, rewind\n");
 	fprintf(stderr, "       <TAB>   vu-meter view (special keys) ------------------------------------\n");
 	fprintf(stderr, "       =>      seek forward 5 seconds\n");

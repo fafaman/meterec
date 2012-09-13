@@ -85,6 +85,12 @@
 #define CON 0
 #define CON_OUT (1)
 
+/* loop boundaries */
+#define BOUND_LOW 1
+#define BOUND_HIGH 2
+#define BOUND_ALL 3
+
+
 #define MAX_UINT ((unsigned int)(-1))
 
 /*
@@ -314,4 +320,4 @@ void start_record(struct meterec_s *meterec) ;
 void cancel_record(struct meterec_s *meterec) ;
 
 int set_loop(struct meterec_s *meterec, unsigned int loophead);
-void clr_loop(struct meterec_s *meterec);
+void clr_loop(struct meterec_s *meterec, unsigned int bound);
