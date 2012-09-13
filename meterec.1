@@ -1,7 +1,7 @@
 .\" Process this file with
 .\" groff -man -Tascii meterec.1
 .\"
-.TH meterec 1 "September 12th 2012" "Fabrice Lebas" "Meterec"
+.TH meterec 1 "September 12th 2012" "Fabrice Lebas" "Meterec 0.9.1"
 
 .SH NAME
 meterec \- console multitrack audio recorder
@@ -81,8 +81,8 @@ as well as configuration data for this meterec-session.
 Start recording at startup. Default is to start in playback mode. With this option 
 a new take will be captured at startup. This allows to call 
 .B meterec 
-from a script or do a quick take right from the shell. If the recording should only be starting 
-upon user action or when jack-transport go to roll state, use this option along with 
+from a script or do a quick take right from the shell. If recording should only be starting 
+upon user action or when jack-transport goes to roll state, use this option along with 
 .I -p 
 option.
 .IP "-p"
@@ -98,15 +98,156 @@ Do not connect automatically to jack ports. By default meterec will use the list
 of connections stored in \<jack-session\>.mrec to connect it's ports to other jack
 clients at startup as well as when these ports becomes available.
 .IP "-h"
-Show options and commands summary.
+Show options and command keys summary.
 
-.SH COMMAND KEYS
+.SH COMMAND KEYS (all views)
 
 .IP "q"
-quit.
-.IP "<SPACE>"
-Start/stop playback
+Quit
+.IP "\<TAB\>"
+Switch between the different \'views\': vu-meter, edit, connections.
+.IP "\<SPACE\>"
+Start playback, stop playback. unless 
+.B -i 
+option is used, the jack-transport state will be updated so the other 
+jack clients supporting jack-transport are syncronised with 
+.B meterec.
+.IP "\<ENTER\>"
+Start recording, stop playback and record. At least one port should be in one of the 
+recording modes for recording to start. Also updates jack-transport state.
+.IP "\<BKSPS\>"
+when record is already ongoing, this creates a new take on the fly. This operation 
+allows to have subsequent takes without any gaps in audio. When recording is not ongoing
+this key will engage the record mode: the recording of audio is pending until playback starts.
+This allows to have
+.B meterec
+start recording when jack-transport state goes to \'roll\'
+.IP "\<UP\>"
+Select port above in the list. Will wrap at list boundaries.
+.IP "\<DOWN\>"
+Well... Select port bellow in the list. Will wrap at list boundaries.
+.IP "v"
+Reset maximum level vu-meter markers. Each port will record the maximum signal level reached
+and display it with a column char ':'. It is sometime usefull to reset these markers for a fresh start.
+.IP "n"
+Toggle port names display. Since the port name is located over the vu-meter display it might be 
+annoying when reading levels.
+.IP "i"
+Insert name. Helps tidy you workspace by giving each port a meaningfull name.
+.IP "t"
+Toggles pass-thru for this port. Depending on the instrument plugged in, it is usefull to have the 
+live audio at the input side available at the output side.
+.IP "T"
+Toggles pass thru for all ports.
+.IP "m"
+Mute/unmute that port playback. No recoded audio for this port will be played when this port is muted. 
+The audio data coming from the input side due to \'pass-thru\' beeing active is not muted.
+.IP "M"
+Mute/unmute all ports playback.
+.IP "s"
+Mute all but that port playback (solo). Note this is not standard \'solo\' approach found in mixers 
+as you cannot \'solo\' several ports at the same time.
+.IP "S"
+Unmute all ports playback.
+.IP "r"
+toggle REC record mode for that port. Available audio from previous take will not be played back when recording.
+.IP "R"
+toggle REC record mode for all ports
+.IP "d"
+toggle DUB record mode for that port. Available audio from previous take will played along when recording. 
+The resulting take will contain only audio played during the last take.
+.IP "D"
+toggle DUB record mode for all ports
+.IP "o"
+toggle OVR record mode for that port. Available audio from previous take will played along when recording. 
+The resulting take will contain a mix of audio played during the last take and audio from previous take. When 
+using this record mode, you should use take-locking to precisely control what is the track that will be mixed 
+when recodring. Remeber to remove the lock to be able to ear the result!
+.IP "O"
+toggle OVR record mode for all ports
+.IP "<SHIFT>F1-F12"
+Set time index. Current playhead position will be stored in this index. 
+.IP "F1-F12"
+Jump to time index. When playback is ongoing, playhead will jump to stored time index. No action 
+if this time index is not set or if in record state.
+.IP "<CTRL>F1-F12"
+Use time index as loop boundary. Will be used at upper or lower bound depending on time index value and 
+already programmed loop boundary. If the time index was not set, current playhead time will be used
+and stored for this time index.
+.IP "+"
+Use current time as loop boundary. Usefull for setting a loop quickly.
+.IP "-"
+Clear loop boundaries. Playback will keep on reading once the former loop upper bound is reached.
+.IP "\<HOME\>"
+Be kind, rewind.
 
+.SH COMMAND KEYS (vu-meter)
+
+.IP "\<RIGHT\>"
+Seek forward 5 seconds
+.IP "\<LEFT\>""
+Seek backward 5 seconds
+
+.SH COMMAND KEYS (edit)
+
+.IP "\<RIGHT\>"
+Select next take
+.IP "\<LEFT\>""
+Select previous take
+.IP "l"
+Lock/unlock selected track for playback
+.IP "L"
+Lock/unlock selected track for playback and clear all other locks for this port
+.IP "a"
+Lock/unlock selected take for playback
+.IP "A"
+Lock/unlock selected take for playback and clear all other locks in the session
+
+.SH COMMAND KEYS (connections)
+
+.IP "\<RIGHT\>"
+Select port column on the right
+.IP "\<LEFT\>"
+Select port column on the left.
+.IP "c"
+Connect ports.
+.IP "x"
+Disconnect ports.
+
+.SH FEATURES
+
+.IP "Monitor port"
+.B meterec
+has an extra output port called 'monitor' that is providing a copy of audio signal available
+at the input side of the currently selected port.
+
+.IP "Take-locking"
+By default 
+.B meterec
+will play the latest take for a given port when playing back or recording with DUB or OVR mode.
+If you want to play an other take you have to set a lock on the particular tack you want to ear.
+This is done in \'edit view\'. If a port has lock for several tracks, the track recorded during 
+the latest take will be played (most recent).
+
+.IP "Loops"
+Setting loop boundaries will not make 
+.B meterec 
+jump into the loop right away. Only once the upper loop bound is reached, playback will jump to 
+lower bound.
+
+.IP "Ports connection"
+The connection views show 3 ports columns. On the left: all available output ports of jack clients 
+other than this 
+.B meterec
+instance. On the right: all available input ports of jack clients other that this client. The middle columns
+shows all 
+.B meterec
+ports available in this session. To connect 2 ports first select the 
+.B meterec 
+port you want to connect in the middle column, then go to left or right colum and browse to the port you wish to 
+connect to and hit the \'c\' key. Connected ports will be shown by a '+' sign and highligted if your console
+allows. For all ports, a \'\-\>\' sign between the input side and the ouput side show if this port is 
+in pass-thru mode.
 
 .SH INTERRUPT
 You can abort
@@ -135,15 +276,13 @@ audio editor if it supports multitrack audio files.
 
 .SH BUGS
 
-tbd
+Please report and monitor bugs using http://sourceforge.net/projects/meterec/ 
 
 .SH SEE ALSO
 .BR meterec-init-conf(1)
 .BR jackd(1)
 
-.SH AUTHORS
+.SH AUTHOR
 
-.TP
-Program Author:
 .br
 Fabrice Lebas <fabrice@kotoubas.net>

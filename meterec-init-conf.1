@@ -1,0 +1,50 @@
+.\" Process this file with
+.\" groff -man -Tascii meterec-init-conf.1
+.\"
+.TH meterec-init-conf 1 "September 12th 2012" "Fabrice Lebas" "Meterec 0.9.1"
+
+.SH NAME
+meterec-init-conf \- session-file creation for meterec.
+
+.SH SYNOPSIS
+.B  meterec-init-conf
+.I \<session-name\>
+
+.SH DESCRIPTION
+.B meterec-init-conf
+is a batch script that will create an initial configuration file for meterec session. 
+The script should be called while 
+.B jackd
+is running.
+The session-file created
+will contain enough ports to match system:capture ports. Each 
+.B meterec 
+port will be connected to coresponding system:capture and system:playback.All ports will be in 
+REC mode, THRU will be enabled and MUTE disabled (unmuted). all time indexes will be cleared and sampling rate
+informations will not be filled.
+
+.SH OPTIONS
+.IP "<session-name>"
+Name of the session. If a file called \<session-name\>.mrec 
+already exists, it will be overwriten.
+
+.SH FILES
+
+.TP
+\<session-name\>.mrec
+Contains current state of session: list of ports with connections, record mode, 
+mute state, name, takes map. List of time indexes. Sampling rate.
+.PP
+
+.SH BUGS
+
+Please report and monitor bugs using http://sourceforge.net/projects/meterec/ 
+
+.SH SEE ALSO
+.BR meterec(1)
+.BR jackd(1)
+
+.SH AUTHOR
+
+.br
+Fabrice Lebas <fabrice@kotoubas.net>
