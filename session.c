@@ -34,9 +34,9 @@
 
 void session_callback(jack_session_event_t *event, void *arg) {
 	
-	// this is a direct reply and we dont have state to save here.
-	// in a gtk app we would forward the event to the gui thread
-	// using g_idle_add() and execute similar code there.
+	/* this is a direct reply and we dont have state to save here.
+	in a gtk app we would forward the event to the gui thread
+	using g_idle_add() and execute similar code there. */
 	
 	char retval[200];
 	struct meterec_s *meterec;

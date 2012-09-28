@@ -11,7 +11,9 @@ AC_PROG_CC
 
 AC_CHECK_FUNCS(atexit usleep)
 
-AC_CHECK_LIB([mx],      [powf])
+AC_CHECK_LIB([mx], [powf], , [
+  AC_CHECK_LIB([m], [powf], ,[AC_MSG_ERROR(Can't find libm or libmx supporting powf() installed)])
+])
 AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm installed)])
 AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
 AC_CHECK_LIB([curses],  [initscr],      , [AC_MSG_ERROR(Can't find libcurses installed)])

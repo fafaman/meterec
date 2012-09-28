@@ -20,4 +20,4 @@
 
 */
 
-int keyboard_thread(void *arg);
+void *keyboard_thread(void *arg);

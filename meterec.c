@@ -945,7 +945,7 @@ void start_playback(struct meterec_s *meterec) {
 	
 	compute_takes_to_playback(meterec);
 	meterec->playback_cmd = START ;
-	pthread_create(&rd_dt, NULL, (void *)&reader_thread, (void *) meterec);
+	pthread_create(&rd_dt, NULL, reader_thread, (void *)meterec);
 
 }
 
@@ -954,7 +954,7 @@ void start_record(struct meterec_s *meterec) {
 	compute_tracks_to_record(meterec);
 	if (meterec->n_tracks) {
 		meterec->record_cmd = START;
-		pthread_create(&wr_dt, NULL, (void *)&writer_thread, (void *) meterec);
+		pthread_create(&wr_dt, NULL, writer_thread, (void *)meterec);
 	}
 
 }
@@ -1219,7 +1219,7 @@ int main(int argc, char *argv[])
 	if (file_exists(meterec->conf_file)) {
 		load_conf(meterec);
 		if (meterec->connect_ports)
-			connect_all_ports(meterec);
+			connect_all_ports((void*)meterec);
 	} else {
 		load_setup(meterec);
 		load_session(meterec);
@@ -1258,7 +1258,7 @@ int main(int argc, char *argv[])
 	curs_set(0);
 	start_color();
 	
-	// choose our color pairs
+	/* choose our color pairs */
 	init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
 	init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
 	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
@@ -1275,7 +1275,7 @@ int main(int argc, char *argv[])
 	/* Init the scale */
 	init_display_scale(console_width);
 	
-	pthread_create(&kb_dt, NULL, (void *)&keyboard_thread, (void *) meterec);
+	pthread_create(&kb_dt, NULL, keyboard_thread, (void *) meterec);
 	
 	find_existing_takes(meterec);
 	

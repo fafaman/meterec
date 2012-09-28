@@ -46,7 +46,7 @@ void parse_port_con(struct meterec_s *meterec, FILE *fd_conf, unsigned int port)
 	
 	i = fscanf(fd_conf,"%s%[^\r\n]%*[\r\n ]",label, line);
 	i = 0;
-	while ( sscanf(line+i,"%s%n",port_name,&u ) ) {
+	while ( sscanf(line+i,"%s%u",port_name,&u ) ) {
 		
 		register_port_old(meterec, port_name, port);
 		connect_any_port(meterec, port_name, port);
@@ -110,15 +110,15 @@ void load_setup(struct meterec_s *meterec) {
 		
 		if (*buf == '|') {
 		
-			// allocate memory for this port
+			/* allocate memory for this port */
 			meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 			meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 			
-			// create input ports
+			/* create input ports */
 			create_input_port(meterec, port);
 			create_output_port(meterec, port);
 			
-			// connect to other ports
+			/* connect to other ports */
 			parse_port_con(meterec, fd_conf, port);
 			
 			port++;
@@ -333,7 +333,7 @@ int parse_record(const char *record) {
 	
 	return OFF;
 	
-};
+}
 
 void parse_time(struct meterec_s *meterec, unsigned int index, const char *time_str) {
 	
@@ -388,7 +388,7 @@ void load_conf(struct meterec_s *meterec) {
 	unsigned int port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
-	long int sample_rate;
+	int sample_rate;
 	char fn[4];
 				
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
@@ -432,11 +432,11 @@ void load_conf(struct meterec_s *meterec) {
 		
 			if (port_group) {
 			
-				// allocate memory for this port
+				/* allocate memory for this port */
 				meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
 				
-				// create input ports
+				/* create input ports */
 				create_input_port(meterec, port);
 				create_output_port(meterec, port);
 						
@@ -468,7 +468,7 @@ void load_conf(struct meterec_s *meterec) {
 							meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
 							strcpy(meterec->ports[port].connections[con], port_name);
 					
-							// store connection info
+							/* store connection info */
 							register_port(meterec, (char *)port_name, port);
 						}
 					}

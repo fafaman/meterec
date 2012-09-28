@@ -59,7 +59,7 @@ void process_port_register(jack_port_id_t port_id, int new, void *arg) {
 			}
 	
 	if (needs_connection) 
-		pthread_create(&cn_dt, NULL, (void *)&connect_all_ports, (void *) meterec);
+		pthread_create(&cn_dt, NULL, connect_all_ports, (void *)meterec);
 }
 
 void retreive_connected_ports(struct meterec_s *meterec) {
@@ -74,7 +74,7 @@ void retreive_connected_ports(struct meterec_s *meterec) {
 		meterec->ports[port].output_connected = jack_port_get_connections( meterec->ports[port].output );
 	}
 
-};
+}
 
 void retreive_existing_ports(struct meterec_s *meterec) {
 	
@@ -86,7 +86,7 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 	meterec->all_input_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsInput);
 	meterec->all_output_ports = jack_get_ports(meterec->client, NULL, NULL, JackPortIsOutput);
 	
-};
+}
 
 void count_all_io_ports(struct meterec_s *meterec) {
 
@@ -98,7 +98,7 @@ void count_all_io_ports(struct meterec_s *meterec) {
 	while (meterec->all_input_ports[meterec->pos.n_con_out + 1])
 		meterec->pos.n_con_out ++;
 
-};
+}
 
 void filter_existing_ports(const char **port_list, const char *port_name_pattern ) {
 	
@@ -197,10 +197,10 @@ void register_port_old(struct meterec_s *meterec, char *port_name, unsigned int 
 	char *tmp = NULL;
 	jack_port_t *jack_port;
 	
-	// Get the port we are connecting to
+	/* Get the port we are connecting to */
 	jack_port = jack_port_by_name(meterec->client, port_name);
 	
-	// Check if port exists
+	/* Check if port exists */
 	if (jack_port == NULL) {
 		fprintf(meterec->fd_log, "Can't find port '%s' assuming this is part of port name.\n", port_name);
 		
@@ -231,10 +231,10 @@ void register_port(struct meterec_s *meterec, char *port_name, unsigned int port
 	jack_port_t *jack_port;
 	unsigned int con = meterec->ports[port].n_cons;
 	
-	// Get the port we are connecting to
+	/* Get the port we are connecting to */
 	jack_port = jack_port_by_name(meterec->client, port_name);
 	
-	// Check if port exists
+	/* Check if port exists */
 	if (jack_port == NULL) 
 		fprintf(meterec->fd_log, "Can't find port '%s' will connect later if port becomes available.\n", port_name);
 		
@@ -269,15 +269,18 @@ void deregister_port(struct meterec_s *meterec, char *port_name, unsigned int po
 	
 }
 
-int connect_all_ports(struct meterec_s *meterec) {
+void *connect_all_ports(void *d) {
 
 	unsigned int port, con;
+	struct meterec_s *meterec;
+	
+	meterec = (struct meterec_s *)d;
 	
 	for (port=0; port<meterec->n_ports; port++)
 		for (con=0; con<meterec->ports[port].n_cons; con++)
 			connect_any_port(meterec, meterec->ports[port].connections[con], port);
 	
-	return 0;
+	return (void *)0;
 }
 
 /* Connect the chosen port to ours */
@@ -298,7 +301,7 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 	
 	if ( jack_flags & JackPortIsInput ) {
 		
-		// Connect the port to our output port
+		/* Connect the port to our output port */
 		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", jack_port_name(meterec->ports[port].output), port_name);
 		
 		if (jack_port_connected_to(meterec->ports[port].output, port_name)) {
@@ -315,7 +318,7 @@ void connect_any_port(struct meterec_s *meterec, char *port_name, unsigned int p
 	
 	if ( jack_flags & JackPortIsOutput ) {
 		
-		// Connect the port to our input port
+		/* Connect the port to our input port */
 		fprintf(meterec->fd_log,"Connecting '%s' to '%s'...\n", port_name, jack_port_name(meterec->ports[port].input));
 		
 		if (jack_port_connected_to(meterec->ports[port].input, port_name)) {
@@ -349,7 +352,7 @@ void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned in
 	
 	if ( jack_flags & JackPortIsInput ) {
 		
-		// Disconnect the port from our output port
+		/* Disconnect the port from our output port */
 		fprintf(meterec->fd_log,"Disconnecting '%s' from '%s'...\n", jack_port_name(meterec->ports[port].output), jack_port_name(jack_port));
 
 		if (!jack_port_connected_to(meterec->ports[port].output, port_name)) {
@@ -366,7 +369,7 @@ void disconnect_any_port(struct meterec_s *meterec, char *port_name, unsigned in
 	
 	if ( jack_flags & JackPortIsOutput ) {
 		
-		// Connect the port to our input port
+		/* Connect the port to our input port */
 		fprintf(meterec->fd_log,"Disconnecting '%s' from '%s'...\n", jack_port_name(jack_port), jack_port_name(meterec->ports[port].input));
 
 		if (!jack_port_connected_to(meterec->ports[port].input, port_name)) {

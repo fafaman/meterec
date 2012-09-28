@@ -45,7 +45,7 @@
 #include "keyboard.h"
 
 
-int keyboard_thread(void *arg) {
+void *keyboard_thread(void *arg) {
 	
 	struct meterec_s *meterec ;
 	struct event_s *event ;
@@ -438,7 +438,9 @@ int keyboard_thread(void *arg) {
 			
 			case '+': 
 				if (set_loop(meterec, meterec->jack.playhead)) {
-					// The disk tread cannot be aware of this loop as it is already processing the data, so let's seek to the begining of the loop ourselves
+					/* The disk tread cannot be aware of this loop as it 
+					is already processing the data, 
+					so let's seek to the begining of the loop ourselves */
 					pthread_mutex_lock( &meterec->event_mutex );
 					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->loop.low, MAX_UINT);
 					pthread_mutex_unlock( &meterec->event_mutex );
@@ -463,7 +465,9 @@ int keyboard_thread(void *arg) {
 			if (meterec->seek_index[key - KEY_F(25)] == MAX_UINT) {
 				meterec->seek_index[key - KEY_F(25)] = meterec->jack.playhead ;
 				if (set_loop(meterec, meterec->jack.playhead)) {
-					// The disk tread cannot be aware of this loop as it is already processing the data, so let's seek to the begining of the loop ourselves
+					/* The disk tread cannot be aware of this loop as it 
+					is already processing the data, 
+					so let's seek to the begining of the loop ourselves */
 					pthread_mutex_lock( &meterec->event_mutex );
 					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->loop.low, MAX_UINT);
 					pthread_mutex_unlock( &meterec->event_mutex );
@@ -490,7 +494,7 @@ int keyboard_thread(void *arg) {
 			}
 		}
 		
-	} // while
+	}
 	
 	return 0;
 	

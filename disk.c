@@ -81,7 +81,7 @@ SNDFILE* write_disk_open_fd(struct meterec_s *meterec) {
 	return out;
 }
 
-int writer_thread(void *d) {
+void *writer_thread(void *d) {
 	unsigned int i, port, opos, track, thread_delay;
 	SNDFILE *out;
 	float buf[BUF_SIZE * MAX_PORTS];
@@ -99,7 +99,7 @@ int writer_thread(void *d) {
 	out = write_disk_open_fd(meterec);
 	
 	if (!out)
-		return 1;
+		return (void*)1;
 	
 	/* Start writing the RT ringbuffer to disk */
 	meterec->record_sts = ONGOING ;
@@ -165,7 +165,7 @@ int writer_thread(void *d) {
 	
 	meterec->record_sts = OFF;
 	
-	return 0;
+	return (void*)0;
 }
 
 void read_disk_close_fd(struct meterec_s *meterec) {
@@ -335,7 +335,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 }
 
 
-int reader_thread(void *d)
+void *reader_thread(void *d)
 {
 	unsigned int i, opos, thread_delay, may_loop;
 	struct event_s *event, *event_kill;

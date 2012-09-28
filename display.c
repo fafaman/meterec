@@ -237,29 +237,29 @@ void init_display_scale( unsigned int width ) {
 	scale = (char *) malloc( width+1+2 );
 	line  = (char *) malloc( width+1+2 );
 	
-	// Initialise the scale
+	/* Initialise the scale */
 	for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='_'; }
 	scale0[width] = 0;
 	line0[width] = 0;
 	
 	
-	// 'draw' on each of the db marks
+	/* 'draw' on each of the db marks */
 	for(i=0; i < 12; i++) {
 		char mark[5];
 		int pos = iec_scale( marks[i], width )-1;
 		int spos, slen;
 		
-		// Create string of the db value
+		/* Create string of the db value */
 		snprintf(mark, 4, "%d", marks[i]);
 		
-		// Position the label string
+		/* Position the label string */
 		slen = strlen(mark);
 		spos = pos-(slen/2);
 		if (spos<0) spos=0;
 		if (spos+strlen(mark)>width) spos=width-slen;
 		memcpy( scale0+spos, mark, slen );
 		
-		// Position little marker
+		/* Position little marker */
 		line0[pos] = '|';
 	}
 	
