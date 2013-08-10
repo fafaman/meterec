@@ -388,7 +388,7 @@ void load_conf(struct meterec_s *meterec) {
 	unsigned int port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
-	int sample_rate;
+	long sample_rate;
 	char fn[4];
 				
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
@@ -421,7 +421,7 @@ void load_conf(struct meterec_s *meterec) {
 	
 	if (jack_group) 
 		if (config_setting_lookup_int(jack_group, "sample_rate", &sample_rate))
-			meterec->jack.sample_rate = sample_rate;
+			meterec->jack.sample_rate = (int)sample_rate;
 	
 	port_list = config_lookup(cf, "ports");
 	if (port_list) {

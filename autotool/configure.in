@@ -16,13 +16,12 @@ AC_CHECK_LIB([mx], [powf], , [
 ])
 
 AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm supporting sqrt() installed)])
-
 AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
 
 
-PKG_CHECK_MODULES([NCURSES], [ncurses >= 5]) 
-PKG_CHECK_MODULES(JACK,      [jack >= 0.100.0])
-PKG_CHECK_MODULES(SNDFILE,   [sndfile >= 1.0.0])
+PKG_CHECK_MODULES(NCURSES,   [ncurses >= 5.9]) 
+PKG_CHECK_MODULES(JACK,      [jack >= 1.9.8])
+PKG_CHECK_MODULES(SNDFILE,   [sndfile >= 1.0.25])
 PKG_CHECK_MODULES(LIBCONFIG, [libconfig >= 1.3.2])
 
 AC_CHECK_HEADERS(jack/session.h)
