@@ -1,10 +1,11 @@
 BUGS
-- in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
+- Using 5sec arrow keys seek (or other seek?) make the end of audio choppy
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does not start playback if transport already rolling due to a first instance of meterec.
 - OVR record mode seams to need lock to perform properly. observed bounce in audio recorded without lock...
 - live update of the locks is not immediate sometimes
 - seams cracks in audio breaks jackd (may not be linked to meterec)
+x in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
 x meterec crashes when trying to automatically connect to ports - http://lists.jackaudio.org/private.cgi/jack-devel-jackaudio.org/2012-August/009907.html
 x store/load of index time not reliable (index drift load after load) - sample to time conversion problem.
 x failure to read configuration file breaks jackd
