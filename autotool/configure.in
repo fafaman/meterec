@@ -14,19 +14,16 @@ AC_CHECK_FUNCS(atexit usleep)
 AC_CHECK_LIB([mx], [powf], , [
   AC_CHECK_LIB([m], [powf], ,[AC_MSG_ERROR(Can't find libm or libmx supporting powf() installed)])
 ])
-AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm installed)])
-AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
-AC_CHECK_LIB([curses],  [initscr],      , [AC_MSG_ERROR(Can't find libcurses installed)])
 
+AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm supporting sqrt() installed)])
+
+AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
+
+
+PKG_CHECK_MODULES([NCURSES], [ncurses >= 5]) 
 PKG_CHECK_MODULES(JACK,      [jack >= 0.100.0])
 PKG_CHECK_MODULES(SNDFILE,   [sndfile >= 1.0.0])
 PKG_CHECK_MODULES(LIBCONFIG, [libconfig >= 1.3.2])
-
-PACKAGE_CFLAGS="-g -Wall $SNDFILE_CFLAGS $JACK_CFLAGS $LIBCONFIG_CFLAGS"
-PACKAGE_LIBS="$SNDFILE_LIBS $JACK_LIBS $LIBCONFIG_LIBS"
-
-CFLAGS="$CFLAGS $PACKAGE_CFLAGS "
-CPPFLAGS="$CPPFLAGS $PACKAGE_CFLAGS "
 
 AC_CHECK_HEADERS(jack/session.h)
 
@@ -52,7 +49,11 @@ AC_CHECK_DECL(
  [#include <sndfile.h>]
 )
 
+PACKAGE_CFLAGS="$SNDFILE_CFLAGS $JACK_CFLAGS $LIBCONFIG_CFLAGS $NCURSES_CFLAGS "
+PACKAGE_LIBS="$SNDFILE_LIBS $JACK_LIBS $LIBCONFIG_LIBS $NCURSES_LIBS "
 
+CFLAGS="$CFLAGS $PACKAGE_CFLAGS"
+LIBS=" $LIBS $PACKAGE_LIBS"
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
