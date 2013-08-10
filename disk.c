@@ -329,9 +329,9 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 		/* check if track is used */
 		if (meterec->takes[take].take_fd == NULL)
 			continue;
-		/*
+		
 		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d (%.2f).\n", take, seek, (float)seek/meterec->jack.sample_rate);
-		*/
+		
 		
 		reached = sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
 		
