@@ -258,11 +258,16 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 	
 	unsigned int rdbuff_pos, port, take, track, ntrack=0, fill;
 	
+	/* Leave right away if the process does not need any data (disk buffer full) */
+	if (meterec->read_disk_buffer_thread_pos == meterec->read_disk_buffer_process_pos)
+		return meterec->read_disk_buffer_thread_pos;
+	
 	/* lets fill local buffer only if previously emptied */
 	if (*zbuff_pos == 0) {
 	
+	#ifdef DEBUG_BUFF
 	fprintf(meterec->fd_log, "fill_buffer: Filling zero buffer -------------------------------\n");
-	
+	#endif
 		/* load the local buffer */
 		for(take=1; take<meterec->n_takes+1; take++) {
 			
@@ -285,7 +290,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 	
 	
 	
-	/* walk in the buffer 0 and copy it to each port buffers (demux)*/
+	/* walk in the zero buffer and copy it to each port buffers (demux)*/
 	for (rdbuff_pos  = meterec->read_disk_buffer_thread_pos; 
 		rdbuff_pos != meterec->read_disk_buffer_process_pos && *zbuff_pos < ZBUF_SIZE;
 		rdbuff_pos  = (rdbuff_pos + 1) & (DBUF_SIZE - 1), (*zbuff_pos)++, meterec->disk.playhead++ ) {
@@ -320,11 +325,13 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 	if (*zbuff_pos == ZBUF_SIZE) 
 		*zbuff_pos = 0;
 	
+	#ifdef DEBUG_BUFF
 	fprintf(meterec->fd_log, "fill_buffer: zbuff_pos %4X/%4X | rdbuff_pos %5X/%5X | thread_pos %5X/%5X | process_pos %5X/%5X\n", 
 		*zbuff_pos, ZBUF_SIZE, 
 		rdbuff_pos, DBUF_SIZE, 
 		meterec->read_disk_buffer_thread_pos, DBUF_SIZE,
 		meterec->read_disk_buffer_process_pos, DBUF_SIZE);
+	#endif
 	
 	return rdbuff_pos;
 	
@@ -341,14 +348,16 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 		if (meterec->takes[take].take_fd == NULL)
 			continue;
 		
-		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.2f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
+		#ifdef DEBUG_SEEK
+		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.3f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
+		#endif
 		
 		reached = sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
 		
 		if (seek - reached) {
-			/*
+			#ifdef DEBUG_SEEK
 			fprintf(meterec->fd_log, "read_disk_seek: failed (seek=%d reached=%d)", seek, reached);
-			*/
+			#endif
 			sf_seek(meterec->takes[take].take_fd, 0, SEEK_END);
 		}
 	}
@@ -370,7 +379,7 @@ void *reader_thread(void *d)
 	
 	thread_delay = set_thread_delay(meterec);
 	
-	/* empty buffer ( reposition thread position in order to refill where process will first read) */
+	/* empty buffer (reposition thread position in order to refill where process will first read) */
 	meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);
 	meterec->read_disk_buffer_thread_pos &= (DBUF_SIZE - 1);
 	
