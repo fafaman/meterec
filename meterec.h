@@ -35,10 +35,12 @@
 #define MAX_TAKES 100
 
 /* size of disk wait buffer, must be power of two */
-#define DISK_SIZE 131072
+/* #define DISK_SIZE 0x20000 */
+#define DISK_SIZE 0x20000 
 
 /* size of disk buffers */
-#define BUF_SIZE 4096
+/* #define BUF_SIZE 4096 */
+#define BUF_SIZE 4096*4
 
 /*number of seek indexes*/
 #define MAX_INDEX 12

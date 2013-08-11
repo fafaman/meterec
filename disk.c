@@ -253,10 +253,15 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 
 unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	
+	/* real read from disk thru libsndfile to fill 'buffer zero' then copy from
+	   'buffer zero' to 'disk buffer' that is the connection with jack process */
+	
 	unsigned int rdbuff_pos, port, take, track, ntrack=0, fill;
 	
 	/* lets fill local buffer only if previously emptied */
 	if (*opos == 0) {
+	
+	fprintf(meterec->fd_log, "fill_buffer: Filling zero buffer -------------------------------\n");
 	
 		/* load the local buffer */
 		for(take=1; take<meterec->n_takes+1; take++) {
@@ -280,7 +285,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	
 	
 	
-	/* walk in the local buffer and copy it to each port buffers (demux)*/
+	/* walk in the buffer 0 and copy it to each port buffers (demux)*/
 	for (rdbuff_pos  = meterec->read_disk_buffer_thread_pos; 
 		rdbuff_pos != meterec->read_disk_buffer_process_pos && *opos < BUF_SIZE;
 		rdbuff_pos  = (rdbuff_pos + 1) & (DISK_SIZE - 1), (*opos)++, meterec->disk.playhead++ ) {
@@ -315,6 +320,12 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	if (*opos == BUF_SIZE) 
 		*opos = 0;
 	
+	fprintf(meterec->fd_log, "fill_buffer: opos %4X/%4X | rdbuff_pos %5X/%5X | thread_pos %5X/%5X | process_pos %5X/%5X\n", 
+		*opos, BUF_SIZE, 
+		rdbuff_pos, DISK_SIZE, 
+		meterec->read_disk_buffer_thread_pos, DISK_SIZE,
+		meterec->read_disk_buffer_process_pos, DISK_SIZE);
+	
 	return rdbuff_pos;
 	
 }
@@ -330,7 +341,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 		if (meterec->takes[take].take_fd == NULL)
 			continue;
 		
-		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d (%.2f).\n", take, seek, (float)seek/meterec->jack.sample_rate);
+		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.2f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
 		
 		
 		reached = sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
@@ -381,6 +392,11 @@ void *reader_thread(void *d)
 	/* Start reading disk to fill the RT ringbuffer */
 	while ( meterec->playback_cmd==START ) {
 		
+		#ifdef DEBUG_QUEUES
+		event_queue_print(meterec, LOG); 
+		#endif
+		
+		/* find ALL event types in DISK queue */
 		event = find_last_event(meterec, DISK, ALL);
 		
 		if (event) {
@@ -397,7 +413,7 @@ void *reader_thread(void *d)
 				
 			case SEEK:
 				
-				/* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer*/
+				/* make sure we fill buffer away from where jack read to avoid having to wait filling ringbuffer */
 				meterec->read_disk_buffer_thread_pos  = meterec->read_disk_buffer_process_pos - (DISK_SIZE/2);
 				meterec->read_disk_buffer_thread_pos &= (DISK_SIZE - 1);
 				
@@ -405,7 +421,7 @@ void *reader_thread(void *d)
 				
 				opos = 0;
 				
-				event->buffer_pos  = meterec->read_disk_buffer_thread_pos;
+				event->buffer_pos  = meterec->read_disk_buffer_thread_pos ;
 				event->buffer_pos &= (DISK_SIZE - 1);
 				
 				meterec->disk.playhead = event->new_playhead;
@@ -425,8 +441,9 @@ void *reader_thread(void *d)
 				/* Is next loop event already in the buffer */
 				if (meterec->loop.enable) {
 					
-					if (meterec->disk.playhead > meterec->loop.high && meterec->jack.playhead < meterec->loop.high) {
-					
+					if (meterec->disk.playhead > meterec->loop.high &&
+						meterec->jack.playhead < meterec->loop.high) {
+						
 						/*we need to empty buffer up to the loop point */
 						meterec->read_disk_buffer_thread_pos -= meterec->loop.high;
 						meterec->read_disk_buffer_thread_pos += meterec->disk.playhead;
@@ -488,6 +505,10 @@ void *reader_thread(void *d)
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		
+		#ifdef DEBUG_QUEUES
+		event_queue_print(meterec, LOG); 
+		#endif
+		
 		event = find_first_event(meterec, PEND, ALL);
 		
 		if (event) 
@@ -496,11 +517,14 @@ void *reader_thread(void *d)
 					
 					/* do not pass the event to jack process if we did not have data
 					   to fill the buffer */
-					if (meterec->read_disk_buffer_thread_pos != rdbuff_pos) 
+					if (meterec->read_disk_buffer_thread_pos != rdbuff_pos)
 						event->queue = JACK;
 					break;
 					
 				case LOCK:
+					/* be less reactive but more secure when changing take locks
+					   and only tell jack process to jump once we have a full 
+					   'buffer zero' adavance */
 					if (meterec->disk.playhead > meterec->jack.playhead + BUF_SIZE)
 						event->queue = JACK;
 					break;
@@ -508,6 +532,10 @@ void *reader_thread(void *d)
 			}
 		
 		meterec->read_disk_buffer_thread_pos = rdbuff_pos;
+		
+		#ifdef DEBUG_QUEUES
+		event_queue_print(meterec, LOG); 
+		#endif
 		
 		usleep(thread_delay);
 		
