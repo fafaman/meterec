@@ -253,9 +253,9 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 
 unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	
-	unsigned int i,  port, take, track, ntrack=0, fill;
+	unsigned int rdbuff_pos, port, take, track, ntrack=0, fill;
 	
-	/* lets fill local buffer only if previously emptied*/
+	/* lets fill local buffer only if previously emptied */
 	if (*opos == 0) {
 	
 		/* load the local buffer */
@@ -281,9 +281,9 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	
 	
 	/* walk in the local buffer and copy it to each port buffers (demux)*/
-	for (i  = meterec->read_disk_buffer_thread_pos; 
-		i != meterec->read_disk_buffer_process_pos && *opos < BUF_SIZE;
-		i  = (i + 1) & (DISK_SIZE - 1), (*opos)++, meterec->disk.playhead++ ) {
+	for (rdbuff_pos  = meterec->read_disk_buffer_thread_pos; 
+		rdbuff_pos != meterec->read_disk_buffer_process_pos && *opos < BUF_SIZE;
+		rdbuff_pos  = (rdbuff_pos + 1) & (DISK_SIZE - 1), (*opos)++, meterec->disk.playhead++ ) {
 		
 		for(take=1; take<meterec->n_takes+1; take++) {
 			
@@ -304,7 +304,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 				if (meterec->ports[port].playback_take == take)
 					/* Only fill buffer if in playback, dub or overdub */
 					if (meterec->ports[port].record != REC || !meterec->record_sts)
-						meterec->ports[port].read_disk_buffer[i] = meterec->takes[take].buf[*opos * ntrack + track] ;
+						meterec->ports[port].read_disk_buffer[rdbuff_pos] = meterec->takes[take].buf[*opos * ntrack + track] ;
 				
 			}
 		
@@ -315,7 +315,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *opos ) {
 	if (*opos == BUF_SIZE) 
 		*opos = 0;
 	
-	return i;
+	return rdbuff_pos;
 	
 }
 
@@ -348,7 +348,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 void *reader_thread(void *d)
 {
-	unsigned int i, opos, thread_delay, may_loop;
+	unsigned int rdbuff_pos, opos, thread_delay, may_loop;
 	struct event_s *event, *event_kill;
 	struct meterec_s *meterec ;
 	
@@ -372,8 +372,8 @@ void *reader_thread(void *d)
 	/* prefill buffer at once */
 	opos = 0;
 	while (meterec->read_disk_buffer_thread_pos != meterec->read_disk_buffer_process_pos) {
-		i = fill_buffer(meterec, &opos);
-		meterec->read_disk_buffer_thread_pos = i;
+		rdbuff_pos = fill_buffer(meterec, &opos);
+		meterec->read_disk_buffer_thread_pos = rdbuff_pos;
 	}
 	
 	meterec->playback_sts=ONGOING;
@@ -392,6 +392,8 @@ void *reader_thread(void *d)
 				read_disk_close_fd(meterec);
 				compute_takes_to_playback(meterec);
 				read_disk_open_fd(meterec);
+				
+				/* no break here */
 				
 			case SEEK:
 				
@@ -468,7 +470,7 @@ void *reader_thread(void *d)
 			if (meterec->disk.playhead < meterec->loop.high)
 				may_loop = 1;
 		
-		i = fill_buffer(meterec, &opos);
+		rdbuff_pos = fill_buffer(meterec, &opos);
 		
 		if (may_loop)
 			if (meterec->disk.playhead >= meterec->loop.high) {
@@ -476,13 +478,13 @@ void *reader_thread(void *d)
 				read_disk_seek(meterec, meterec->loop.low);
 				opos = 0;
 				
-				i -= (meterec->disk.playhead - meterec->loop.high);
-				i &= (DISK_SIZE - 1);
+				rdbuff_pos -= (meterec->disk.playhead - meterec->loop.high);
+				rdbuff_pos &= (DISK_SIZE - 1);
 				
 				meterec->disk.playhead = meterec->loop.low;
 				
 				pthread_mutex_lock(&meterec->event_mutex);
-				add_event(meterec, JACK, LOOP, meterec->loop.low, meterec->loop.high, i);
+				add_event(meterec, JACK, LOOP, meterec->loop.low, meterec->loop.high, rdbuff_pos);
 				pthread_mutex_unlock(&meterec->event_mutex);
 			}
 		
@@ -491,8 +493,10 @@ void *reader_thread(void *d)
 		if (event) 
 			switch (event->type) {
 				case SEEK:
-				
-					if (meterec->read_disk_buffer_thread_pos != i) 
+					
+					/* do not pass the event to jack process if we did not have data
+					   to fill the buffer */
+					if (meterec->read_disk_buffer_thread_pos != rdbuff_pos) 
 						event->queue = JACK;
 					break;
 					
@@ -503,7 +507,7 @@ void *reader_thread(void *d)
 						
 			}
 		
-		meterec->read_disk_buffer_thread_pos = i;
+		meterec->read_disk_buffer_thread_pos = rdbuff_pos;
 		
 		usleep(thread_delay);
 		
