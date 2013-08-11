@@ -14,6 +14,8 @@ mv $DEVAREA meterec-$RELEASE
 tar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/*.c \
 meterec-$RELEASE/*.h \
+meterec-$RELEASE/meterec.1 \
+meterec-$RELEASE/meterec-init-conf.1 \
 meterec-$RELEASE/meterec-init-conf \
 meterec-$RELEASE/README \
 meterec-$RELEASE/NEWS \
