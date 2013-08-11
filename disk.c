@@ -82,7 +82,7 @@ SNDFILE* write_disk_open_fd(struct meterec_s *meterec) {
 }
 
 void *writer_thread(void *d) {
-	unsigned int i, port, opos, track, thread_delay;
+	unsigned int i, port, zbuff_pos, track, thread_delay;
 	SNDFILE *out;
 	float buf[ZBUF_SIZE * MAX_PORTS];
 	struct meterec_s *meterec ;
@@ -103,25 +103,25 @@ void *writer_thread(void *d) {
 	
 	/* Start writing the RT ringbuffer to disk */
 	meterec->record_sts = ONGOING ;
-	opos = 0;
+	zbuff_pos = 0;
 	while (meterec->record_sts) {
 		
 		for (i  = meterec->write_disk_buffer_thread_pos; 
-			i != meterec->write_disk_buffer_process_pos && opos < ZBUF_SIZE;
-			i  = (i + 1) & (DBUF_SIZE - 1), opos++ ) {
+			i != meterec->write_disk_buffer_process_pos && zbuff_pos < ZBUF_SIZE;
+			i  = (i + 1) & (DBUF_SIZE - 1), zbuff_pos++ ) {
 			
 			track = 0;
 			for (port = 0; port < meterec->n_ports; port++) {
 				if (meterec->ports[port].record) {
-					buf[opos * meterec->n_tracks + track] = meterec->ports[port].write_disk_buffer[i]; 
+					buf[zbuff_pos * meterec->n_tracks + track] = meterec->ports[port].write_disk_buffer[i]; 
 					track++;
 				}
 			}
 		}
 		
-		if (opos == ZBUF_SIZE) {
-			sf_writef_float(out, buf, opos);
-			opos = 0;
+		if (zbuff_pos == ZBUF_SIZE) {
+			sf_writef_float(out, buf, zbuff_pos);
+			zbuff_pos = 0;
 		}
 		
 		meterec->write_disk_buffer_thread_pos = i;
@@ -145,7 +145,7 @@ void *writer_thread(void *d) {
 		/* run until empty buffer after a stop requets */
 		if (meterec->record_sts == STOPING)
 			if ( meterec->write_disk_buffer_thread_pos == meterec->write_disk_buffer_process_pos ) {
-				sf_writef_float(out, buf, opos);
+				sf_writef_float(out, buf, zbuff_pos);
 				break;
 			}
 		
@@ -358,7 +358,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 
 void *reader_thread(void *d)
 {
-	unsigned int rdbuff_pos, opos, thread_delay, may_loop;
+	unsigned int rdbuff_pos, zbuff_pos, thread_delay, may_loop;
 	struct event_s *event, *event_kill;
 	struct meterec_s *meterec ;
 	
@@ -380,9 +380,9 @@ void *reader_thread(void *d)
 	fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
 	
 	/* prefill buffer at once */
-	opos = 0;
+	zbuff_pos = 0;
 	while (meterec->read_disk_buffer_thread_pos != meterec->read_disk_buffer_process_pos) {
-		rdbuff_pos = fill_buffer(meterec, &opos);
+		rdbuff_pos = fill_buffer(meterec, &zbuff_pos);
 		meterec->read_disk_buffer_thread_pos = rdbuff_pos;
 	}
 	
@@ -418,7 +418,7 @@ void *reader_thread(void *d)
 				
 				read_disk_seek(meterec, event->new_playhead);
 				
-				opos = 0;
+				zbuff_pos = 0;
 				
 				event->buffer_pos  = meterec->read_disk_buffer_thread_pos ;
 				event->buffer_pos &= (DBUF_SIZE - 1);
@@ -449,7 +449,7 @@ void *reader_thread(void *d)
 						meterec->read_disk_buffer_thread_pos &= (DBUF_SIZE - 1);
 						
 						read_disk_seek(meterec, meterec->loop.low);
-						opos = 0;
+						zbuff_pos = 0;
 						
 						meterec->disk.playhead = meterec->loop.low;
 					}
@@ -486,13 +486,13 @@ void *reader_thread(void *d)
 			if (meterec->disk.playhead < meterec->loop.high)
 				may_loop = 1;
 		
-		rdbuff_pos = fill_buffer(meterec, &opos);
+		rdbuff_pos = fill_buffer(meterec, &zbuff_pos);
 		
 		if (may_loop)
 			if (meterec->disk.playhead >= meterec->loop.high) {
 				
 				read_disk_seek(meterec, meterec->loop.low);
-				opos = 0;
+				zbuff_pos = 0;
 				
 				rdbuff_pos -= (meterec->disk.playhead - meterec->loop.high);
 				rdbuff_pos &= (DBUF_SIZE - 1);
