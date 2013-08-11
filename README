@@ -63,7 +63,7 @@ Help
 ====
 
 % meterec -h
-version 0.9.1
+version 0.9.2
 
 meterec [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]
 

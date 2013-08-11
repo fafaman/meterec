@@ -1,3 +1,12 @@
+Sun Aug 11 15:36:23 CEST 2013 - Fabrice Lebas <fabrice.lebas@gmail.com>
+	
+	NEW release 0.9.2
+	* Fixed bug where audio would play at time 0 while end of track was reached
+	* Fixed bug where audio was choppy after seek
+	
+	KNONW BUGS
+	* see TODO file
+
 Thu Aug 30 11:16:08 CEST 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	
 	NEW release 0.9.1
