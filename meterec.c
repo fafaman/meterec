@@ -385,6 +385,7 @@ void init_takes(struct meterec_s *meterec) {
 	
 	for (take=0; take<MAX_TAKES; take++) {
 		
+		meterec->takes[take].name = NULL;
 		meterec->takes[take].take_file = NULL;
 		meterec->takes[take].take_fd = NULL;
 		meterec->takes[take].buf = NULL;
@@ -411,6 +412,7 @@ void free_takes(struct meterec_s *meterec) {
 	
 	for (take=0; take<MAX_TAKES; take++) {
 		
+		free(meterec->takes[take].name);
 		free(meterec->takes[take].take_file);
 		free(meterec->takes[take].take_fd);
 		free(meterec->takes[take].buf);

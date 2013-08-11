@@ -250,7 +250,7 @@ void save_conf(struct meterec_s *meterec) {
 	}
 	
 	fprintf(fd_conf, "ports=\n(\n");
-			
+	
 	for (port=0; port<meterec->n_ports; port++) {
 		
 		if (port)
@@ -292,7 +292,14 @@ void save_conf(struct meterec_s *meterec) {
 		fprintf(fd_conf,"name=\"%s\"; }", meterec->ports[port].name?meterec->ports[port].name:"");
 		
 	}
+	fprintf(fd_conf, "\n);\n\n");
 	
+	fprintf(fd_conf, "takes=\n(\n");
+	for (take=0; take<meterec->n_takes; take++) {
+		fprintf(fd_conf, "  { name=\"%s\"; }",meterec->takes[take].name?meterec->takes[take].name:"");
+		if (take<meterec->n_takes-1)
+			fprintf(fd_conf, ",\n");
+	}
 	fprintf(fd_conf, "\n);\n\n");
 	
 	
@@ -382,10 +389,10 @@ unsigned int parse_takes(struct meterec_s *meterec, unsigned int port, const cha
 
 void load_conf(struct meterec_s *meterec) {
 	
-	unsigned int port=0, con=0, index=0;
+	unsigned int port=0, con=0, index=0, take=0;
 	config_t cfg, *cf;
-	const config_setting_t *port_list, *port_group, *connection_list, *index_group, *jack_group ;
-	unsigned int port_list_len, connection_list_len;
+	const config_setting_t *take_list, *take_group, *port_list, *port_group, *connection_list, *index_group, *jack_group ;
+	unsigned int take_list_len, port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
 	long sample_rate;
@@ -423,15 +430,32 @@ void load_conf(struct meterec_s *meterec) {
 		if (config_setting_lookup_int(jack_group, "sample_rate", &sample_rate))
 			meterec->jack.sample_rate = (int)sample_rate;
 	
+	take_list = config_lookup(cf, "takes");
+	if (take_list) {
+		take_list_len = config_setting_length(take_list);
+		
+		for (take=0; take<take_list_len; take++) {
+			take_group = config_setting_get_elem(take_list, take);
+			
+			if (take_group) {
+				
+				if (config_setting_lookup_string(take_group, "name", &name)) {
+					meterec->takes[take].name = (char *) malloc( strlen(name) + 1 ); 
+					strcpy(meterec->takes[take].name, name); 
+				}
+			}
+		}
+	}
+	
 	port_list = config_lookup(cf, "ports");
 	if (port_list) {
 		port_list_len = config_setting_length(port_list);
-	
+		
 		for (port=0; port<port_list_len; port++) {
 			port_group = config_setting_get_elem(port_list, port);
-		
-			if (port_group) {
 			
+			if (port_group) {
+				
 				/* allocate memory for this port */
 				meterec->ports[port].read_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
 				meterec->ports[port].write_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
@@ -442,32 +466,32 @@ void load_conf(struct meterec_s *meterec) {
 						
 				if (config_setting_lookup_string(port_group, "takes", &takes))
 					meterec->n_takes = parse_takes(meterec, port, takes);
-			
+				
 				if (config_setting_lookup_bool(port_group, "mute", &mute))
 					meterec->ports[port].mute = mute;
-			
+				
 				if (config_setting_lookup_bool(port_group, "thru", &thru))
 					meterec->ports[port].thru = thru;
-			
+				
 				if (config_setting_lookup_string(port_group, "record", &record))
 					meterec->ports[port].record = parse_record(record);
-			
+				
 				if (config_setting_lookup_string(port_group, "name", &name)) {
 					meterec->ports[port].name = (char *) malloc( strlen(name) + 1 ); 
 					strcpy(meterec->ports[port].name, name); 
 				}
-			
+				
 				connection_list = config_setting_get_member(port_group, "connections");
 				if (connection_list) {
 					connection_list_len = config_setting_length(connection_list); 
-			
+					
 					for (con=0; con<connection_list_len; con++) {
 						port_name = config_setting_get_string_elem(connection_list, con);
-				
+						
 						if (port_name) {
 							meterec->ports[port].connections[con] = (char *) malloc( strlen(port_name) + 1 );
 							strcpy(meterec->ports[port].connections[con], port_name);
-					
+							
 							/* store connection info */
 							register_port(meterec, (char *)port_name, port);
 						}

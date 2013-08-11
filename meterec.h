@@ -140,6 +140,7 @@ struct take_s
 	unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */ 
 	unsigned int port_has_lock[MAX_PORTS]; /* port is marked locked for playback on this take : port_has_lock[port] = 1/0 */
 	
+	char *name;
 	char *take_file;
 	SNDFILE *take_fd;
 	SF_INFO info;
