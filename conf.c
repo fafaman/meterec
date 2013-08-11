@@ -111,8 +111,8 @@ void load_setup(struct meterec_s *meterec) {
 		if (*buf == '|') {
 		
 			/* allocate memory for this port */
-			meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-			meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+			meterec->ports[port].read_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
+			meterec->ports[port].write_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
 			
 			/* create input ports */
 			create_input_port(meterec, port);
@@ -433,8 +433,8 @@ void load_conf(struct meterec_s *meterec) {
 			if (port_group) {
 			
 				/* allocate memory for this port */
-				meterec->ports[port].read_disk_buffer = calloc(DISK_SIZE, sizeof(float));
-				meterec->ports[port].write_disk_buffer = calloc(DISK_SIZE, sizeof(float));
+				meterec->ports[port].read_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
+				meterec->ports[port].write_disk_buffer = calloc(DBUF_SIZE, sizeof(float));
 				
 				/* create input ports */
 				create_input_port(meterec, port);

@@ -770,7 +770,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 				
 				/* if we seek because of a file re-open, compensate for what played since re-open request */
 				meterec->read_disk_buffer_process_pos += (meterec->jack.playhead  - event->new_playhead);
-				meterec->read_disk_buffer_process_pos &= (DISK_SIZE - 1);
+				meterec->read_disk_buffer_process_pos &= (DBUF_SIZE - 1);
 				
 				/*
 				event_print(meterec, LOG, event);
@@ -837,7 +837,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					out[i] = meterec->ports[port].read_disk_buffer[read_pos];
 				
 				/* update buffer pointer */
-				read_pos = (read_pos + 1) & (DISK_SIZE - 1);
+				read_pos = (read_pos + 1) & (DBUF_SIZE - 1);
 				
 				/* compute peak of input (recordable) data*/
 				s = fabs(in[i] * 1.0f) ;
@@ -863,7 +863,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 					meterec->ports[port].write_disk_buffer[write_pos] = in[i];
 				
 				/* update buffer pointer */
-				write_pos = (write_pos + 1) & (DISK_SIZE - 1);
+				write_pos = (write_pos + 1) & (DBUF_SIZE - 1);
 				
 				}
 			
@@ -893,13 +893,13 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	if (playback_ongoing) {
 		
 		/* track buffer over/under flow -- needs rework */
-		remaining_read_disk_buffer = DISK_SIZE - ((meterec->read_disk_buffer_thread_pos-meterec->read_disk_buffer_process_pos) & (DISK_SIZE-1));
+		remaining_read_disk_buffer = DBUF_SIZE - ((meterec->read_disk_buffer_thread_pos-meterec->read_disk_buffer_process_pos) & (DBUF_SIZE-1));
 		
 		if (remaining_read_disk_buffer <= nframes)
 			meterec->read_disk_buffer_overflow++;
 		
 		/* positon read pointer to end of ringbuffer */
-		meterec->read_disk_buffer_process_pos = (meterec->read_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+		meterec->read_disk_buffer_process_pos = (meterec->read_disk_buffer_process_pos + nframes) & (DBUF_SIZE - 1);
 		
 		/* set new playhead position */
 		meterec->jack.playhead += nframes ;
@@ -917,13 +917,13 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		if (record_ongoing) {
 			
 			/* track buffer over/under flow */
-			remaining_write_disk_buffer = DISK_SIZE - ((meterec->write_disk_buffer_process_pos-meterec->write_disk_buffer_thread_pos) & (DISK_SIZE-1));
+			remaining_write_disk_buffer = DBUF_SIZE - ((meterec->write_disk_buffer_process_pos-meterec->write_disk_buffer_thread_pos) & (DBUF_SIZE-1));
 			
 			if (remaining_write_disk_buffer <= nframes)
 				meterec->write_disk_buffer_overflow++;
 			
 			/* positon write pointer to end of ringbuffer*/
-			meterec->write_disk_buffer_process_pos = (meterec->write_disk_buffer_process_pos + nframes) & (DISK_SIZE - 1);
+			meterec->write_disk_buffer_process_pos = (meterec->write_disk_buffer_process_pos + nframes) & (DBUF_SIZE - 1);
 		
 		}
 	
