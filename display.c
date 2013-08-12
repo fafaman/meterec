@@ -33,7 +33,52 @@
 char *scale ;
 char *line ;
 
-void display_port_info(struct port_s *port_p) {
+void display_fill_remaining(unsigned int remain) {
+	unsigned int i;
+	unsigned int width, y, x;
+	int spaces;
+	
+	width = getmaxx(stdscr);
+	getyx(stdscr, y, x); (void)y;
+	spaces = width - x - remain;
+	
+	if (spaces < 0)
+		return;
+	
+	for (i=0; i<spaces; i++) 
+		printw(" ");
+}
+
+void display_right_aligned(char *message, unsigned int remain) {
+	unsigned int i, len;
+	unsigned int width, y, x;
+	int spaces;
+	
+	len =strlen(message);
+	
+	width = getmaxx(stdscr);
+	getyx(stdscr, y, x); (void)y;
+	spaces = width - x - remain - len;
+	
+	if (spaces < 0)
+		spaces += len;
+		
+	if (spaces < 0)
+		return;
+	
+	for (i=0; i<spaces; i++) 
+		printw(" ");
+	
+	if ( spaces == width - x - remain - len)
+		printw("%s",message);
+}
+
+void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
+	
+	char *take_name = "";
+	
+	if (port_p->playback_take)
+		take_name = meterec->takes[port_p->playback_take].name;
 	
 	if (port_p->record==REC)
 		printw("[REC]");
@@ -55,15 +100,16 @@ void display_port_info(struct port_s *port_p) {
 		printw("[    ]");
 	
 	if ( port_p->playback_take ) 
-		printw(" PLAYING take %2d", port_p->playback_take);
+		printw(" PLAYING take %d (%s)", port_p->playback_take, take_name);
 	else 
 		printw(" PLAYING no take");
 	
-	printw(" | %5.1fdB", port_p->db_in);
-	printw(" (%5.1fdB)", port_p->db_max_in);
-	
 	if (port_p->name)
-		printw(" | %s", port_p->name);
+		display_right_aligned(port_p->name,21);
+	else 
+		display_fill_remaining(21);
+	
+	printw(" | %5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
 	
 }
 
@@ -211,7 +257,7 @@ void display_meter(struct meterec_s *meterec, int display_names, int width, int 
 	printw("%s\n", scale);
 	
 	printw("  Port %2d ", meterec->pos.port+1);
-	display_port_info( &meterec->ports[meterec->pos.port] );
+	display_port_info( meterec, &meterec->ports[meterec->pos.port] );
 	
 	
 }
@@ -340,32 +386,30 @@ void display_wr_buffer(struct meterec_s *meterec) {
 	
 }
 
-void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
-	unsigned int size, i;
-	static unsigned int peak=0;
-	
-	width -= (31 + 3*13);
-	
-	size = (width * jack_cpu_load(meterec->client)) / 100;
-	
-	if (size > peak) 
-		peak = size;
-		
-	printw("  .");
-	
-	for (i=0; i<width; i++) {
-		if (i < size)
-			printw("|");
-		else if (i == peak-1)
-			printw(":");
-		else 
-			printw(" ");
-	}
-	
-	printw("'  ");
-	
+void display_cpu_load_digital(struct meterec_s *meterec) {
+	printw("%6.2f%%", jack_cpu_load(meterec->client));
 }
 
+void display_session_name(struct meterec_s *meterec, unsigned int remain) {
+	
+	unsigned int i, len;
+	unsigned int width, y, x;
+	int spaces;
+	
+	width = getmaxx(stdscr);
+	getyx(stdscr, y, x); (void)y;
+	len =strlen(meterec->session);
+	
+	spaces = width - x - remain - len - 4;
+	
+	if (spaces < 0)
+		return;
+	
+	for (i=0; i<spaces/2; i++) 
+		printw(" ");
+	
+	printw("~ %s ~", meterec->session);
+}
 
 void display_loop(struct meterec_s *meterec) {
 	
@@ -394,7 +438,6 @@ void display_loop(struct meterec_s *meterec) {
 		printw("[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
 	}
 	
-	printw("\n");
 }
 
 void display_rd_status(struct meterec_s *meterec) {
@@ -449,16 +492,18 @@ void display_wr_status(struct meterec_s *meterec) {
 	color_set(DEFAULT, NULL);
 }
 
-void display_header(struct meterec_s *meterec, unsigned int width) {
+void display_header(struct meterec_s *meterec) {
 	
 	display_rd_status(meterec);
 	display_rd_buffer(meterec);
-	display_cpu_load(meterec, width);
-	
+	display_session_name(meterec, 3*13+1);
+	display_fill_remaining(3*13+1);
 	display_loop(meterec);
+	printw("\n");
 	
 	display_wr_status(meterec);
-	
+	display_fill_remaining(8);
+	display_cpu_load_digital(meterec);
 	printw("\n");
 	
 }
@@ -467,17 +512,20 @@ void display_session(struct meterec_s *meterec)
 {
 	unsigned int take, port;
 	unsigned int y_pos, x_pos;
+	char *name ="";
 	
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
 	
+	if (meterec->takes[x_pos].name)
+		name = meterec->takes[x_pos].name;
 	
-	printw("  Take %2d ",x_pos);
-	printw("%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
+	printw("  Take %d (%s)\n",x_pos, name);
+	printw("  %s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
 	printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
 	printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
 	
-	printw("\n\n");
+	printw("\n");
 	
 	for (port=0; port<meterec->n_ports; port++) {
 		
@@ -526,7 +574,7 @@ void display_session(struct meterec_s *meterec)
 	
 	printw("\n\n");
 	printw("  Port %2d ", y_pos+1);
-	display_port_info( &meterec->ports[y_pos] );
+	display_port_info( meterec, &meterec->ports[y_pos] );
 	
 }
 
