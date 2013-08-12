@@ -45,6 +45,22 @@ void display_fill_remaining(unsigned int remain) {
 		printw(" ");
 }
 
+void display_left_aligned(char *message, unsigned int remain) {
+	unsigned int i, spaces, len;
+	unsigned int width, y, x;
+	
+	len =strlen(message);
+	
+	width = getmaxx(stdscr);
+	getyx(stdscr, y, x); (void)y;
+	spaces = width - x - remain - len;
+	
+	for (i=0; i<spaces; i++) 
+		printw(" ");
+	
+	printw("%s",message);
+}
+
 void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	
 	char *take_name = "";
@@ -76,13 +92,12 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	else 
 		printw(" PLAYING no take");
 	
-	display_fill_remaining(17);
-	
-	printw("%5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
-	
-	
 	if (port_p->name)
-		printw(" | %s", port_p->name);
+		display_left_aligned(port_p->name,20);
+	else 
+		display_fill_remaining(20);
+	
+	printw(" | %5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
 	
 }
 
