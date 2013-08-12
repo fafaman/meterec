@@ -375,33 +375,6 @@ void display_session_name(struct meterec_s *meterec, unsigned int remain) {
 	printw("~ %s ~", meterec->session);
 }
 
-void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
-	unsigned int size, i;
-	static unsigned int peak=0;
-	
-	width -= (31 + 3*13);
-	
-	size = (width * jack_cpu_load(meterec->client)) / 100;
-	
-	if (size > peak) 
-		peak = size;
-		
-	printw("  .");
-	
-	for (i=0; i<width; i++) {
-		if (i < size)
-			printw("|");
-		else if (i == peak-1)
-			printw(":");
-		else 
-			printw(" ");
-	}
-	
-	printw("'  ");
-	
-}
-
-
 void display_loop(struct meterec_s *meterec) {
 	
 	struct time_s low, high, now;
