@@ -340,6 +340,38 @@ void display_wr_buffer(struct meterec_s *meterec) {
 	
 }
 
+void display_cpu_load_digital(struct meterec_s *meterec) {
+	printw("\u03a6 %6.2f%%", jack_cpu_load(meterec->client));
+}
+
+void display_session_name(struct meterec_s *meterec, unsigned int width, unsigned int remain) {
+	
+	unsigned int i, len, spaces;
+	unsigned int y, x;
+	
+	len =strlen(meterec->session);
+	getyx(stdscr, y, x);
+	
+	spaces = width - x - remain - len - 4;
+	
+	for (i=0; i<spaces/2; i++) 
+		printw(" ");
+	
+	printw("~ %s ~", meterec->session);
+}
+
+void display_fill_remaining(unsigned int width, unsigned int remain) {
+	unsigned int i, spaces;
+	unsigned int y, x;
+	
+	getyx(stdscr, y, x);
+	spaces = width - x - remain;
+	
+	for (i=0; i<spaces; i++) 
+		printw(" ");
+}
+
+
 void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 	unsigned int size, i;
 	static unsigned int peak=0;
@@ -394,7 +426,6 @@ void display_loop(struct meterec_s *meterec) {
 		printw("[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
 	}
 	
-	printw("\n");
 }
 
 void display_rd_status(struct meterec_s *meterec) {
@@ -453,12 +484,14 @@ void display_header(struct meterec_s *meterec, unsigned int width) {
 	
 	display_rd_status(meterec);
 	display_rd_buffer(meterec);
-	display_cpu_load(meterec, width);
-	
+	display_session_name(meterec, width, 3*13+1);
+	display_fill_remaining(width, 3*13+1);
 	display_loop(meterec);
+	printw("\n");
 	
 	display_wr_status(meterec);
-	
+	display_fill_remaining(width, 10);
+	display_cpu_load_digital(meterec);
 	printw("\n");
 	
 }
