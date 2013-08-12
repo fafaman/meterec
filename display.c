@@ -45,7 +45,12 @@ void display_fill_remaining(unsigned int remain) {
 		printw(" ");
 }
 
-void display_port_info(struct port_s *port_p) {
+void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
+	
+	char *take_name = "";
+	
+	if (port_p->playback_take)
+		take_name = meterec->takes[port_p->playback_take-1].name;
 	
 	if (port_p->record==REC)
 		printw("[REC]");
@@ -67,7 +72,7 @@ void display_port_info(struct port_s *port_p) {
 		printw("[    ]");
 	
 	if ( port_p->playback_take ) 
-		printw(" PLAYING take %2d", port_p->playback_take);
+		printw(" PLAYING take %d (%s)", port_p->playback_take, take_name);
 	else 
 		printw(" PLAYING no take");
 	
@@ -225,7 +230,7 @@ void display_meter(struct meterec_s *meterec, int display_names, int width, int 
 	printw("%s\n", scale);
 	
 	printw("  Port %2d ", meterec->pos.port+1);
-	display_port_info( &meterec->ports[meterec->pos.port] );
+	display_port_info( meterec, &meterec->ports[meterec->pos.port] );
 	
 	
 }
@@ -535,7 +540,7 @@ void display_session(struct meterec_s *meterec)
 	
 	printw("\n\n");
 	printw("  Port %2d ", y_pos+1);
-	display_port_info( &meterec->ports[y_pos] );
+	display_port_info( meterec, &meterec->ports[y_pos] );
 	
 }
 
