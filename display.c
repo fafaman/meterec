@@ -33,6 +33,18 @@
 char *scale ;
 char *line ;
 
+void display_fill_remaining(unsigned int remain) {
+	unsigned int i, spaces;
+	unsigned int width, y, x;
+	
+	width = getmaxx(stdscr);
+	getyx(stdscr, y, x); (void)y;
+	spaces = width - x - remain;
+	
+	for (i=0; i<spaces; i++) 
+		printw(" ");
+}
+
 void display_port_info(struct port_s *port_p) {
 	
 	if (port_p->record==REC)
@@ -59,8 +71,10 @@ void display_port_info(struct port_s *port_p) {
 	else 
 		printw(" PLAYING no take");
 	
-	printw(" | %5.1fdB", port_p->db_in);
-	printw(" (%5.1fdB)", port_p->db_max_in);
+	display_fill_remaining(17);
+	
+	printw("%5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
+	
 	
 	if (port_p->name)
 		printw(" | %s", port_p->name);
@@ -360,18 +374,6 @@ void display_session_name(struct meterec_s *meterec, unsigned int width, unsigne
 	printw("~ %s ~", meterec->session);
 }
 
-void display_fill_remaining(unsigned int width, unsigned int remain) {
-	unsigned int i, spaces;
-	unsigned int y, x;
-	
-	getyx(stdscr, y, x); (void)y;
-	spaces = width - x - remain;
-	
-	for (i=0; i<spaces; i++) 
-		printw(" ");
-}
-
-
 void display_cpu_load(struct meterec_s *meterec, unsigned int width) {
 	unsigned int size, i;
 	static unsigned int peak=0;
@@ -485,12 +487,12 @@ void display_header(struct meterec_s *meterec, unsigned int width) {
 	display_rd_status(meterec);
 	display_rd_buffer(meterec);
 	display_session_name(meterec, width, 3*13+1);
-	display_fill_remaining(width, 3*13+1);
+	display_fill_remaining(3*13+1);
 	display_loop(meterec);
 	printw("\n");
 	
 	display_wr_status(meterec);
-	display_fill_remaining(width, 8);
+	display_fill_remaining(8);
 	display_cpu_load_digital(meterec);
 	printw("\n");
 	
