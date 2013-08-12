@@ -1299,7 +1299,7 @@ int main(int argc, char *argv[])
 		
 		clear();
 		
-		display_header(meterec, console_width);
+		display_header(meterec);
 		
 		if (meterec->display.view==VU)
 			display_meter(meterec, meterec->display.names, console_width, decay_len);
