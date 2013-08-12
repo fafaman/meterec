@@ -34,20 +34,25 @@ char *scale ;
 char *line ;
 
 void display_fill_remaining(unsigned int remain) {
-	unsigned int i, spaces;
+	unsigned int i;
 	unsigned int width, y, x;
+	int spaces;
 	
 	width = getmaxx(stdscr);
 	getyx(stdscr, y, x); (void)y;
 	spaces = width - x - remain;
 	
+	if (spaces < 0)
+		return;
+	
 	for (i=0; i<spaces; i++) 
 		printw(" ");
 }
 
-void display_left_aligned(char *message, unsigned int remain) {
-	unsigned int i, spaces, len;
+void display_right_aligned(char *message, unsigned int remain) {
+	unsigned int i, len;
 	unsigned int width, y, x;
+	int spaces;
 	
 	len =strlen(message);
 	
@@ -55,10 +60,17 @@ void display_left_aligned(char *message, unsigned int remain) {
 	getyx(stdscr, y, x); (void)y;
 	spaces = width - x - remain - len;
 	
+	if (spaces < 0)
+		spaces += len;
+		
+	if (spaces < 0)
+		return;
+	
 	for (i=0; i<spaces; i++) 
 		printw(" ");
 	
-	printw("%s",message);
+	if ( spaces == width - x - remain - len)
+		printw("%s",message);
 }
 
 void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
@@ -93,9 +105,9 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 		printw(" PLAYING no take");
 	
 	if (port_p->name)
-		display_left_aligned(port_p->name,20);
+		display_right_aligned(port_p->name,21);
 	else 
-		display_fill_remaining(20);
+		display_fill_remaining(21);
 	
 	printw(" | %5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
 	
@@ -380,14 +392,18 @@ void display_cpu_load_digital(struct meterec_s *meterec) {
 
 void display_session_name(struct meterec_s *meterec, unsigned int remain) {
 	
-	unsigned int i, len, spaces;
+	unsigned int i, len;
 	unsigned int width, y, x;
+	int spaces;
 	
 	width = getmaxx(stdscr);
 	getyx(stdscr, y, x); (void)y;
 	len =strlen(meterec->session);
 	
 	spaces = width - x - remain - len - 4;
+	
+	if (spaces < 0)
+		return;
 	
 	for (i=0; i<spaces/2; i++) 
 		printw(" ");
