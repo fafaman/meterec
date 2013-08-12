@@ -50,7 +50,7 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	char *take_name = "";
 	
 	if (port_p->playback_take)
-		take_name = meterec->takes[port_p->playback_take-1].name;
+		take_name = meterec->takes[port_p->playback_take].name;
 	
 	if (port_p->record==REC)
 		printw("[REC]");
@@ -481,17 +481,20 @@ void display_session(struct meterec_s *meterec)
 {
 	unsigned int take, port;
 	unsigned int y_pos, x_pos;
+	char *name ="";
 	
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
 	
+	if (meterec->takes[x_pos].name)
+		name = meterec->takes[x_pos].name;
 	
-	printw("  Take %2d ",x_pos);
-	printw("%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
+	printw("  Take %d (%s)\n",x_pos, name);
+	printw("  %s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
 	printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
 	printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
 	
-	printw("\n\n");
+	printw("\n");
 	
 	for (port=0; port<meterec->n_ports; port++) {
 		

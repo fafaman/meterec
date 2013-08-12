@@ -295,9 +295,9 @@ void save_conf(struct meterec_s *meterec) {
 	fprintf(fd_conf, "\n);\n\n");
 	
 	fprintf(fd_conf, "takes=\n(\n");
-	for (take=0; take<meterec->n_takes; take++) {
+	for (take=1; take<meterec->n_takes+1; take++) {
 		fprintf(fd_conf, "  { name=\"%s\"; }",meterec->takes[take].name?meterec->takes[take].name:"");
-		if (take<meterec->n_takes-1)
+		if (take<meterec->n_takes)
 			fprintf(fd_conf, ",\n");
 	}
 	fprintf(fd_conf, "\n);\n\n");
@@ -440,8 +440,8 @@ void load_conf(struct meterec_s *meterec) {
 			if (take_group) {
 				
 				if (config_setting_lookup_string(take_group, "name", &name)) {
-					meterec->takes[take].name = (char *) malloc( strlen(name) + 1 ); 
-					strcpy(meterec->takes[take].name, name); 
+					meterec->takes[take+1].name = (char *) malloc( strlen(name) + 1 ); 
+					strcpy(meterec->takes[take+1].name, name); 
 				}
 			}
 		}
