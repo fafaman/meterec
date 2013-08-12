@@ -44,6 +44,23 @@
 #include "queue.h"
 #include "keyboard.h"
 
+char* realloc_freetext(char **name) 
+{
+	char *new;
+	
+	new = (char *) malloc( MAX_NAME_LEN + 1 );
+	
+	if (*name) 
+		free(*name);
+	
+	*name = new;
+	
+	*new     = '_';
+	*(new+1) = '\0';
+	
+	return new;
+}
+
 
 void *keyboard_thread(void *arg) {
 	
@@ -72,7 +89,7 @@ void *keyboard_thread(void *arg) {
 		
 		if (freetext) {
 			
-			if (key == 10) {
+			if (key == 10 || key == 27) {
 				freetext = 0;
 			} 
 			else if ((key == 127 || key == 263) && freetext < MAX_NAME_LEN) {
@@ -106,6 +123,14 @@ void *keyboard_thread(void *arg) {
 		case EDIT: 
 			
 			switch (key) {
+				
+				/* 
+				** Rename takes 
+				*/
+				case 'i' : /* rename the current take */
+					text = realloc_freetext(&meterec->takes[x_pos].name);
+					freetext = MAX_NAME_LEN;
+					break;
 				
 				/* 
 				** Move cursor 
@@ -173,6 +198,11 @@ void *keyboard_thread(void *arg) {
 			switch (key) {
 				/* reset absolute maximum markers */
 				
+				case 'i' : /* rename the current port */
+					text = realloc_freetext(&meterec->ports[y_pos].name);
+					freetext = MAX_NAME_LEN;
+					break;
+					
 				case 'n': 
 					meterec->display.names = !meterec->display.names ;
 					break;
@@ -298,11 +328,6 @@ void *keyboard_thread(void *arg) {
 		}
 		
 		switch (key) {
-			
-			case 'i' : /* rename the current port */
-				text = port_rename(meterec, y_pos);
-				freetext = MAX_NAME_LEN;
-				break;
 			
 			case 'T' : /* toggle pass thru on all ports */
 				if ( meterec->ports[y_pos].thru ) 
