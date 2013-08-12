@@ -1,0 +1,29 @@
+# Meterec files
+*.mrec
+*.log
+*.wav
+*.w64
+*.flac
+*.ogg
+*.oga
+
+# Autotool results
+Makefile*
+aclocal.m4
+autom4te.cache
+depcomp
+install-sh
+missing
+.deps
+stamp-h1
+
+# Configuration results
+configure*
+config*
+
+
+# Compilation results
+meterec
+test
+*.o
+*.obj
