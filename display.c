@@ -113,35 +113,32 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	
 }
 
-void display_port_recmode(struct port_s *port_p) {
+void display_port_modes(struct port_s *port_p) {
+	
+	printw("|");
 	
 	if ( port_p->record == REC )
-		if ( port_p->mute )
-			printw("r");
-		else
-			printw("R");
+		printw("R");
 	else if ( port_p->record == DUB )
-		if ( port_p->mute )
-			printw("d");
-		else
-			printw("D");
+		printw("D");
 	else if ( port_p->record == OVR )
-		if ( port_p->mute )
-			printw("o");
-		else
-			printw("O");
+		printw("O");
 	else 
-		if ( port_p->mute )
-			printw("~");
-		else
-			printw("=");
-	
+		printw(" ");
+		
+	if ( port_p->mute )
+		printw("M");
+	else 
+		printw(" ");
+		
+	if ( port_p->thru )
+		printw("T");
+	else 
+		printw(" ");
+		
+	printw("|");
 }
 
-/*
-  db: the signal stength in db
-  width: the size of the meter
-*/
 static int iec_scale(float db, int size) {
 	
 	float def = 0.0f; /* Meter deflection %age */
@@ -185,8 +182,8 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 	int size_out, size_in, i;
 	unsigned int port, width;
 	
-	width = getmaxx(stdscr);
-	width -= 4;
+	width = meterec->display.width;
+	width -= 8;
 	
 	printw("%s\n", scale);
 	printw("%s\n", line);
@@ -202,7 +199,7 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 		
 		
 		printw("%02d",port+1);
-		display_port_recmode(&meterec->ports[port]);
+		display_port_modes(&meterec->ports[port]);
 		
 		size_in = iec_scale( meterec->ports[port].db_in, width );
 		size_out = iec_scale( meterec->ports[port].db_out, width );
@@ -284,7 +281,7 @@ void init_display_scale(struct meterec_s *meterec) {
 	meterec->display.width = getmaxx(stdscr);
 	
 	width = meterec->display.width;
-	width -= 4;
+	width -= 8;
 	
 	scale0 = (char *) malloc( width+1+2 );
 	line0  = (char *) malloc( width+1+2 );
@@ -318,8 +315,8 @@ void init_display_scale(struct meterec_s *meterec) {
 		line0[pos] = '|';
 	}
 	
-	sprintf(scale,"  %s",scale0);
-	sprintf(line,"  %s",line0);
+	sprintf(scale,"       %s",scale0);
+	sprintf(line,"       %s",line0);
 	
 	free(scale0);
 	free(line0);
@@ -405,7 +402,7 @@ void display_session_name(struct meterec_s *meterec, unsigned int remain) {
 	unsigned int width, y, x;
 	int spaces;
 	
-	width = getmaxx(stdscr);
+	width = meterec->display.width;
 	getyx(stdscr, y, x); (void)y;
 	len =strlen(meterec->session);
 	
@@ -547,7 +544,7 @@ void display_session(struct meterec_s *meterec)
 		
 		printw("%02d",port+1);
 		
-		display_port_recmode(&meterec->ports[port]);
+		display_port_modes(&meterec->ports[port]);
 		
 		for (take=1; take<meterec->n_takes+1; take++) {
 			
