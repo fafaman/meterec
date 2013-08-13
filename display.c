@@ -50,13 +50,18 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
 	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
 	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
-	meterec->display.wvum = newwin(h, w,        4,  0);
+	meterec->display.wpor = newwin(h,   8,       4,  0);
+	meterec->display.wvum = newwin(h, w-8,       4,  8);
 	meterec->display.wsc2 = newwin(2, w-8,     h+4,  8);
 	meterec->display.wbot = newwin(1, w,       h+6,  0);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
 	
+	box(meterec->display.wvum,0,0);
+	wnoutrefresh(meterec->display.wvum);
+	box(meterec->display.wpor,0,0);
+	wnoutrefresh(meterec->display.wpor);
 }
 
 void display_session_name(struct meterec_s *meterec, WINDOW *win) {
@@ -156,30 +161,30 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	
 }
 
-void display_port_modes(struct port_s *port_p) {
+void display_port_modes(struct port_s *port_p, WINDOW *win) {
 	
-	printw("|");
+	wprintw(win, "|");
 	
 	if ( port_p->record == REC )
-		printw("R");
+		wprintw(win, "R");
 	else if ( port_p->record == DUB )
-		printw("D");
+		wprintw(win, "D");
 	else if ( port_p->record == OVR )
-		printw("O");
+		wprintw(win, "O");
 	else 
-		printw(" ");
+		wprintw(win, " ");
 		
 	if ( port_p->mute )
-		printw("M");
+		wprintw(win, "M");
 	else 
-		printw(" ");
+		wprintw(win, " ");
 		
 	if ( port_p->thru )
-		printw("T");
+		wprintw(win, "T");
 	else 
-		printw(" ");
+		wprintw(win, " ");
 		
-	printw("|");
+	wprintw(win, "|\n");
 }
 
 static int iec_scale(float db, int size) {
@@ -224,12 +229,14 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 {
 	int size_out, size_in, i;
 	unsigned int port, width;
+	WINDOW *win;
 	
-	width = meterec->display.width;
-	width -= 8;
+	wclear(meterec->display.wpor);
+	wclear(meterec->display.wvum);
+	wclear(meterec->display.wbot);
 	
-	printw("%s\n", scale);
-	printw("%s\n", line);
+	
+	width = getmaxx(meterec->display.wvum);
 	
 	for ( port=0 ; port < meterec->n_ports ; port++) {
 		
@@ -240,9 +247,9 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 		else 
 			attroff(A_REVERSE);
 		
-		
-		printw("%02d",port+1);
-		display_port_modes(&meterec->ports[port]);
+		win = meterec->display.wpor;
+		wprintw(win, "%02d",port+1);
+		display_port_modes(&meterec->ports[port], win);
 		
 		size_in = iec_scale( meterec->ports[port].db_in, width );
 		size_out = iec_scale( meterec->ports[port].db_out, width );
@@ -258,49 +265,50 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 			meterec->ports[port].dkpeak_in = size_in;
 		}
 		
+		win = meterec->display.wvum;
 		for ( i=0; i<width; i++) {
 			
 			if (display_names)
 				if (i == width/5) 
 					if (meterec->ports[port].name) {
-						printw("%s",meterec->ports[port].name);
+						wprintw(win, "%s",meterec->ports[port].name);
 						i += strlen(meterec->ports[port].name);
 					}
 			
 			if (i < size_in-1) {
-				printw("#");
+				wprintw(win, "#");
 			}
 			else if ( i==meterec->ports[port].dkpeak_in-1 ) {
-				printw("I");
+				wprintw(win, "I");
 			}
 			else if ( i==meterec->ports[port].dkmax_in-1 ) {
 				if (i>width-3)
-					printw("X");
+					wprintw(win, "X");
 				else
-					printw(":");
+					wprintw(win, ":");
 			}
 			else if ( i < size_out-1 ) {
-				printw("-");
+				wprintw(win, "-");
 			}
 			else {
-				printw(" ");
+				wprintw(win, " ");
 			}
 		
 		}
 		
-		printw("\n");
+		wprintw(win, "\n");
 		
 	}
 	
 	attroff(A_REVERSE);
 	color_set(DEFAULT, NULL);
-	printw("%s\n", line);
-	printw("%s\n", scale);
-	
-	printw("  Port %2d ", meterec->pos.port+1);
+	win = meterec->display.wbot;
+	wprintw(win, "  Port %2d ", meterec->pos.port+1);
 	display_port_info( meterec, &meterec->ports[meterec->pos.port] );
 	
-	
+	wnoutrefresh(meterec->display.wpor);
+	wnoutrefresh(meterec->display.wvum);
+	wnoutrefresh(meterec->display.wbot);
 }
 
 void display_init_scale(int side, WINDOW *win) {
@@ -554,7 +562,7 @@ void display_session(struct meterec_s *meterec)
 		
 		printw("%02d",port+1);
 		
-		display_port_modes(&meterec->ports[port]);
+		display_port_modes(&meterec->ports[port], meterec->display.wpor);
 		
 		for (take=1; take<meterec->n_takes+1; take++) {
 			

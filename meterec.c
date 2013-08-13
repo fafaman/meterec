@@ -1291,7 +1291,7 @@ int main(int argc, char *argv[])
 		
 		display_header(meterec);
 		
-		/*
+		
 		if (meterec->display.view==VU)
 			display_meter(meterec, meterec->display.names, decay_len);
 		else if (meterec->display.view==EDIT)	
@@ -1299,7 +1299,7 @@ int main(int argc, char *argv[])
 		else if (meterec->display.view==PORT) {
 			display_ports(meterec);
 		}
-		*/
+		
 		
 		/*
 		struct event_s *event;

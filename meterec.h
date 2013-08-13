@@ -242,6 +242,7 @@ struct display_s
 	WINDOW* wvum;
 	WINDOW* wsc2;
 	WINDOW* wbot;
+	WINDOW* wpor;
 };
 
 
