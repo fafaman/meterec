@@ -309,25 +309,11 @@ void display_init_scale(WINDOW *win) {
 	unsigned int i=0, width;
 	const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
 	
-	char * scale0 ;
-	char * line0 ;
+	wclear(win);
 	
 	width = getmaxx(win);
-	width -= 8;
 	
-	scale0 = (char *) malloc( width+1+2 );
-	line0  = (char *) malloc( width+1+2 );
-	
-	scale = (char *) malloc( width+1+2 );
-	line  = (char *) malloc( width+1+2 );
-	
-	/* Initialise the scale */
-	/*
-	for(i=0; i<width; i++) { 
-		wprintw();scale0[i] = ' '; line0[i]='-'; }
-	scale0[width] = 0;
-	line0[width] = 0;
-	*/
+	mvwhline(win, 1, 0, 0, width);
 	
 	/* 'draw' on each of the db marks */
 	for(i=0; i < 12; i++) {
@@ -347,19 +333,11 @@ void display_init_scale(WINDOW *win) {
 			spos = width - slen;
 		
 		mvwprintw(win, 0, spos, "%s", mark);
-		/*memcpy( scale0+spos, mark, slen );*/
 		
-		/* Position little marker */
-		line0[pos] = '+';
-		mvwprintw(win, 1, pos, "+");
-
+		/* Position ticks along the scale */
+		mvwaddch(win, 1, pos, ACS_PLUS);
+	
 	}
-	
-	sprintf(scale,"       %s",scale0);
-	sprintf(line,"       %s",line0);
-	
-	free(scale0);
-	free(line0);
 	
 	wnoutrefresh(win);
 	
