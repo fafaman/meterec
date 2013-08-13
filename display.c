@@ -49,9 +49,9 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wttl = newwin(2, w-20-3*13, 0, 20);
 	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
 	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
-	meterec->display.wsc1 = newwin(2, w,         2,  0);
-	meterec->display.wvum = newwin(h, w,         4,  0);
-	meterec->display.wsc2 = newwin(2, w,       h+4,  0);
+	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
+	meterec->display.wvum = newwin(h, w,        4,  0);
+	meterec->display.wsc2 = newwin(2, w-8,     h+4,  8);
 	meterec->display.wbot = newwin(1, w,       h+6,  0);
 	
 	display_init_scale(0, meterec->display.wsc1);
@@ -338,7 +338,7 @@ void display_init_scale(int side, WINDOW *win) {
 		
 		/* Position ticks along the scale */
 		mvwaddch(win, !side, pos, ACS_PLUS);
-	
+		
 	}
 	
 	wnoutrefresh(win);
