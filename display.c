@@ -36,13 +36,15 @@ char *line ;
 
 void display_init_windows(struct meterec_s *meterec) {
 	
-	unsigned int w, h;
+	unsigned int w, h, p;
 	
 	if (meterec->display.width == getmaxx(stdscr))
-		return;
+		if (meterec->display.height == getmaxy(stdscr))
+			return;
 	
 	w = meterec->display.width = getmaxx(stdscr);
-	h = meterec->n_ports;
+	h = meterec->display.height = getmaxy(stdscr);
+	p = meterec->n_ports;
 	
 	meterec->display.wrds = newwin(1, 20,        0,  0);
 	meterec->display.wwrs = newwin(1, 20,        1,  0);
@@ -50,18 +52,19 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
 	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
 	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
-	meterec->display.wpor = newwin(h,   8,       4,  0);
-	meterec->display.wvum = newwin(h, w-8,       4,  8);
-	meterec->display.wsc2 = newwin(2, w-8,     h+4,  8);
-	meterec->display.wbot = newwin(1, w,       h+6,  0);
+	meterec->display.wpor = newwin(p,   8,       4,  0);
+	meterec->display.wvum = newwin(p, w-8,       4,  8);
+	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
+	meterec->display.wbot = newwin(1, w-20,     h-1,  0);
+	meterec->display.wbdb = newwin(1, 20,       h-1,  w-20);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
 	
-	box(meterec->display.wvum,0,0);
-	wnoutrefresh(meterec->display.wvum);
-	box(meterec->display.wpor,0,0);
-	wnoutrefresh(meterec->display.wpor);
+	box(meterec->display.wbot,0,0);
+	wnoutrefresh(meterec->display.wbot);
+	box(meterec->display.wbdb,0,0);
+	wnoutrefresh(meterec->display.wbdb);
 }
 
 void display_session_name(struct meterec_s *meterec, WINDOW *win) {
@@ -118,9 +121,16 @@ void display_right_aligned(char *message, unsigned int remain) {
 		printw("%s",message);
 }
 
-void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
+void display_port_info(struct meterec_s *meterec) {
 	
 	char *take_name = NULL;
+	unsigned int port = meterec->pos.port;
+	struct port_s *port_p = &meterec->ports[port];
+	WINDOW *win = meterec->display.wbot;
+	
+	wclear(win);
+	
+	wprintw(win, "  Port %2d ", port);
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
@@ -129,62 +139,89 @@ void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 		take_name = "";
 	
 	if (port_p->record==REC)
-		printw("[REC]");
+		wprintw(win, "[REC]");
 	else if (port_p->record==OVR)
-		printw("[OVR]");
+		wprintw(win, "[OVR]");
 	else if (port_p->record==DUB)
-		printw("[DUB]");
+		wprintw(win, "[DUB]");
 	else 
-		printw("[   ]");
+		wprintw(win, "[   ]");
 	
 	if (port_p->mute)
-		printw("[MUTED]");
+		wprintw(win, "[MUTED]");
 	else 
-		printw("[     ]");
+		wprintw(win, "[     ]");
 	
 	if (port_p->thru)
-		printw("[THRU]");
+		wprintw(win, "[THRU]");
 	else 
-		printw("[    ]");
+		wprintw(win, "[    ]");
 	
 	if ( port_p->playback_take ) 
-		printw(" PLAYING take %d (%s)", port_p->playback_take, take_name);
+		wprintw(win, " PLAYING take %d (%s)", port_p->playback_take, take_name);
 	else 
-		printw(" PLAYING no take");
+		wprintw(win, " PLAYING no take");
 	
 	if (port_p->name)
 		display_right_aligned(port_p->name,21);
 	else 
 		display_fill_remaining(21);
 	
-	printw(" | %5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
+	wnoutrefresh(win);
 	
 }
 
-void display_port_modes(struct port_s *port_p, WINDOW *win) {
+void display_port_db_digital(struct meterec_s *meterec) {
 	
-	wprintw(win, "|");
+	unsigned int port = meterec->pos.port;
+	struct port_s *port_p = &meterec->ports[port];
+	WINDOW *win = meterec->display.wbdb;
 	
-	if ( port_p->record == REC )
-		wprintw(win, "R");
-	else if ( port_p->record == DUB )
-		wprintw(win, "D");
-	else if ( port_p->record == OVR )
-		wprintw(win, "O");
-	else 
-		wprintw(win, " ");
+	wclear(win);
+	
+	wprintw(win, "%5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
+	
+	wnoutrefresh(win);
+	
+}
+
+void display_ports_modes(struct meterec_s *meterec) {
+	
+	unsigned int port;
+	WINDOW *win; 
+	
+	win = meterec->display.wpor;
+	
+	wclear(win);
+	
+	for (port=0; port < meterec->n_ports; port++) {
 		
-	if ( port_p->mute )
-		wprintw(win, "M");
-	else 
-		wprintw(win, " ");
+		mvwprintw(win, port, 0, "%02d|",port+1);
 		
-	if ( port_p->thru )
-		wprintw(win, "T");
-	else 
-		wprintw(win, " ");
+		if ( meterec->ports[port].record == REC )
+			wprintw(win, "R");
+		else if ( meterec->ports[port].record == DUB )
+			wprintw(win, "D");
+		else if ( meterec->ports[port].record == OVR )
+			wprintw(win, "O");
+		else 
+			wprintw(win, " ");
 		
-	wprintw(win, "|\n");
+		if ( meterec->ports[port].mute )
+			wprintw(win, "M");
+		else 
+			wprintw(win, " ");
+		
+		if ( meterec->ports[port].thru )
+			wprintw(win, "T");
+		else 
+			wprintw(win, " ");
+		
+		wprintw(win, "|");
+	
+	}
+	
+	wnoutrefresh(win);
 }
 
 static int iec_scale(float db, int size) {
@@ -211,45 +248,40 @@ static int iec_scale(float db, int size) {
 	return (int)((def / 100.0f) * ((float) size));
 }
 
-static void color_port(struct meterec_s *meterec, unsigned int port) {
+static void color_port(struct meterec_s *meterec, unsigned int port, WINDOW *win) {
 	
 	if ( meterec->ports[port].record ) 
 		if (meterec->record_sts == ONGOING)
-			color_set(RED, NULL);
+			wcolor_set(win, RED, NULL);
 		else 
-			color_set(YELLOW, NULL);
+			wcolor_set(win, YELLOW, NULL);
 	else 
 		if (meterec->ports[port].mute)
-			color_set(DEFAULT, NULL);
+			wcolor_set(win, DEFAULT, NULL);
 		else 
-			color_set(GREEN, NULL);
+			wcolor_set(win, GREEN, NULL);
 }
 
 void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 {
 	int size_out, size_in, i;
 	unsigned int port, width;
-	WINDOW *win;
+	WINDOW *win = meterec->display.wvum;;
 	
-	wclear(meterec->display.wpor);
-	wclear(meterec->display.wvum);
-	wclear(meterec->display.wbot);
+	wclear(win);
 	
-	
-	width = getmaxx(meterec->display.wvum);
+	width = getmaxx(win);
 	
 	for ( port=0 ; port < meterec->n_ports ; port++) {
 		
-		color_port(meterec, port);
+		color_port(meterec, port, win);
 		
 		if (meterec->pos.port == port) 
-			attron(A_REVERSE);
+			wattron(win, A_REVERSE);
 		else 
-			attroff(A_REVERSE);
+			wattroff(win, A_REVERSE);
 		
-		win = meterec->display.wpor;
-		wprintw(win, "%02d",port+1);
-		display_port_modes(&meterec->ports[port], win);
+		wmove(win, port, 0);
 		
 		size_in = iec_scale( meterec->ports[port].db_in, width );
 		size_out = iec_scale( meterec->ports[port].db_out, width );
@@ -265,7 +297,6 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 			meterec->ports[port].dkpeak_in = size_in;
 		}
 		
-		win = meterec->display.wvum;
 		for ( i=0; i<width; i++) {
 			
 			if (display_names)
@@ -293,22 +324,13 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 			else {
 				wprintw(win, " ");
 			}
-		
 		}
-		
-		wprintw(win, "\n");
-		
 	}
 	
-	attroff(A_REVERSE);
-	color_set(DEFAULT, NULL);
-	win = meterec->display.wbot;
-	wprintw(win, "  Port %2d ", meterec->pos.port+1);
-	display_port_info( meterec, &meterec->ports[meterec->pos.port] );
+	wattroff(win, A_REVERSE);
+	wcolor_set(win, DEFAULT, NULL);
 	
-	wnoutrefresh(meterec->display.wpor);
-	wnoutrefresh(meterec->display.wvum);
-	wnoutrefresh(meterec->display.wbot);
+	wnoutrefresh(win);
 }
 
 void display_init_scale(int side, WINDOW *win) {
@@ -532,11 +554,13 @@ void display_header(struct meterec_s *meterec) {
 	
 }
 
-void display_session(struct meterec_s *meterec) 
-{
-	unsigned int take, port;
-	unsigned int y_pos, x_pos;
+void display_take_info(struct meterec_s *meterec) {
+	
+	WINDOW *win = meterec->display.wsc1;
 	char *name ="";
+	unsigned int y_pos, x_pos;
+	
+	wclear(win);
 	
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
@@ -544,25 +568,35 @@ void display_session(struct meterec_s *meterec)
 	if (meterec->takes[x_pos].name)
 		name = meterec->takes[x_pos].name;
 	
-	printw("  Take %d (%s)\n",x_pos, name);
-	printw("  %s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
-	printw("%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
-	printw("%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
+	wprintw(win, "Take %d (%s)\n",x_pos, name);
+	wprintw(win, "%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
+	wprintw(win, "%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
+	wprintw(win, "%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
 	
-	printw("\n");
+	wnoutrefresh(win);
+
+}
+
+void display_session(struct meterec_s *meterec) 
+{
+	
+	WINDOW *win = meterec->display.wvum;
+	unsigned int take, port;
+	unsigned int y_pos, x_pos;
+	
+	wclear(win);
+		
+	y_pos = meterec->pos.port;
+	x_pos = meterec->pos.take;
 	
 	for (port=0; port<meterec->n_ports; port++) {
 		
-		color_port(meterec, port);
+		color_port(meterec, port, win);
 		
 		if (y_pos == port) 
 			attron(A_REVERSE);
 		else 
 			attroff(A_REVERSE);
-		
-		printw("%02d",port+1);
-		
-		display_port_modes(&meterec->ports[port], meterec->display.wpor);
 		
 		for (take=1; take<meterec->n_takes+1; take++) {
 			
@@ -578,28 +612,25 @@ void display_session(struct meterec_s *meterec)
 				attron(A_BOLD);
 			
 			if ( meterec->takes[take].port_has_lock[port] )
-				printw(meterec->takes[take].port_has_track[port]?"L":"l");
+				wprintw(win, meterec->takes[take].port_has_track[port]?"L":"l");
 			else if ( meterec->ports[port].playback_take == take ) 
-				printw("P");
+				wprintw(win, "P");
 			else if ( meterec->takes[take].port_has_track[port] ) 
-				printw("X");
+				wprintw(win, "X");
 			else 
-				printw("-");
+				wprintw(win, "-");
 			
 			attroff(A_BOLD);
 			
 		}
 		
-		printw("\n");
+		wprintw(win, "\n");
 	}
 	
 	attroff(A_REVERSE);
 	color_set(DEFAULT, NULL);
 	
-	printw("\n\n");
-	printw("  Port %2d ", y_pos+1);
-	display_port_info( meterec, &meterec->ports[y_pos] );
-	
+	wnoutrefresh(win);
 }
 
 void display_ports(struct meterec_s *meterec) 
@@ -607,6 +638,7 @@ void display_ports(struct meterec_s *meterec)
 	unsigned int port=0, i;
 	int line=0;
 	const char **in, **out;
+	WINDOW *win;
 	
 	out=meterec->all_input_ports;
 	in=meterec->all_output_ports;
@@ -635,7 +667,7 @@ void display_ports(struct meterec_s *meterec)
 				printw("%20s",*in);
 				attroff(A_REVERSE);
 				printw(" +");
-				color_port(meterec, meterec->pos.port);
+				color_port(meterec, meterec->pos.port, win);
 			}
 			else {
 				printw("%20s",*in);
@@ -665,7 +697,7 @@ void display_ports(struct meterec_s *meterec)
 			else 
 				printw(" ");
 			
-			color_port(meterec, port);
+			color_port(meterec, port, win);
 			
 			printw("%s:in_%-2d",  meterec->jack_name, port+1);
 			

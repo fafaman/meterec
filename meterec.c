@@ -1260,6 +1260,8 @@ int main(int argc, char *argv[])
 	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
 	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 	
+	clear();
+	
 	/* Calculate the decay length (should be 1600ms) */
 	decay_len = (int)(1.6f / (1.0f/rate));
 	
@@ -1283,19 +1285,25 @@ int main(int argc, char *argv[])
 		
 		read_peak(bias);
 		
-		clear();
-		
-		
 		/* Init the windows shape and scale */
 		display_init_windows(meterec);
 		
 		display_header(meterec);
 		
 		
-		if (meterec->display.view==VU)
+		if (meterec->display.view==VU) {
+			display_ports_modes(meterec);
 			display_meter(meterec, meterec->display.names, decay_len);
-		else if (meterec->display.view==EDIT)	
+			display_port_info(meterec);
+			display_port_db_digital(meterec);
+		}
+		else if (meterec->display.view==EDIT) {
+			display_ports_modes(meterec);
+			display_take_info(meterec);
 			display_session(meterec);
+			display_port_info(meterec);
+			display_port_db_digital(meterec);
+		}
 		else if (meterec->display.view==PORT) {
 			display_ports(meterec);
 		}
