@@ -27,6 +27,6 @@ void display_session(struct meterec_s *meterec);
 void display_port_info(struct meterec_s *meterec, struct port_s *port_p);
 void display_port_recmode(struct port_s *port_p);
 void display_meter(struct meterec_s *meterec, int display_names, int decay_len);
-void display_init_scale(WINDOW *win);
+void display_init_scale(int side, WINDOW *win);
 void display_init_windows(struct meterec_s *meterec);
 

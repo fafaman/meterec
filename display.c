@@ -54,10 +54,9 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wsc2 = newwin(2, w,       h+4,  0);
 	meterec->display.wbot = newwin(1, w,       h+6,  0);
 	
-	display_init_scale(meterec->display.wsc1);
+	display_init_scale(0, meterec->display.wsc1);
+	display_init_scale(1, meterec->display.wsc2);
 	
-	box(meterec->display.wsc2, 0 , 0);
-	wrefresh (meterec->display.wsc2);
 }
 
 void display_session_name(struct meterec_s *meterec, WINDOW *win) {
@@ -304,16 +303,19 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 	
 }
 
-void display_init_scale(WINDOW *win) {
+void display_init_scale(int side, WINDOW *win) {
 	
 	unsigned int i=0, width;
 	const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
+	
+	if (side)
+		side = 1;
 	
 	wclear(win);
 	
 	width = getmaxx(win);
 	
-	mvwhline(win, 1, 0, 0, width);
+	mvwhline(win, !side, 0, 0, width);
 	
 	/* 'draw' on each of the db marks */
 	for(i=0; i < 12; i++) {
@@ -332,10 +334,10 @@ void display_init_scale(WINDOW *win) {
 		if (spos+slen > width) 
 			spos = width - slen;
 		
-		mvwprintw(win, 0, spos, "%s", mark);
+		mvwprintw(win, side, spos, "%s", mark);
 		
 		/* Position ticks along the scale */
-		mvwaddch(win, 1, pos, ACS_PLUS);
+		mvwaddch(win, !side, pos, ACS_PLUS);
 	
 	}
 	
