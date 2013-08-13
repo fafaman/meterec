@@ -65,11 +65,10 @@ Help
 % meterec -h
 version 0.9.2
 
-meterec [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]
+meterec [-f freqency] [-r ref-level] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]
 
 where  -f      is how often to update the meter per second [24]
        -r      is the reference signal level for 0dB on the meter [0]
-       -w      is how wide to make the meter [auto]
        -s      is session name [meterec]
        -j      is the jack client name [meterec]
        -o      is the record output format (w64, wav, flac, ogg) [w64]

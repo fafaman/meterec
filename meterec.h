@@ -229,8 +229,9 @@ struct disk_s
 
 struct display_s
 {
-	unsigned long view;
-	unsigned long names;
+	unsigned int view;
+	unsigned int names;
+	unsigned int width;
 };
 
 

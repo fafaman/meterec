@@ -180,12 +180,13 @@ static void color_port(struct meterec_s *meterec, unsigned int port) {
 			color_set(GREEN, NULL);
 }
 
-void display_meter(struct meterec_s *meterec, int display_names, int width, int decay_len)
+void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 {
 	int size_out, size_in, i;
-	unsigned int port ;
+	unsigned int port, width;
 	
-	width -= 3;
+	width = getmaxx(stdscr);
+	width -= 4;
 	
 	printw("%s\n", scale);
 	printw("%s\n", line);
@@ -267,15 +268,23 @@ void free_scale(void) {
 	free(line);
 }
 
-void init_display_scale( unsigned int width ) {
+void init_display_scale(struct meterec_s *meterec) {
 	
-	unsigned int i=0;
+	unsigned int i=0, width;
 	const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
 	
 	char * scale0 ;
 	char * line0 ;
 	
-	width -= 3;
+	if (meterec->display.width == getmaxx(stdscr))
+		return;
+	
+	free_scale();
+	
+	meterec->display.width = getmaxx(stdscr);
+	
+	width = meterec->display.width;
+	width -= 4;
 	
 	scale0 = (char *) malloc( width+1+2 );
 	line0  = (char *) malloc( width+1+2 );

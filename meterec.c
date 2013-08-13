@@ -488,6 +488,7 @@ void pre_option_init(struct meterec_s *meterec) {
 
 	meterec->display.view = VU;
 	meterec->display.names = ON;
+	meterec->display.width = 0;
 	
 	meterec->event = NULL;
 	pthread_mutex_init(&meterec->event_mutex, NULL);
@@ -1024,10 +1025,9 @@ unsigned int seek(struct meterec_s *meterec, int seek_sec) {
 /* Display how to use this program */
 static int usage( const char * progname ) {
 	fprintf(stderr, "version %s\n\n", VERSION);
-	fprintf(stderr, "%s [-f freqency] [-r ref-level] [-w width] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]\n\n", progname);
+	fprintf(stderr, "%s [-f freqency] [-r ref-level] [-s session-name] [-j jack-name] [-o output-format] [-u uuid] [-t][-p][-c][-i]\n\n", progname);
 	fprintf(stderr, "where  -f      is how often to update the meter per second [24]\n");
 	fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
-	fprintf(stderr, "       -w      is how wide to make the meter [auto]\n");
 	fprintf(stderr, "       -s      is session name [%s]\n",meterec->session);
 	fprintf(stderr, "       -j      is the jack client name [%s]\n",meterec->jack_name);
 	fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
@@ -1084,7 +1084,6 @@ static int usage( const char * progname ) {
 
 int main(int argc, char *argv[])
 {
-	int console_width = 0; 
 	int uuid = 0; 
 	jack_status_t status;
 	float ref_lev = 0;
@@ -1100,7 +1099,7 @@ int main(int argc, char *argv[])
 	
 	pre_option_init(meterec);
 	
-	while ((opt = getopt(argc, argv, "r:w:f:s:j:o:u:ptchvi")) != -1) {
+	while ((opt = getopt(argc, argv, "r:f:s:j:o:u:ptchvi")) != -1) {
 		switch (opt) {
 			case 'r':
 				ref_lev = atof(optarg);
@@ -1111,10 +1110,6 @@ int main(int argc, char *argv[])
 				rate = atoi(optarg);
 				break;
 			
-			case 'w':
-				console_width = atoi(optarg);
-				break;
-				
 			case 's':
 				conf_file = optarg ;
 				break;
@@ -1167,7 +1162,6 @@ int main(int argc, char *argv[])
 	fprintf(meterec->fd_log,"---- Options ----\n");
 	fprintf(meterec->fd_log,"Reference level: %.1fdB\n", ref_lev);
 	fprintf(meterec->fd_log,"Updates per second: %d\n", rate);
-	fprintf(meterec->fd_log,"Console Width: %d\n", console_width);
 	fprintf(meterec->fd_log,"Session name: %s\n", meterec->session);
 	fprintf(meterec->fd_log,"Jack client name: %s\n", meterec->jack_name);
 	fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
@@ -1266,16 +1260,8 @@ int main(int argc, char *argv[])
 	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
 	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 	
-	if (!console_width)
-		console_width = getmaxx(mainwin);
-	
-	console_width --;
-	
 	/* Calculate the decay length (should be 1600ms) */
 	decay_len = (int)(1.6f / (1.0f/rate));
-	
-	/* Init the scale */
-	init_display_scale(console_width);
 	
 	pthread_create(&kb_dt, NULL, keyboard_thread, (void *) meterec);
 	
@@ -1299,10 +1285,13 @@ int main(int argc, char *argv[])
 		
 		clear();
 		
+		/* Init the scale */
+		init_display_scale(meterec);
+	
 		display_header(meterec);
 		
 		if (meterec->display.view==VU)
-			display_meter(meterec, meterec->display.names, console_width, decay_len);
+			display_meter(meterec, meterec->display.names, decay_len);
 		else if (meterec->display.view==EDIT)	
 			display_session(meterec);
 		else if (meterec->display.view==PORT) {

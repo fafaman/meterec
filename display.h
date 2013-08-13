@@ -26,7 +26,7 @@ void display_ports(struct meterec_s *meterec);
 void display_session(struct meterec_s *meterec);
 void display_port_info(struct meterec_s *meterec, struct port_s *port_p);
 void display_port_recmode(struct port_s *port_p);
-void display_meter(struct meterec_s *meterec, int display_names, int width, int decay_len);
-void init_display_scale(unsigned int width);
+void display_meter(struct meterec_s *meterec, int display_names, int decay_len);
+void init_display_scale(struct meterec_s *meterec);
 void free_scale(void);
 
