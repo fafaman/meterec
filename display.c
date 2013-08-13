@@ -44,20 +44,34 @@ void display_init_windows(struct meterec_s *meterec) {
 	w = meterec->display.width = getmaxx(stdscr);
 	h = meterec->n_ports;
 	
-	meterec->display.wrds = newwin(1, 20,	  0, 0);
-	meterec->display.wwrs = newwin(1, 20,	  1, 0);
-	meterec->display.wttl = newwin(2, w-20-3*13,   0, 0);
-	meterec->display.wloo = newwin(1, 3*13,   0, w-3*13);
-	meterec->display.wcpu = newwin(1, 3*13,   1, w-3*13);
-	meterec->display.wsc1 = newwin(2, w,   2, 0);
-	meterec->display.wvum = newwin(h, w,   4, 0);
-	meterec->display.wsc2 = newwin(2, w, h+4, 0);
-	meterec->display.wbot = newwin(1, w, h+6, 0);
+	meterec->display.wrds = newwin(1, 20,        0,  0);
+	meterec->display.wwrs = newwin(1, 20,        1,  0);
+	meterec->display.wttl = newwin(2, w-20-3*13, 0, 20);
+	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
+	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
+	meterec->display.wsc1 = newwin(2, w,         2,  0);
+	meterec->display.wvum = newwin(h, w,         4,  0);
+	meterec->display.wsc2 = newwin(2, w,       h+4,  0);
+	meterec->display.wbot = newwin(1, w,       h+6,  0);
 	
 	display_init_scale(meterec->display.wsc1);
 	
 	box(meterec->display.wsc2, 0 , 0);
 	wrefresh (meterec->display.wsc2);
+}
+
+void display_session_name(struct meterec_s *meterec, WINDOW *win) {
+	unsigned int len, w, pos;
+	
+	wclear(win);
+	
+	len = strlen(meterec->session) + 4;
+	w = getmaxx(win);
+	pos = (w - len) / 2;
+	
+	mvwprintw(win, 0, pos, "~ %s ~", meterec->session);
+	
+	wnoutrefresh(win);
 }
 
 void display_fill_remaining(unsigned int remain) {
@@ -424,27 +438,6 @@ void display_cpu_load_digital(struct meterec_s *meterec) {
 	printw("%6.2f%%", jack_cpu_load(meterec->client));
 }
 
-void display_session_name(struct meterec_s *meterec, unsigned int remain) {
-	
-	unsigned int i, len;
-	unsigned int width, y, x;
-	int spaces;
-	
-	width = meterec->display.width;
-	getyx(stdscr, y, x); (void)y;
-	len =strlen(meterec->session);
-	
-	spaces = width - x - remain - len - 4;
-	
-	if (spaces < 0)
-		return;
-	
-	for (i=0; i<spaces/2; i++) 
-		printw(" ");
-	
-	printw("~ %s ~", meterec->session);
-}
-
 void display_loop(struct meterec_s *meterec, WINDOW *win) {
 	
 	struct time_s low, high, now;
@@ -542,15 +535,9 @@ void display_header(struct meterec_s *meterec) {
 	display_rd_status(meterec, meterec->display.wrds);
 	display_wr_status(meterec, meterec->display.wwrs);
 	display_loop(meterec, meterec->display.wloo);
+	display_session_name(meterec, meterec->display.wttl);
 	
 	/*
-	display_session_name(meterec, 3*13+1);
-	display_fill_remaining(3*13+1);
-	display_loop(meterec);
-	printw("\n");
-	
-	display_wr_status(meterec);
-	display_fill_remaining(8);
 	display_cpu_load_digital(meterec);
 	printw("\n");
 	*/
