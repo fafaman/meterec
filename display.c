@@ -55,8 +55,8 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wpor = newwin(p,   8,       4,  0);
 	meterec->display.wvum = newwin(p, w-8,       4,  8);
 	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
-	meterec->display.wbot = newwin(1, w-20,     h-1,  0);
-	meterec->display.wbdb = newwin(1, 20,       h-1,  w-20);
+	meterec->display.wbot = newwin(1, w-20,    h-1,  0);
+	meterec->display.wbdb = newwin(1, 20,      h-1,  w-20);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
@@ -66,6 +66,31 @@ void display_init_windows(struct meterec_s *meterec) {
 	box(meterec->display.wbdb,0,0);
 	wnoutrefresh(meterec->display.wbdb);
 }
+
+static int iec_scale(float db, int size) {
+	
+	float def = 0.0f; /* Meter deflection %age */
+	
+	if (db < -70.0f) 
+		def = 0.0f;
+	else if (db < -60.0f) 
+		def = (db + 70.0f) * 0.25f;
+	else if (db < -50.0f) 
+		def = (db + 60.0f) * 0.5f + 2.5f;
+	else if (db < -40.0f) 
+		def = (db + 50.0f) * 0.75f + 7.5f;
+	else if (db < -30.0f) 
+		def = (db + 40.0f) * 1.5f + 15.0f;
+	else if (db < -20.0f) 
+		def = (db + 30.0f) * 2.0f + 30.0f;
+	else if (db < 0.0f) 
+		def = (db + 20.0f) * 2.5f + 50.0f;
+	else 
+		def = 100.0f;
+	
+	return (int)((def / 100.0f) * ((float) size));
+}
+
 
 void display_session_name(struct meterec_s *meterec, WINDOW *win) {
 	unsigned int len, w, pos;
@@ -185,6 +210,17 @@ void display_port_db_digital(struct meterec_s *meterec) {
 	
 }
 
+void display_tiny_meter(struct meterec_s *meterec, unsigned int port, WINDOW *win) {
+	
+	char *blink = " \0.\0o\0O\0#";
+	int pos;
+	
+	pos = iec_scale( meterec->ports[port].db_out, 5);
+	
+	wprintw(win, blink + 2*pos);
+	
+}
+
 void display_ports_modes(struct meterec_s *meterec) {
 	
 	unsigned int port;
@@ -217,35 +253,11 @@ void display_ports_modes(struct meterec_s *meterec) {
 		else 
 			wprintw(win, " ");
 		
-		wprintw(win, "|");
-	
+		display_tiny_meter(meterec, port, win);
+		
 	}
 	
 	wnoutrefresh(win);
-}
-
-static int iec_scale(float db, int size) {
-	
-	float def = 0.0f; /* Meter deflection %age */
-	
-	if (db < -70.0f) 
-		def = 0.0f;
-	else if (db < -60.0f) 
-		def = (db + 70.0f) * 0.25f;
-	else if (db < -50.0f) 
-		def = (db + 60.0f) * 0.5f + 2.5f;
-	else if (db < -40.0f) 
-		def = (db + 50.0f) * 0.75f + 7.5f;
-	else if (db < -30.0f) 
-		def = (db + 40.0f) * 1.5f + 15.0f;
-	else if (db < -20.0f) 
-		def = (db + 30.0f) * 2.0f + 30.0f;
-	else if (db < 0.0f) 
-		def = (db + 20.0f) * 2.5f + 50.0f;
-	else 
-		def = 100.0f;
-	
-	return (int)((def / 100.0f) * ((float) size));
 }
 
 static void color_port(struct meterec_s *meterec, unsigned int port, WINDOW *win) {
@@ -594,22 +606,22 @@ void display_session(struct meterec_s *meterec)
 		color_port(meterec, port, win);
 		
 		if (y_pos == port) 
-			attron(A_REVERSE);
+			wattron(win, A_REVERSE);
 		else 
-			attroff(A_REVERSE);
+			wattroff(win, A_REVERSE);
 		
 		for (take=1; take<meterec->n_takes+1; take++) {
 			
 			if ((y_pos == port) || (x_pos == take))
-				attron(A_REVERSE);
+				wattron(win, A_REVERSE);
 			else 
-				attroff(A_REVERSE);
+				wattroff(win, A_REVERSE);
 			
 			if ((y_pos == port) && (x_pos == take))
-				attroff(A_REVERSE);
+				wattroff(win, A_REVERSE);
 			
 			if ( meterec->ports[port].playback_take == take )
-				attron(A_BOLD);
+				wattron(win, A_BOLD);
 			
 			if ( meterec->takes[take].port_has_lock[port] )
 				wprintw(win, meterec->takes[take].port_has_track[port]?"L":"l");
@@ -620,15 +632,15 @@ void display_session(struct meterec_s *meterec)
 			else 
 				wprintw(win, "-");
 			
-			attroff(A_BOLD);
+			wattroff(win, A_BOLD);
 			
 		}
 		
 		wprintw(win, "\n");
 	}
 	
-	attroff(A_REVERSE);
-	color_set(DEFAULT, NULL);
+	wattroff(win, A_REVERSE);
+	wcolor_set(win, DEFAULT, NULL);
 	
 	wnoutrefresh(win);
 }
