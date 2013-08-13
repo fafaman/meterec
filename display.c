@@ -293,7 +293,7 @@ void init_display_scale(struct meterec_s *meterec) {
 	line  = (char *) malloc( width+1+2 );
 	
 	/* Initialise the scale */
-	for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='_'; }
+	for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='-'; }
 	scale0[width] = 0;
 	line0[width] = 0;
 	
@@ -315,7 +315,7 @@ void init_display_scale(struct meterec_s *meterec) {
 		memcpy( scale0+spos, mark, slen );
 		
 		/* Position little marker */
-		line0[pos] = '|';
+		line0[pos] = '+';
 	}
 	
 	sprintf(scale,"       %s",scale0);
