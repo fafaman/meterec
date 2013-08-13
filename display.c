@@ -75,10 +75,13 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec, struct port_s *port_p) {
 	
-	char *take_name = "";
+	char *take_name = NULL;
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
+	
+	if (take_name == NULL)
+		take_name = "";
 	
 	if (port_p->record==REC)
 		printw("[REC]");
