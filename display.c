@@ -434,8 +434,12 @@ void display_wr_buffer(struct meterec_s *meterec, WINDOW *win) {
 	
 }
 
-void display_cpu_load_digital(struct meterec_s *meterec) {
-	printw("%6.2f%%", jack_cpu_load(meterec->client));
+void display_cpu_load_digital(struct meterec_s *meterec, WINDOW *win) {
+	wclear(win);
+	
+	mvwprintw(win, 0, 39-7, "%6.2f%%", jack_cpu_load(meterec->client));
+	
+	wnoutrefresh(win);
 }
 
 void display_loop(struct meterec_s *meterec, WINDOW *win) {
@@ -536,11 +540,8 @@ void display_header(struct meterec_s *meterec) {
 	display_wr_status(meterec, meterec->display.wwrs);
 	display_loop(meterec, meterec->display.wloo);
 	display_session_name(meterec, meterec->display.wttl);
+	display_cpu_load_digital(meterec, meterec->display.wcpu);
 	
-	/*
-	display_cpu_load_digital(meterec);
-	printw("\n");
-	*/
 }
 
 void display_session(struct meterec_s *meterec) 
