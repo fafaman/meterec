@@ -232,6 +232,16 @@ struct display_s
 	unsigned int view;
 	unsigned int names;
 	unsigned int width;
+	
+	WINDOW* wrds;
+	WINDOW* wwrs;
+	WINDOW* wttl;
+	WINDOW* wcpu;
+	WINDOW* wloo;
+	WINDOW* wsc1;
+	WINDOW* wvum;
+	WINDOW* wsc2;
+	WINDOW* wbot;
 };
 
 

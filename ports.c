@@ -22,8 +22,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#include <curses.h>
 #include <sndfile.h>
 #include <jack/jack.h>
+
 #include "meterec.h"
 #include "ports.h"
 

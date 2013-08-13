@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <curses.h>
 #include <sndfile.h>
 #include <jack/jack.h>
 

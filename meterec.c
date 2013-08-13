@@ -1285,9 +1285,10 @@ int main(int argc, char *argv[])
 		
 		clear();
 		
-		/* Init the scale */
-		init_display_scale(meterec);
-	
+		
+		/* Init the windows shape and scale */
+		display_init_windows(meterec);
+		
 		display_header(meterec);
 		
 		if (meterec->display.view==VU)
@@ -1308,7 +1309,7 @@ int main(int argc, char *argv[])
 		}
 		*/
 		
-		refresh();
+		doupdate(); 
 		
 		fsleep( 1.0f/rate );
 		
@@ -1319,7 +1320,6 @@ int main(int argc, char *argv[])
 	pthread_kill(kb_dt, SIGTERM); 
 	pthread_join(kb_dt, NULL);
 	
-	free_scale();
 	free_ports(meterec);
 	free_takes(meterec);
 	free_options(meterec);

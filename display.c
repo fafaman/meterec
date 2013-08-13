@@ -29,9 +29,36 @@
 #include "position.h"
 #include "meterec.h"
 #include "disk.h"
+#include "display.h"
 
 char *scale ;
 char *line ;
+
+void display_init_windows(struct meterec_s *meterec) {
+	
+	unsigned int w, h;
+	
+	if (meterec->display.width == getmaxx(stdscr))
+		return;
+	
+	w = meterec->display.width = getmaxx(stdscr);
+	h = meterec->n_ports;
+	
+	meterec->display.wrds = newwin(1, 20,	  0, 0);
+	meterec->display.wwrs = newwin(1, 20,	  1, 0);
+	meterec->display.wttl = newwin(2, w-20-3*13,   0, 0);
+	meterec->display.wloo = newwin(1, 3*13,   0, w-3*13);
+	meterec->display.wcpu = newwin(1, 3*13,   1, w-3*13);
+	meterec->display.wsc1 = newwin(2, w,   2, 0);
+	meterec->display.wvum = newwin(h, w,   4, 0);
+	meterec->display.wsc2 = newwin(2, w, h+4, 0);
+	meterec->display.wbot = newwin(1, w, h+6, 0);
+	
+	display_init_scale(meterec->display.wsc1);
+	
+	box(meterec->display.wsc2, 0 , 0);
+	wrefresh (meterec->display.wsc2);
+}
 
 void display_fill_remaining(unsigned int remain) {
 	unsigned int i;
@@ -263,12 +290,7 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 	
 }
 
-void free_scale(void) {
-	free(scale);
-	free(line);
-}
-
-void init_display_scale(struct meterec_s *meterec) {
+void display_init_scale(WINDOW *win) {
 	
 	unsigned int i=0, width;
 	const int marks[12] = { 0, -3, -5, -10, -15, -20, -25, -30, -35, -40, -50, -60 };
@@ -276,14 +298,7 @@ void init_display_scale(struct meterec_s *meterec) {
 	char * scale0 ;
 	char * line0 ;
 	
-	if (meterec->display.width == getmaxx(stdscr))
-		return;
-	
-	free_scale();
-	
-	meterec->display.width = getmaxx(stdscr);
-	
-	width = meterec->display.width;
+	width = getmaxx(win);
 	width -= 8;
 	
 	scale0 = (char *) malloc( width+1+2 );
@@ -293,15 +308,17 @@ void init_display_scale(struct meterec_s *meterec) {
 	line  = (char *) malloc( width+1+2 );
 	
 	/* Initialise the scale */
-	for(i=0; i<width; i++) { scale0[i] = ' '; line0[i]='-'; }
+	/*
+	for(i=0; i<width; i++) { 
+		wprintw();scale0[i] = ' '; line0[i]='-'; }
 	scale0[width] = 0;
 	line0[width] = 0;
-	
+	*/
 	
 	/* 'draw' on each of the db marks */
 	for(i=0; i < 12; i++) {
 		char mark[5];
-		int pos = iec_scale( marks[i], width )-1;
+		int pos = iec_scale( marks[i], width ) - 1;
 		int spos, slen;
 		
 		/* Create string of the db value */
@@ -309,13 +326,19 @@ void init_display_scale(struct meterec_s *meterec) {
 		
 		/* Position the label string */
 		slen = strlen(mark);
-		spos = pos-(slen/2);
-		if (spos<0) spos=0;
-		if (spos+strlen(mark)>width) spos=width-slen;
-		memcpy( scale0+spos, mark, slen );
+		spos = pos - (slen/2);
+		if (spos<0) 
+			spos=0;
+		if (spos+slen > width) 
+			spos = width - slen;
+		
+		mvwprintw(win, 0, spos, "%s", mark);
+		/*memcpy( scale0+spos, mark, slen );*/
 		
 		/* Position little marker */
 		line0[pos] = '+';
+		mvwprintw(win, 1, pos, "+");
+
 	}
 	
 	sprintf(scale,"       %s",scale0);
@@ -323,10 +346,12 @@ void init_display_scale(struct meterec_s *meterec) {
 	
 	free(scale0);
 	free(line0);
- 	 
+	
+	wnoutrefresh(win);
+	
 }
 
-void display_rd_buffer(struct meterec_s *meterec) {
+void display_rd_buffer(struct meterec_s *meterec, WINDOW *win) {
 	int size, i;
 	static int peak=0;
 	static char *pedale = "|";
@@ -340,13 +365,13 @@ void display_rd_buffer(struct meterec_s *meterec) {
 	
 	for (i=0; i<width; i++) {
 		if (i == peak-1)
-			printw(":");
+			wprintw(win, ":");
 		else if (i > size-1)
-			printw("I");
+			wprintw(win, "I");
 		else 
-			printw(" ");
+			wprintw(win, " ");
 	}
-	printw("%s", pedale);
+	wprintw(win, "%s", pedale);
 	
 	if (meterec->playback_sts==ONGOING) {
 		if      (*pedale=='/')
@@ -361,7 +386,7 @@ void display_rd_buffer(struct meterec_s *meterec) {
 	
 }
 
-void display_wr_buffer(struct meterec_s *meterec) {
+void display_wr_buffer(struct meterec_s *meterec, WINDOW *win) {
 	int size, i;
 	static int peak=0;
 	static char *pedale = "|";
@@ -372,14 +397,14 @@ void display_wr_buffer(struct meterec_s *meterec) {
 	if (size > peak) 
 		peak = size;
 		
-	printw("%s", pedale);
+	wprintw(win, "%s", pedale);
 	for (i=0; i<width; i++) {
 		if (i < size-1)
-			printw("I");
+			wprintw(win, "I");
 		else if (i == peak-1)
-			printw(":");
+			wprintw(win, ":");
 		else 
-			printw(" ");
+			wprintw(win, " ");
 	}
 	
 	if (meterec->record_sts==ONGOING) {
@@ -420,91 +445,105 @@ void display_session_name(struct meterec_s *meterec, unsigned int remain) {
 	printw("~ %s ~", meterec->session);
 }
 
-void display_loop(struct meterec_s *meterec) {
+void display_loop(struct meterec_s *meterec, WINDOW *win) {
 	
 	struct time_s low, high, now;
+	wclear(win);
 	
 	if (meterec->loop.low == MAX_UINT) 
-		printw("[-:--:--.---]");
+		wprintw(win, "[-:--:--.---]");
 	else {
 		low.frm = meterec->loop.low;
 		low.rate = meterec->jack.sample_rate ;
 		time_hms(&low);
-		printw("[%d:%02d:%02d.%03d]", low.h, low.m, low.s, low.ms);
+		wprintw(win, "[%d:%02d:%02d.%03d]", low.h, low.m, low.s, low.ms);
 	}
 	
 	now.frm = meterec->jack.playhead;
 	now.rate = meterec->jack.sample_rate ;
 	time_hms(&now);
-	printw(" %d:%02d:%02d.%03d ", now.h, now.m, now.s, now.ms);
+	wprintw(win, " %d:%02d:%02d.%03d ", now.h, now.m, now.s, now.ms);
 		
 	if (meterec->loop.high == MAX_UINT) 
-		printw("[-:--:--.---]");
+		wprintw(win, "[-:--:--.---]");
 	else {
 		high.frm = meterec->loop.high;
 		high.rate = meterec->jack.sample_rate ;
 		time_hms(&high);
-		printw("[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
+		wprintw(win, "[%d:%02d:%02d.%03d]", high.h, high.m, high.s, high.ms);
 	}
 	
+	wnoutrefresh(win);
 }
 
-void display_rd_status(struct meterec_s *meterec) {
+void display_rd_status(struct meterec_s *meterec, WINDOW *win) {
 	
-	printw("[> ");
+	wclear(win);
+	
+	wprintw(win, "[> ");
 		
 	if (meterec->playback_sts==OFF) 
-		printw("%-8s","OFF");
+		wprintw(win, "%-8s","OFF");
 	else if (meterec->playback_sts==STARTING) 
-		printw("%-8s","STARTING");
+		wprintw(win, "%-8s","STARTING");
 	else if (meterec->playback_sts==ONGOING) 
-		printw("%-8s","ONGOING");
+		wprintw(win, "%-8s","ONGOING");
 	else if (meterec->playback_sts==PAUSED) 
-		printw("%-8s","PAUSED");
+		wprintw(win, "%-8s","PAUSED");
 	else if (meterec->playback_sts==STOPING) 
-		printw("%-8s","STOPING");
+		wprintw(win, "%-8s","STOPING");
 	
-	printw("]");
+	wprintw(win, "]");
 	
+	display_rd_buffer(meterec, win);
+	
+	wnoutrefresh(win);
 }
 
-void display_wr_status(struct meterec_s *meterec) {
+void display_wr_status(struct meterec_s *meterec, WINDOW *win) {
+	
+	wclear(win);
 	
 	if (meterec->record_sts) 
 	color_set(RED, NULL);
 	
-	printw("[O ");
+	wprintw(win, "[O ");
 	
 	if (meterec->record_sts==OFF) 
-		printw("%-8s","OFF");
+		wprintw(win, "%-8s","OFF");
 	else if (meterec->record_sts==STARTING) 
-		printw("%-8s","STARTING");
+		wprintw(win, "%-8s","STARTING");
 	else if (meterec->record_sts==ONGOING) 
-		printw("%-8s","ONGOING");
+		wprintw(win, "%-8s","ONGOING");
 	else if (meterec->record_sts==STOPING) 
-		printw("%-8s","STOPING");
+		wprintw(win, "%-8s","STOPING");
 	
-	printw("]");
+	wprintw(win, "]");
 	
-	display_wr_buffer(meterec);
+	display_wr_buffer(meterec, win);
 	
 	if (meterec->record_sts) {
 		attron(A_BOLD);
-		printw(" Take %d",meterec->n_takes+1);
+		wprintw(win, " Take %d",meterec->n_takes+1);
 		attroff(A_BOLD); 
 	}
 	
 	
 	if (meterec->write_disk_buffer_overflow)
-		printw(" OVERFLOWS(%d)",meterec->write_disk_buffer_overflow);
+		wprintw(win, " OVERFLOWS(%d)",meterec->write_disk_buffer_overflow);
 	
 	color_set(DEFAULT, NULL);
+	
+	wnoutrefresh(win);
 }
 
 void display_header(struct meterec_s *meterec) {
 	
-	display_rd_status(meterec);
-	display_rd_buffer(meterec);
+	display_rd_status(meterec, meterec->display.wrds);
+	display_wr_status(meterec, meterec->display.wwrs);
+	display_loop(meterec, meterec->display.wloo);
+	
+	/*
 	display_session_name(meterec, 3*13+1);
 	display_fill_remaining(3*13+1);
 	display_loop(meterec);
@@ -514,7 +553,7 @@ void display_header(struct meterec_s *meterec) {
 	display_fill_remaining(8);
 	display_cpu_load_digital(meterec);
 	printw("\n");
-	
+	*/
 }
 
 void display_session(struct meterec_s *meterec) 
