@@ -232,6 +232,8 @@ struct display_s
 {
 	unsigned int view;
 	unsigned int pre_view;
+	unsigned int needs_update;
+	unsigned int needed_update;
 	unsigned int names;
 	unsigned int width;
 	unsigned int height;

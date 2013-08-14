@@ -244,6 +244,7 @@ void *keyboard_thread(void *arg) {
 						meterec->pos.con_in = meterec->pos.port ;
 					if ( meterec->pos.con_in > meterec->pos.n_con_in )
 						meterec->pos.con_in = meterec->pos.n_con_in;
+					meterec->display.needs_update++;
 					break;
 				case KEY_RIGHT:
 					meterec->pos.inout ++;
@@ -253,18 +254,21 @@ void *keyboard_thread(void *arg) {
 						meterec->pos.con_out = meterec->pos.port ;
 					if ( meterec->pos.con_out > meterec->pos.n_con_out )
 						meterec->pos.con_out = meterec->pos.n_con_out;
+					meterec->display.needs_update++;
 					break;
 				case 'c':
 					if (meterec->pos.inout == CON_IN)
 						register_connect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
 					else if (meterec->pos.inout == CON_OUT)
 						register_connect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+					meterec->display.needs_update++;
 					break;
 				case 'x':
 					if (meterec->pos.inout == CON_IN)
 						deregister_disconnect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
 					else if (meterec->pos.inout == CON_OUT)
 						deregister_disconnect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+					meterec->display.needs_update++;
 					break;
 			}
 			break;
@@ -336,10 +340,12 @@ void *keyboard_thread(void *arg) {
 				else 
 					for ( port=0 ; port < meterec->n_ports ; port++) 
 						meterec->ports[port].thru = 1;
+				meterec->display.needs_update++;
 				break;
 			
 			case 't' : /* toggle pass thru on this port */
 				meterec->ports[y_pos].thru = !meterec->ports[y_pos].thru;
+				meterec->display.needs_update++;
 				break;
 			
 			case 'M' : /* toggle mute on all ports */
@@ -384,6 +390,7 @@ void *keyboard_thread(void *arg) {
 						meterec->pos.port--;
 					meterec->ports[meterec->pos.port].monitor = 1;
 				}
+				meterec->display.needs_update++;
 				break;
 			
 			case KEY_DOWN :
@@ -404,6 +411,7 @@ void *keyboard_thread(void *arg) {
 						meterec->pos.port++;
 					meterec->ports[meterec->pos.port].monitor = 1;
 				}
+				meterec->display.needs_update++;
 				break;
 			
 			case 9: /* TAB */

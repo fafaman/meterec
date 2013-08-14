@@ -490,6 +490,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->display.pre_view = NONE;
 	meterec->display.names = ON;
 	meterec->display.width = 0;
+	meterec->display.needs_update = 0;
+	meterec->display.needed_update = 0;
 	
 	meterec->event = NULL;
 	pthread_mutex_init(&meterec->event_mutex, NULL);
@@ -1310,8 +1312,12 @@ int main(int argc, char *argv[])
 		else if (meterec->display.view==PORT) {
 			if (meterec->display.pre_view != PORT)
 				display_view_change(meterec);
-				
-			//display_ports(meterec);
+			
+			if (meterec->display.needs_update != meterec->display.needed_update) {
+				display_connections_fill_ports(meterec);
+				display_connections_fill_conns(meterec);
+				meterec->display.needed_update++ ;
+			}
 		}
 		
 		display_port_info(meterec);

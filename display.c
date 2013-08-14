@@ -128,6 +128,7 @@ void display_view_change(struct meterec_s *meterec) {
 			break;
 	}
 	meterec->display.pre_view = meterec->display.view;
+	meterec->display.needed_update = meterec->display.needs_update;
 }
 
 static int iec_scale(float db, int size) {
@@ -768,12 +769,14 @@ void display_connections_fill_conns(struct meterec_s *meterec) {
 	wclear(meterec->display.wco);
 	
 	for (port=0; port<meterec->n_ports; port++) {
+		
 		if (port == meterec->pos.port) {
 			wattron(meterec->display.wt, A_REVERSE);
 			mvwhline(meterec->display.wt, port, 0, 32, 5);
 		}
+		
 		if (meterec->ports[port].thru) 
-			mvwhline(meterec->display.wt, port, 0, 0, 5);
+			mvwhline(meterec->display.wt, port, 0, 0, 4);
 		
 		wattroff(meterec->display.wt, A_REVERSE);
 	}
