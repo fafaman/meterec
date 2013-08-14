@@ -706,6 +706,10 @@ void display_session(struct meterec_s *meterec)
 	wnoutrefresh(win);
 }
 
+void display_connections(struct meterec_s *meterec) {
+
+}
+
 void display_ports(struct meterec_s *meterec) 
 {
 	unsigned int port=0, i;
