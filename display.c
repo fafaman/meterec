@@ -713,8 +713,14 @@ void display_connections(struct meterec_s *meterec) {
 
 void display_connections_fill_ports(struct meterec_s *meterec) {
 	
-	unsigned int port, i;
+	unsigned int port, i, len, w;
 	const char **in, **out;
+	
+	wclear(meterec->display.wpi);
+	wclear(meterec->display.wpii);
+	wclear(meterec->display.wpo);
+	wclear(meterec->display.wpoo);
+	
 	
 	for (port=0; port<meterec->n_ports; port++) {
 		mvwprintw(meterec->display.wpi, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
@@ -730,12 +736,58 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	}
 	
 	out=meterec->all_input_ports;
+	w = getmaxx(meterec->display.wpoo);
 	i = 0;
 	while (out && *out) {
-		mvwprintw(meterec->display.wpoo, i, 0, "%s",*out);
+		len = strlen(*out);
+		mvwprintw(meterec->display.wpoo, i, w-len, "%s",*out);
 		i++;
 		out++;
 	}
+	
+	wnoutrefresh(meterec->display.wpi);
+	wnoutrefresh(meterec->display.wpii);
+	wnoutrefresh(meterec->display.wpo);
+	wnoutrefresh(meterec->display.wpoo);
+}
+
+void display_connections_fill_conns(struct meterec_s *meterec) {
+	
+	unsigned int port, i, len, w;
+	const char **in, **out;
+	
+	wclear(meterec->display.wci);
+	wclear(meterec->display.wt);
+	wclear(meterec->display.wco);
+	
+	/*
+	for (port=0; port<meterec->n_ports; port++) {
+		mvwprintw(meterec->display.wci, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
+		mvwprintw(meterec->display.wco, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
+	}
+	
+	in=meterec->all_output_ports;
+	i = 0;
+	while (in && *in) {
+		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
+		i++;
+		in++;
+	}
+	
+	out=meterec->all_input_ports;
+	w = getmaxx(meterec->display.wpoo);
+	i = 0;
+	while (out && *out) {
+		len = strlen(*out);
+		mvwprintw(meterec->display.wpoo, i, w-len, "%s",*out);
+		i++;
+		out++;
+	}
+	*/
+	
+	wnoutrefresh(meterec->display.wci);
+	wnoutrefresh(meterec->display.wt);
+	wnoutrefresh(meterec->display.wco);
 	
 }
 
