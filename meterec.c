@@ -1290,7 +1290,7 @@ int main(int argc, char *argv[])
 		display_init_windows(meterec);
 		
 		
-		//display_header(meterec);
+		display_header(meterec);
 		
 		if (meterec->display.view==VU) {
 			if (meterec->display.pre_view != VU)
@@ -1313,10 +1313,10 @@ int main(int argc, char *argv[])
 				
 			//display_ports(meterec);
 		}
-		/*
+		
 		display_port_info(meterec);
 		display_port_db_digital(meterec);
-		*/
+		
 		
 		/*
 		struct event_s *event;

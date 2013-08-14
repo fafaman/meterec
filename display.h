@@ -25,6 +25,8 @@ void display_loop(struct meterec_s *meterec,WINDOW *win);
 void display_ports(struct meterec_s *meterec);
 void display_connections(struct meterec_s *meterec);
 void display_connections_init(struct meterec_s *meterec);
+void display_connections_fill_ports(struct meterec_s *meterec);
+void display_connections_fill_conns(struct meterec_s *meterec);
 void display_session(struct meterec_s *meterec);
 void display_port_info(struct meterec_s *meterec);
 void display_port_recmode(struct port_s *port_p);

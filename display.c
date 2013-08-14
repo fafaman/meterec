@@ -124,6 +124,7 @@ void display_view_change(struct meterec_s *meterec) {
 			count_all_io_ports(meterec);
 			display_connections_init(meterec);
 			display_connections_fill_ports(meterec);
+			display_connections_fill_conns(meterec);
 			break;
 	}
 	meterec->display.pre_view = meterec->display.view;
@@ -721,7 +722,6 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	wclear(meterec->display.wpo);
 	wclear(meterec->display.wpoo);
 	
-	
 	for (port=0; port<meterec->n_ports; port++) {
 		mvwprintw(meterec->display.wpi, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
 		mvwprintw(meterec->display.wpo, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
@@ -753,37 +753,58 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 
 void display_connections_fill_conns(struct meterec_s *meterec) {
 	
-	unsigned int port, i, len, w;
+	unsigned int port, i, len, w, h;
 	const char **in, **out;
 	
 	wclear(meterec->display.wci);
 	wclear(meterec->display.wt);
 	wclear(meterec->display.wco);
 	
-	/*
-	for (port=0; port<meterec->n_ports; port++) {
-		mvwprintw(meterec->display.wci, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
-		mvwprintw(meterec->display.wco, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
-	}
+	for (port=0; port<meterec->n_ports; port++) 
+		if (meterec->ports[port].thru) 
+			mvwhline(meterec->display.wt, port, 0, 0, 4);
+	
+	h = getmaxy(meterec->display.wci);
+	mvwvline(meterec->display.wci, 0, 1, 0, h);
+	
+	h = getmaxy(meterec->display.wco);
+	mvwvline(meterec->display.wco, 0, 1, 0, h);
+	
+	mvwaddch(meterec->display.wci, meterec->pos.port, 1, ACS_LTEE);
+	mvwaddch(meterec->display.wci, meterec->pos.port, 2, ACS_HLINE);
+	mvwaddch(meterec->display.wco, meterec->pos.port, 1, ACS_RTEE);
+	mvwaddch(meterec->display.wco, meterec->pos.port, 0, ACS_HLINE);
 	
 	in=meterec->all_output_ports;
 	i = 0;
 	while (in && *in) {
-		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
+		if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, *in)) {
+			if (i==meterec->pos.port)
+				mvwaddch(meterec->display.wci, i, 1, ACS_PLUS);
+			else 
+				mvwaddch(meterec->display.wci, i, 1, ACS_RTEE);
+			
+			mvwaddch(meterec->display.wci, i, 0, ACS_HLINE);
+		}
 		i++;
 		in++;
 	}
 	
 	out=meterec->all_input_ports;
-	w = getmaxx(meterec->display.wpoo);
 	i = 0;
 	while (out && *out) {
-		len = strlen(*out);
-		mvwprintw(meterec->display.wpoo, i, w-len, "%s",*out);
+		if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *out)) {
+			if (i==meterec->pos.port)
+				mvwaddch(meterec->display.wco, i, 1, ACS_PLUS);
+			else 
+				mvwaddch(meterec->display.wco, i, 1, ACS_LTEE);
+			
+			mvwaddch(meterec->display.wco, i, 2, ACS_HLINE);
+		}
 		i++;
 		out++;
 	}
-	*/
+	
 	
 	wnoutrefresh(meterec->display.wci);
 	wnoutrefresh(meterec->display.wt);
@@ -804,7 +825,7 @@ void display_connections_init(struct meterec_s *meterec) {
 	
 	unsigned int ilen = strlen(meterec->jack_name) + 6 ;
 	unsigned int olen = strlen(meterec->jack_name) + 7 ;
-	const unsigned int tlen = 4, clen = 3;
+	const unsigned int tlen = 5, clen = 3;
 	unsigned int iolen;
 	unsigned int h, w, x, y;
 	
