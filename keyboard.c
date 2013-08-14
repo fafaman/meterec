@@ -249,19 +249,35 @@ void *keyboard_thread(void *arg) {
 					meterec->display.needs_update++;
 					break;
 				case 'c':
-					if (meterec->pos.inout == CON_IN)
-						register_connect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
-					else if (meterec->pos.inout == CON_OUT)
-						register_connect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+					if (meterec->pos.inout == CON_OUT)
+						register_connect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_out], meterec->pos.port);
+					else if (meterec->pos.inout == CON_IN)
+						register_connect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_in], meterec->pos.port);
 					meterec->display.needs_update++;
 					break;
 				case 'x':
-					if (meterec->pos.inout == CON_IN)
-						deregister_disconnect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_in], meterec->pos.port);
-					else if (meterec->pos.inout == CON_OUT)
-						deregister_disconnect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_out], meterec->pos.port);
+					if (meterec->pos.inout == CON_OUT)
+						deregister_disconnect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_out], meterec->pos.port);
+					else if (meterec->pos.inout == CON_IN)
+						deregister_disconnect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_in], meterec->pos.port);
 					meterec->display.needs_update++;
 					break;
+				case 'w':
+					if (meterec->pos.inout == CON_OUT) {
+						if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, (char*)meterec->all_output_ports[meterec->pos.con_out]))
+							deregister_disconnect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_out], meterec->pos.port);
+						else
+							register_connect_port(meterec, (char*)meterec->all_output_ports[meterec->pos.con_out], meterec->pos.port);
+					}
+					if (meterec->pos.inout == CON_IN) {
+						if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, (char*)meterec->all_input_ports[meterec->pos.con_in]))
+							deregister_disconnect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_in], meterec->pos.port);
+						else 
+							register_connect_port(meterec, (char*)meterec->all_input_ports[meterec->pos.con_in], meterec->pos.port);
+					}
+					meterec->display.needs_update++;
+					break;
+					
 			}
 			
 			break;

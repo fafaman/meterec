@@ -772,7 +772,7 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 
 void display_connections_fill_conns(struct meterec_s *meterec) {
 	
-	unsigned int port, i, len, w, h;
+	unsigned int port, i, h;
 	const char **in, **out;
 	
 	wclear(meterec->display.wci);

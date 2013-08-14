@@ -1082,6 +1082,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       <= =>   select port column\n");
 	fprintf(stderr, "       c       connect ports\n");
 	fprintf(stderr, "       x       disconnect ports\n");
+	fprintf(stderr, "       w       toggle ports connection\n");
 	exit(1);
 }
 
@@ -1290,7 +1291,6 @@ int main(int argc, char *argv[])
 		
 		/* Init the windows shape and scale if any resize occurs */
 		display_init_windows(meterec);
-		
 		
 		display_header(meterec);
 		
