@@ -82,9 +82,9 @@
 #define PORT 3
 
 /* port selection */
-#define CON_IN (-1)
+#define CON_OUT (-1)
 #define CON 0
-#define CON_OUT (1)
+#define CON_IN (1)
 
 /* loop boundaries */
 #define BOUND_LOW 1

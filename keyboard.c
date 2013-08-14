@@ -238,22 +238,14 @@ void *keyboard_thread(void *arg) {
 			switch (key) {
 				case KEY_LEFT:
 					meterec->pos.inout --;
-					if (meterec->pos.inout < CON_IN)
-						meterec->pos.inout = CON_OUT;
-					if ( meterec->pos.inout == CON_IN )
-						meterec->pos.con_in = meterec->pos.port ;
-					if ( meterec->pos.con_in > meterec->pos.n_con_in )
-						meterec->pos.con_in = meterec->pos.n_con_in;
+					if (meterec->pos.inout < CON_OUT)
+						meterec->pos.inout = CON_IN;
 					meterec->display.needs_update++;
 					break;
 				case KEY_RIGHT:
 					meterec->pos.inout ++;
-					if (meterec->pos.inout > CON_OUT)
-						meterec->pos.inout = CON_IN;
-					if ( meterec->pos.inout == CON_OUT )
-						meterec->pos.con_out = meterec->pos.port ;
-					if ( meterec->pos.con_out > meterec->pos.n_con_out )
-						meterec->pos.con_out = meterec->pos.n_con_out;
+					if (meterec->pos.inout > CON_IN)
+						meterec->pos.inout = CON_OUT;
 					meterec->display.needs_update++;
 					break;
 				case 'c':
@@ -271,6 +263,7 @@ void *keyboard_thread(void *arg) {
 					meterec->display.needs_update++;
 					break;
 			}
+			
 			break;
 		}
 		

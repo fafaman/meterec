@@ -724,7 +724,7 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	wclear(meterec->display.wpoo);
 	
 	for (port=0; port<meterec->n_ports; port++) {
-		if (port == meterec->pos.port) {
+		if (port == meterec->pos.port && !meterec->pos.inout) {
 			wattron(meterec->display.wpi, A_REVERSE);
 			wattron(meterec->display.wpo, A_REVERSE);
 		}
@@ -735,22 +735,33 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 		
 	}
 	
-	in=meterec->all_output_ports;
-	i = 0;
-	while (in && *in) {
-		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
-		i++;
-		in++;
-	}
-	
-	out=meterec->all_input_ports;
+	out=meterec->all_output_ports;
 	w = getmaxx(meterec->display.wpoo);
 	i = 0;
 	while (out && *out) {
+		if (meterec->pos.inout == CON_OUT && meterec->pos.con_out == i) {
+			wattron(meterec->display.wpoo, A_REVERSE);
+			mvwhline(meterec->display.wpoo, i, 0, 32, w);
+		}
 		len = strlen(*out);
 		mvwprintw(meterec->display.wpoo, i, w-len, "%s",*out);
+		wattroff(meterec->display.wpoo, A_REVERSE);
 		i++;
 		out++;
+	}
+	
+	in=meterec->all_input_ports;
+	w = getmaxx(meterec->display.wpii);
+	i = 0;
+	while (in && *in) {
+		if (meterec->pos.inout == CON_IN && meterec->pos.con_in == i) {
+			wattron(meterec->display.wpii, A_REVERSE);
+			mvwhline(meterec->display.wpii, i, 0, 32, w);
+		}
+		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
+		wattroff(meterec->display.wpii, A_REVERSE);
+		i++;
+		in++;
 	}
 	
 	wnoutrefresh(meterec->display.wpi);
@@ -770,7 +781,7 @@ void display_connections_fill_conns(struct meterec_s *meterec) {
 	
 	for (port=0; port<meterec->n_ports; port++) {
 		
-		if (port == meterec->pos.port) {
+		if (port == meterec->pos.port && !meterec->pos.inout) {
 			wattron(meterec->display.wt, A_REVERSE);
 			mvwhline(meterec->display.wt, port, 0, 32, 5);
 		}
@@ -843,20 +854,21 @@ void display_connections_init(struct meterec_s *meterec) {
 	unsigned int ilen = strlen(meterec->jack_name) + 6 ;
 	unsigned int olen = strlen(meterec->jack_name) + 7 ;
 	const unsigned int tlen = 5, clen = 3;
-	unsigned int iolen;
+	unsigned int oolen, iilen;
 	unsigned int h, w, x, y;
 	
 	getbegyx(win,y,x);
 	getmaxyx(win,h,w);
-	iolen = (w - ilen - olen - tlen - clen) / 2 - 2;
+	oolen = (w - ilen - olen - tlen - clen) / 2;
+	iilen = (w - ilen - olen - tlen - clen - oolen);
 	
-	meterec->display.wpoo = newwin(h, iolen, y, x);
-	meterec->display.wci  = newwin(h, clen,  y, x+iolen);
-	meterec->display.wpi  = newwin(h, ilen,  y, x+iolen+clen);
-	meterec->display.wt   = newwin(h, tlen,  y, x+iolen+clen+ilen);
-	meterec->display.wpo  = newwin(h, olen,  y, x+iolen+clen+ilen+tlen);
-	meterec->display.wco  = newwin(h, clen,  y, x+iolen+clen+ilen+tlen+olen);
-	meterec->display.wpii = newwin(h, iolen, y, x+iolen+clen+ilen+tlen+olen+clen);
+	meterec->display.wpoo = newwin(h, oolen, y, x);
+	meterec->display.wci  = newwin(h, clen,  y, x+oolen);
+	meterec->display.wpi  = newwin(h, ilen,  y, x+oolen+clen);
+	meterec->display.wt   = newwin(h, tlen,  y, x+oolen+clen+ilen);
+	meterec->display.wpo  = newwin(h, olen,  y, x+oolen+clen+ilen+tlen);
+	meterec->display.wco  = newwin(h, clen,  y, x+oolen+clen+ilen+tlen+olen);
+	meterec->display.wpii = newwin(h, iilen, y, x+oolen+clen+ilen+tlen+olen+clen);
 	
 	display_box(meterec->display.wpoo);
 	display_box(meterec->display.wci );
