@@ -723,8 +723,15 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	wclear(meterec->display.wpoo);
 	
 	for (port=0; port<meterec->n_ports; port++) {
+		if (port == meterec->pos.port) {
+			wattron(meterec->display.wpi, A_REVERSE);
+			wattron(meterec->display.wpo, A_REVERSE);
+		}
 		mvwprintw(meterec->display.wpi, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
 		mvwprintw(meterec->display.wpo, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
+		wattroff(meterec->display.wpi, A_REVERSE);
+		wattroff(meterec->display.wpo, A_REVERSE);
+		
 	}
 	
 	in=meterec->all_output_ports;
