@@ -123,6 +123,7 @@ void display_view_change(struct meterec_s *meterec) {
 			filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
 			count_all_io_ports(meterec);
 			display_connections_init(meterec);
+			display_connections_fill_ports(meterec);
 			break;
 	}
 	meterec->display.pre_view = meterec->display.view;
