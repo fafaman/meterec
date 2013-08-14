@@ -52,11 +52,30 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
 	meterec->display.wtak = newwin(2, w-8,       2,  8);
 	meterec->display.wpor = newwin(p,   8,       4,  0);
+	meterec->display.wses = newwin(h-4-1,w-8,       4,  8);
 	meterec->display.wvum = newwin(p, w-8,       4,  8);
 	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
-	meterec->display.wcon = newwin(h-4-1, w,      4,  0);
-	meterec->display.wbot = newwin(1, w-20,    h-1,  0);
-	meterec->display.wbdb = newwin(1, 20,      h-1,  w-20);
+	meterec->display.wcon = newwin(h-2-1, w,      2,  0);
+	meterec->display.wbot = newwin(1, w-17,    h-1,  0);
+	meterec->display.wbdb = newwin(1, 17,      h-1,  w-17);
+	
+	/*
+	display_box(meterec->display.wrds);
+	display_box(meterec->display.wwrs);
+	display_box(meterec->display.wttl);
+	display_box(meterec->display.wloo);
+	display_box(meterec->display.wcpu);
+	display_box(meterec->display.wsc1);
+	//display_box(meterec->display.wtak);
+	display_box(meterec->display.wpor);
+	display_box(meterec->display.wvum);
+	display_box(meterec->display.wsc2);
+	//display_box(meterec->display.wcon);
+	display_box(meterec->display.wbot);
+	display_box(meterec->display.wbdb);
+	return;
+	
+	*/
 	
 	display_session_name(meterec, meterec->display.wttl);
 	
@@ -86,12 +105,11 @@ void display_view_change(struct meterec_s *meterec) {
 	switch (meterec->display.view) {
 		
 		case VU : 
-			display_init_scale(0, meterec->display.wsc1);
-			display_init_scale(1, meterec->display.wsc2);
-			/*
+			touchwin(meterec->display.wsc1);
+			touchwin(meterec->display.wsc2);
 			wnoutrefresh(meterec->display.wsc1);
 			wnoutrefresh(meterec->display.wsc2);
-			*/
+			
 			break;
 		
 		case EDIT :
@@ -198,7 +216,7 @@ void display_port_info(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
-	wprintw(win, "  Port %2d ", port);
+	wprintw(win, "Port %2d ", port+1);
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
@@ -230,11 +248,12 @@ void display_port_info(struct meterec_s *meterec) {
 	else 
 		wprintw(win, " PLAYING no take");
 	
+	/*
 	if (port_p->name)
 		display_right_aligned(port_p->name,21);
 	else 
 		display_fill_remaining(21);
-	
+	*/
 	wnoutrefresh(win);
 	
 }
@@ -634,7 +653,7 @@ void display_take_info(struct meterec_s *meterec) {
 void display_session(struct meterec_s *meterec) 
 {
 	
-	WINDOW *win = meterec->display.wvum;
+	WINDOW *win = meterec->display.wses;
 	unsigned int take, port;
 	unsigned int y_pos, x_pos;
 	

@@ -1286,33 +1286,36 @@ int main(int argc, char *argv[])
 		
 		read_peak(bias);
 		
-		/* Init the windows shape and scale */
+		/* Init the windows shape and scale if any resize occurs */
 		display_init_windows(meterec);
+		
 		
 		display_header(meterec);
 		
 		if (meterec->display.view==VU) {
 			if (meterec->display.pre_view != VU)
 				display_view_change(meterec);
+			
 			display_ports_modes(meterec);
 			display_meter(meterec, meterec->display.names, decay_len);
-			display_port_info(meterec);
-			display_port_db_digital(meterec);
 		}
 		else if (meterec->display.view==EDIT) {
 			if (meterec->display.pre_view != EDIT)
 				display_view_change(meterec);
+				
 			display_ports_modes(meterec);
 			display_take_info(meterec);
 			display_session(meterec);
-			display_port_info(meterec);
-			display_port_db_digital(meterec);
 		}
 		else if (meterec->display.view==PORT) {
 			if (meterec->display.pre_view != PORT)
 				display_view_change(meterec);
+				
 			display_ports(meterec);
 		}
+		
+		display_port_info(meterec);
+		display_port_db_digital(meterec);
 		
 		
 		/*
