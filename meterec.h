@@ -250,6 +250,16 @@ struct display_s
 	WINDOW* wbot;
 	WINDOW* wbdb;
 	WINDOW* wcon;
+	
+	WINDOW* wpi;
+	WINDOW* wpii;
+	WINDOW* wpo;
+	WINDOW* wpoo;
+	WINDOW* wci;
+	WINDOW* wco;
+	WINDOW* wt;
+	
+	
 };
 
 

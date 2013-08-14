@@ -122,7 +122,7 @@ void display_view_change(struct meterec_s *meterec) {
 			filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
 			filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
 			count_all_io_ports(meterec);
-			
+			display_connections_init(meterec);
 			break;
 	}
 	meterec->display.pre_view = meterec->display.view;
@@ -707,7 +707,74 @@ void display_session(struct meterec_s *meterec)
 }
 
 void display_connections(struct meterec_s *meterec) {
+	
+}
 
+void display_connections_fill_ports(struct meterec_s *meterec) {
+	
+	unsigned int port, i;
+	const char **in, **out;
+	
+	for (port=0; port<meterec->n_ports; port++) {
+		mvwprintw(meterec->display.wpi, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
+		mvwprintw(meterec->display.wpo, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
+	}
+	
+	in=meterec->all_output_ports;
+	i = 0;
+	while (in && *in) {
+		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
+		i++;
+		in++;
+	}
+	
+	out=meterec->all_input_ports;
+	i = 0;
+	while (out && *out) {
+		mvwprintw(meterec->display.wpoo, i, 0, "%s",*out);
+		i++;
+		out++;
+	}
+	
+}
+
+void display_connections_init(struct meterec_s *meterec) {
+	
+	WINDOW *win = meterec->display.wcon;
+	
+	/*
+	** Windows structures
+	**
+	** | outputs | icon | meterec_ins | thru | meterec_outs | ocon | inputs |
+	** 
+	*/
+	
+	unsigned int ilen = strlen(meterec->jack_name) + 6 ;
+	unsigned int olen = strlen(meterec->jack_name) + 7 ;
+	const unsigned int tlen = 4, clen = 3;
+	unsigned int iolen;
+	unsigned int h, w, x, y;
+	
+	getbegyx(win,y,x);
+	getmaxyx(win,h,w);
+	iolen = (w - ilen - olen - tlen - clen) / 2 - 2;
+	
+	meterec->display.wpoo = newwin(h, iolen, y, x);
+	meterec->display.wci  = newwin(h, clen,  y, x+iolen);
+	meterec->display.wpi  = newwin(h, ilen,  y, x+iolen+clen);
+	meterec->display.wt   = newwin(h, tlen,  y, x+iolen+clen+ilen);
+	meterec->display.wpo  = newwin(h, olen,  y, x+iolen+clen+ilen+tlen);
+	meterec->display.wco  = newwin(h, clen,  y, x+iolen+clen+ilen+tlen+olen);
+	meterec->display.wpii = newwin(h, iolen, y, x+iolen+clen+ilen+tlen+olen+clen);
+	
+	display_box(meterec->display.wpoo);
+	display_box(meterec->display.wci );
+	display_box(meterec->display.wpi );
+	display_box(meterec->display.wt  );
+	display_box(meterec->display.wpo );
+	display_box(meterec->display.wco );
+	display_box(meterec->display.wpii);
+	
 }
 
 void display_ports(struct meterec_s *meterec) 
