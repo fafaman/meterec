@@ -29,10 +29,8 @@
 #include "position.h"
 #include "meterec.h"
 #include "disk.h"
+#include "ports.h"
 #include "display.h"
-
-char *scale ;
-char *line ;
 
 void display_init_windows(struct meterec_s *meterec) {
 	
@@ -52,12 +50,15 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
 	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
 	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
+	meterec->display.wtak = newwin(2, w-8,       2,  8);
 	meterec->display.wpor = newwin(p,   8,       4,  0);
 	meterec->display.wvum = newwin(p, w-8,       4,  8);
 	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
 	meterec->display.wcon = newwin(h-4-1, w,      4,  0);
 	meterec->display.wbot = newwin(1, w-20,    h-1,  0);
 	meterec->display.wbdb = newwin(1, 20,      h-1,  w-20);
+	
+	display_session_name(meterec, meterec->display.wttl);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
@@ -68,6 +69,45 @@ void display_init_windows(struct meterec_s *meterec) {
 	box(meterec->display.wbdb,0,0);
 	wnoutrefresh(meterec->display.wbdb);
 	*/
+}
+
+void display_box(WINDOW *win) {
+	
+	wclear(win);
+	box(win, 0,0);
+	wnoutrefresh(win);
+	
+}
+
+void display_view_change(struct meterec_s *meterec) {
+	
+	fprintf(meterec->fd_log,"display_view_change: form %d to %d\n", meterec->display.pre_view, meterec->display.view);
+	
+	switch (meterec->display.view) {
+		
+		case VU : 
+			display_init_scale(0, meterec->display.wsc1);
+			display_init_scale(1, meterec->display.wsc2);
+			/*
+			wnoutrefresh(meterec->display.wsc1);
+			wnoutrefresh(meterec->display.wsc2);
+			*/
+			break;
+		
+		case EDIT :
+			
+			break;
+		
+		case PORT :
+			retreive_connected_ports(meterec);
+			retreive_existing_ports(meterec);
+			filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
+			filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
+			count_all_io_ports(meterec);
+			
+			break;
+	}
+	meterec->display.pre_view = meterec->display.view;
 }
 
 static int iec_scale(float db, int size) {
@@ -564,14 +604,13 @@ void display_header(struct meterec_s *meterec) {
 	display_rd_status(meterec, meterec->display.wrds);
 	display_wr_status(meterec, meterec->display.wwrs);
 	display_loop(meterec, meterec->display.wloo);
-	display_session_name(meterec, meterec->display.wttl);
 	display_cpu_load_digital(meterec, meterec->display.wcpu);
 	
 }
 
 void display_take_info(struct meterec_s *meterec) {
 	
-	WINDOW *win = meterec->display.wsc1;
+	WINDOW *win = meterec->display.wtak;
 	char *name ="";
 	unsigned int y_pos, x_pos;
 	

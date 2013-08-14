@@ -32,3 +32,5 @@ void display_init_scale(int side, WINDOW *win);
 void display_init_windows(struct meterec_s *meterec);
 void display_port_db_digital(struct meterec_s *meterec);
 void display_take_info(struct meterec_s *meterec);
+void display_view_change(struct meterec_s *meterec);
+void display_session_name(struct meterec_s *meterec, WINDOW *win);

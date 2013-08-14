@@ -76,9 +76,10 @@
 #define BLUE 4
 
 /* view type */
-#define VU 0
-#define EDIT 1
-#define PORT 2
+#define NONE 0
+#define VU 1
+#define EDIT 2
+#define PORT 3
 
 /* port selection */
 #define CON_IN (-1)
@@ -230,6 +231,7 @@ struct disk_s
 struct display_s
 {
 	unsigned int view;
+	unsigned int pre_view;
 	unsigned int names;
 	unsigned int width;
 	unsigned int height;
@@ -240,6 +242,7 @@ struct display_s
 	WINDOW* wcpu;
 	WINDOW* wloo;
 	WINDOW* wsc1;
+	WINDOW* wtak;
 	WINDOW* wpor;
 	WINDOW* wvum;
 	WINDOW* wsc2;

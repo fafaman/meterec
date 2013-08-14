@@ -487,6 +487,7 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->loop.enable = 0;
 
 	meterec->display.view = VU;
+	meterec->display.pre_view = NONE;
 	meterec->display.names = ON;
 	meterec->display.width = 0;
 	
@@ -1290,24 +1291,26 @@ int main(int argc, char *argv[])
 		
 		display_header(meterec);
 		
-		
 		if (meterec->display.view==VU) {
+			if (meterec->display.pre_view != VU)
+				display_view_change(meterec);
 			display_ports_modes(meterec);
 			display_meter(meterec, meterec->display.names, decay_len);
 			display_port_info(meterec);
 			display_port_db_digital(meterec);
 		}
 		else if (meterec->display.view==EDIT) {
+			if (meterec->display.pre_view != EDIT)
+				display_view_change(meterec);
 			display_ports_modes(meterec);
 			display_take_info(meterec);
 			display_session(meterec);
-			/*wclear(meterec->display.wcon);
-			box(meterec->display.wcon,0,0);
-			wnoutrefresh(meterec->display.wcon);*/
 			display_port_info(meterec);
 			display_port_db_digital(meterec);
 		}
 		else if (meterec->display.view==PORT) {
+			if (meterec->display.pre_view != PORT)
+				display_view_change(meterec);
 			display_ports(meterec);
 		}
 		
