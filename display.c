@@ -55,16 +55,19 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wpor = newwin(p,   8,       4,  0);
 	meterec->display.wvum = newwin(p, w-8,       4,  8);
 	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
+	meterec->display.wcon = newwin(h-4-1, w,      4,  0);
 	meterec->display.wbot = newwin(1, w-20,    h-1,  0);
 	meterec->display.wbdb = newwin(1, 20,      h-1,  w-20);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
 	
+	/*
 	box(meterec->display.wbot,0,0);
 	wnoutrefresh(meterec->display.wbot);
 	box(meterec->display.wbdb,0,0);
 	wnoutrefresh(meterec->display.wbdb);
+	*/
 }
 
 static int iec_scale(float db, int size) {
@@ -243,13 +246,13 @@ void display_ports_modes(struct meterec_s *meterec) {
 		else 
 			wprintw(win, " ");
 		
-		if ( meterec->ports[port].mute )
-			wprintw(win, "M");
+		if ( meterec->ports[port].thru )
+			wprintw(win, "T");
 		else 
 			wprintw(win, " ");
 		
-		if ( meterec->ports[port].thru )
-			wprintw(win, "T");
+		if ( meterec->ports[port].mute )
+			wprintw(win, "M");
 		else 
 			wprintw(win, " ");
 		
@@ -650,121 +653,120 @@ void display_ports(struct meterec_s *meterec)
 	unsigned int port=0, i;
 	int line=0;
 	const char **in, **out;
-	WINDOW *win;
+	WINDOW *win = meterec->display.wcon;
 	
 	out=meterec->all_input_ports;
 	in=meterec->all_output_ports;
 	
-	
-	printw("\n\n\n");
+	wclear(win);
 	
 	while ((in && *in) || (out && *out) || port < meterec->n_ports) {
 		
-		printw("  ");
+		wprintw(win, "  ");
 		
 		if (in && *in) {
 		
 			if (meterec->pos.inout == CON_IN)
 				if (meterec->pos.con_in == line)
-					attron(A_REVERSE);
+					wattron(win, A_REVERSE);
 					
 			if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, *in)) {
-				attron(A_BOLD);
-				printw("%20s",*in);
-				attroff(A_BOLD);
-				attroff(A_REVERSE);
-				printw("-+");
+				wattron(win, A_BOLD);
+				wprintw(win, "%20s",*in);
+				wattroff(win, A_BOLD);
+				wattroff(win, A_REVERSE);
+				wprintw(win, "-+");
 			}
 			else if (port==meterec->pos.port) {
-				printw("%20s",*in);
-				attroff(A_REVERSE);
-				printw(" +");
+				wprintw(win, "%20s",*in);
+				wattroff(win, A_REVERSE);
+				wprintw(win, " +");
 				color_port(meterec, meterec->pos.port, win);
 			}
 			else {
-				printw("%20s",*in);
-				attroff(A_REVERSE);
-				printw(" |");
+				wprintw(win, "%20s",*in);
+				wattroff(win, A_REVERSE);
+				wprintw(win, " |");
 			}
 			in++;
 		} else {
 			if (port<meterec->pos.port)
-				printw("%20s |","");
+				wprintw(win, "%20s |","");
 			else if (port==meterec->pos.port)
-				printw("%20s +","");
+				wprintw(win, "%20s +","");
 			else 
-				printw("%20s  ","");
+				wprintw(win, "%20s  ","");
 		}
 		
 		
 		if (port<meterec->n_ports) {
 		
 			if (meterec->pos.port == port) {
-				printw("-");
+				wprintw(win, "-");
 				if (!meterec->pos.inout)
-					attron(A_REVERSE);
+					wattron(win, A_REVERSE);
 				else
-					attron(A_BOLD);
+					wattron(win, A_BOLD);
 			}
 			else 
-				printw(" ");
+				wprintw(win, " ");
 			
 			color_port(meterec, port, win);
 			
-			printw("%s:in_%-2d",  meterec->jack_name, port+1);
+			wprintw(win, "%s:in_%-2d",  meterec->jack_name, port+1);
 			
-			color_set(DEFAULT, NULL);
+			wcolor_set(win, DEFAULT, NULL);
 			
 			if (meterec->ports[port].thru)
-				printw("-> ");
+				wprintw(win, "-> ");
 			else 
-				printw("   ");
+				wprintw(win, "   ");
 			
-			printw("%s:out_%-2d",  meterec->jack_name, port+1);
+			wprintw(win, "%s:out_%-2d",  meterec->jack_name, port+1);
 			
-			attroff(A_BOLD);
-			attroff(A_REVERSE);
+			wattroff(win, A_BOLD);
+			wattroff(win, A_REVERSE);
 		
 		}
 		else 
 			for (i=0; i<(2*strlen(meterec->jack_name)+17); i++)
-				printw(" ");
+				wprintw(win, " ");
 		
 		if (meterec->pos.port==port)
-			printw("-");
+			wprintw(win, "-");
 		else 
-			printw(" ");
+			wprintw(win, " ");
 		
 		if (out && *out) {
 			if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *out)) {
-				printw("+-");
-				attron(A_BOLD);
+				wprintw(win, "+-");
+				wattron(win, A_BOLD);
 			}
 			else if (port==meterec->pos.port) {
-				printw("+ ");
+				wprintw(win, "+ ");
 			}
 			else
-				printw("| ");
+				wprintw(win, "| ");
 				
 			if (meterec->pos.inout == CON_OUT)
 				if (meterec->pos.con_out == line)
-					attron(A_REVERSE);
+					wattron(win, A_REVERSE);
 				
-			printw("%s",*out);
-			attroff(A_BOLD);
-			attroff(A_REVERSE);
+			wprintw(win, "%s",*out);
+			wattroff(win, A_BOLD);
+			wattroff(win, A_REVERSE);
 			
 			out++;
 		} else {
 			if (port<meterec->pos.port)
-				printw("|");
+				wprintw(win, "|");
 			else if (port==meterec->pos.port)
-				printw("+");
+				wprintw(win, "+");
 			else 
-				printw("");
+				wprintw(win, "");
 		}
-		color_set(DEFAULT, NULL);
-		printw("\n");
+		wcolor_set(win, DEFAULT, NULL);
+		wprintw(win, "\n");
 		
 		if (port < meterec->n_ports)
 			port ++;
@@ -772,6 +774,8 @@ void display_ports(struct meterec_s *meterec)
 		line ++;
 	}
 	
-	color_set(DEFAULT, NULL);
+	wcolor_set(win, DEFAULT, NULL);
+	
+	wnoutrefresh(win);
 	
 }

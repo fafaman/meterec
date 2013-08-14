@@ -240,11 +240,12 @@ struct display_s
 	WINDOW* wcpu;
 	WINDOW* wloo;
 	WINDOW* wsc1;
+	WINDOW* wpor;
 	WINDOW* wvum;
 	WINDOW* wsc2;
 	WINDOW* wbot;
 	WINDOW* wbdb;
-	WINDOW* wpor;
+	WINDOW* wcon;
 };
 
 

@@ -1301,6 +1301,9 @@ int main(int argc, char *argv[])
 			display_ports_modes(meterec);
 			display_take_info(meterec);
 			display_session(meterec);
+			/*wclear(meterec->display.wcon);
+			box(meterec->display.wcon,0,0);
+			wnoutrefresh(meterec->display.wcon);*/
 			display_port_info(meterec);
 			display_port_db_digital(meterec);
 		}
