@@ -767,9 +767,16 @@ void display_connections_fill_conns(struct meterec_s *meterec) {
 	wclear(meterec->display.wt);
 	wclear(meterec->display.wco);
 	
-	for (port=0; port<meterec->n_ports; port++) 
+	for (port=0; port<meterec->n_ports; port++) {
+		if (port == meterec->pos.port) {
+			wattron(meterec->display.wt, A_REVERSE);
+			mvwhline(meterec->display.wt, port, 0, 32, 5);
+		}
 		if (meterec->ports[port].thru) 
-			mvwhline(meterec->display.wt, port, 0, 0, 4);
+			mvwhline(meterec->display.wt, port, 0, 0, 5);
+		
+		wattroff(meterec->display.wt, A_REVERSE);
+	}
 	
 	h = getmaxy(meterec->display.wci);
 	mvwvline(meterec->display.wci, 0, 1, 0, h);
