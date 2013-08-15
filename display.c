@@ -798,11 +798,6 @@ void display_wr_status(struct meterec_s *meterec) {
 	wnoutrefresh(win);
 }
 
-void display_header(struct meterec_s *meterec) {
-	
-	
-}
-
 void display_take_info(struct meterec_s *meterec) {
 	
 	WINDOW *win = meterec->display.wtak;
@@ -817,10 +812,11 @@ void display_take_info(struct meterec_s *meterec) {
 	if (meterec->takes[x_pos].name)
 		name = meterec->takes[x_pos].name;
 	
-	wprintw(win, "Take %d (%s)\n",x_pos, name);
+	wprintw(win, "Take %d ",x_pos, name);
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
 	wprintw(win, "%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
+	wprintw(win, " (%s)\n", name);
 	
 	wnoutrefresh(win);
 
@@ -897,12 +893,22 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	wclear(meterec->display.wpoo);
 	
 	for (port=0; port<meterec->n_ports; port++) {
-		if (port == meterec->pos.port && !meterec->pos.inout) {
-			wattron(meterec->display.wpi, A_REVERSE);
-			wattron(meterec->display.wpo, A_REVERSE);
+		
+		if (port == meterec->pos.port) {
+			if (!meterec->pos.inout) {
+				wattron(meterec->display.wpi, A_REVERSE);
+				wattron(meterec->display.wpo, A_REVERSE);
+			} else {
+				wattron(meterec->display.wpi, A_BOLD);
+				wattron(meterec->display.wpo, A_BOLD);
+			}
 		}
+		
 		mvwprintw(meterec->display.wpi, port, 0, "%s:in_%-2d",  meterec->jack_name, port+1);
 		mvwprintw(meterec->display.wpo, port, 0, "%s:out_%-2d", meterec->jack_name, port+1);
+		
+		wattroff(meterec->display.wpi, A_BOLD);
+		wattroff(meterec->display.wpo, A_BOLD);
 		wattroff(meterec->display.wpi, A_REVERSE);
 		wattroff(meterec->display.wpo, A_REVERSE);
 		
@@ -916,8 +922,11 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 			wattron(meterec->display.wpoo, A_REVERSE);
 			mvwhline(meterec->display.wpoo, i, 0, 32, w);
 		}
+		if (jack_port_connected_to(meterec->ports[meterec->pos.port].input, *out))
+			wattron(meterec->display.wpoo, A_BOLD);
 		len = strlen(*out);
 		mvwprintw(meterec->display.wpoo, i, w-len, "%s",*out);
+		wattroff(meterec->display.wpoo, A_BOLD);
 		wattroff(meterec->display.wpoo, A_REVERSE);
 		i++;
 		out++;
@@ -931,7 +940,10 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 			wattron(meterec->display.wpii, A_REVERSE);
 			mvwhline(meterec->display.wpii, i, 0, 32, w);
 		}
+		if (jack_port_connected_to(meterec->ports[meterec->pos.port].output, *in))
+			wattron(meterec->display.wpii, A_BOLD);
 		mvwprintw(meterec->display.wpii, i, 0, "%s",*in);
+		wattroff(meterec->display.wpii, A_BOLD);
 		wattroff(meterec->display.wpii, A_REVERSE);
 		i++;
 		in++;
