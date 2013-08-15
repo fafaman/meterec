@@ -244,6 +244,7 @@ struct display_s
 	WINDOW* wcpu;
 	WINDOW* wloo;
 	WINDOW* wsc1;
+	WINDOW* wleg;
 	WINDOW* wtak;
 	WINDOW* wpor;
 	WINDOW* wvum;

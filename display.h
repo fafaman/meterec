@@ -33,6 +33,7 @@ void display_port_recmode(struct port_s *port_p);
 void display_ports_modes(struct meterec_s *meterec);
 void display_meter(struct meterec_s *meterec, int display_names, int decay_len);
 void display_init_scale(int side, WINDOW *win);
+void display_init_legend(WINDOW *win);
 void display_init_windows(struct meterec_s *meterec);
 void display_port_db_digital(struct meterec_s *meterec);
 void display_take_info(struct meterec_s *meterec);

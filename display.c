@@ -49,6 +49,7 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wttl = newwin(2, w-20-3*13, 0, 20);
 	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
 	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
+	meterec->display.wleg = newwin(2,   8,       2,  0);
 	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
 	meterec->display.wtak = newwin(2, w-8,       2,  8);
 	meterec->display.wpor = newwin(p,   8,       4,  0);
@@ -59,6 +60,7 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wbot = newwin(1, w-17,    h-1,  0);
 	meterec->display.wbdb = newwin(1, 17,      h-1,  w-17);
 	
+	display_box(meterec->display.wleg);
 	/*
 	display_box(meterec->display.wrds);
 	display_box(meterec->display.wwrs);
@@ -81,6 +83,7 @@ void display_init_windows(struct meterec_s *meterec) {
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
+	display_init_legend(meterec->display.wleg);
 	
 	/*
 	box(meterec->display.wbot,0,0);
@@ -409,6 +412,20 @@ void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
 	
 	wnoutrefresh(win);
 }
+
+
+void display_init_legend(WINDOW *win) {
+	
+	unsigned int w = getmaxx(win);
+	wclear(win);
+	
+	mvwprintw(win, 0, 0, "PP RTMI");
+	mvwhline(win, 1, 0, 0, w-1);
+	
+	wnoutrefresh(win);
+	
+}
+
 
 void display_init_scale(int side, WINDOW *win) {
 	
