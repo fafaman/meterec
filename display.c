@@ -405,14 +405,14 @@ void display_port_info(struct meterec_s *meterec) {
 	else 
 		wprintw(win, " PLAYING no take");
 	
-	tlen = strlen(take_name)
-	plen = strlen(port_name)
+	tlen = strlen(take_name);
+	plen = strlen(port_name);
 	
-	x = getposx(win);
+	x = getcurx(win);
 	w = getmaxx(win);
 	
 	mvwprintw(win, 0, x, "(%s)", take_name);
-	mvwprintw(win, 0, w-x, "%s", port_name);
+	mvwprintw(win, 0, w-plen-1, "%s", port_name);
 	
 	wnoutrefresh(win);
 	
