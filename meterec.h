@@ -237,6 +237,8 @@ struct display_s
 	unsigned int names;
 	unsigned int width;
 	unsigned int height;
+	unsigned int rate;
+	unsigned int decay_len;
 	
 	WINDOW* wrds;
 	WINDOW* wwrs;

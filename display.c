@@ -32,17 +32,49 @@
 #include "ports.h"
 #include "display.h"
 
-void display_init_windows(struct meterec_s *meterec) {
+WINDOW * mainwin = NULL;
+
+void display_init_curses(struct meterec_s *meterec) {
 	
-	unsigned int w, h, p;
+	fprintf(meterec->fd_log, "Starting ncurses interface...\n");
 	
-	if (meterec->display.width == getmaxx(stdscr))
-		if (meterec->display.height == getmaxy(stdscr))
-			return;
+	mainwin = initscr();
 	
-	w = meterec->display.width = getmaxx(stdscr);
-	h = meterec->display.height = getmaxy(stdscr);
-	p = meterec->n_ports;
+	if ( mainwin == NULL ) {
+		fprintf(meterec->fd_log, "Error initialising ncurses.\n");
+		exit(1);
+	}
+	
+	curs_set(0);
+	start_color();
+	
+	/* choose our color pairs */
+	init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
+	init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
+	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
+	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
+	
+	clear();
+	
+	meterec->curses_sts = ONGOING;
+	
+}
+
+void display_cleanup_curses(struct meterec_s *meterec) {
+	
+	delwin(mainwin);
+	endwin();
+	refresh();
+	fprintf(meterec->fd_log, "Stopped ncurses interface.\n");
+	
+	meterec->curses_sts = OFF;
+}
+
+
+void display_init_windows(struct meterec_s *meterec, unsigned int w, unsigned int h) {
+	
+	unsigned int p = meterec->n_ports;
+	
 	/*                                h,     w,   x,    y */
 	meterec->display.wrds = newwin(    1,   20,   0,    0);
 	meterec->display.wwrs = newwin(    1,   20,   1,    0);
@@ -62,12 +94,137 @@ void display_init_windows(struct meterec_s *meterec) {
 	meterec->display.wbdb = newwin(    1,   17, h-1, w-17);
 	
 	
-	display_session_name(meterec, meterec->display.wttl);
+}
+
+void display_changed_size(struct meterec_s *meterec) {
+	
+	unsigned int w, h;
+	
+	getmaxyx(stdscr, h, w);
+	
+	if (meterec->display.width == w)
+		if (meterec->display.height == h)
+			return;
+	
+	flushinp();
+	clear();
+	refresh();
+	
+	meterec->display.width = w;
+	meterec->display.height = h;
+	
+	display_init_windows(meterec, w, h);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
+	
+	display_init_title(meterec);	
 	display_init_legend(meterec->display.wleg);
 	display_init_clr(meterec->display.wclr);
+	
+	display_refresh_view(meterec);
+	
+}
+
+void display_changed_view(struct meterec_s *meterec) {
+	
+	static unsigned int view = NONE;
+	
+	if (meterec->display.view == view)
+		return;
+	
+	view = meterec->display.view;
+	
+	display_refresh_view(meterec);
+	
+}
+
+void display_refresh_view(struct meterec_s *meterec) {
+	
+	touchwin(meterec->display.wttl);
+	wnoutrefresh(meterec->display.wttl);
+	
+	switch (meterec->display.view) {
+		
+		case VU : 
+			touchwin(meterec->display.wsc1);
+			touchwin(meterec->display.wsc2);
+			touchwin(meterec->display.wleg);
+			touchwin(meterec->display.wclr);
+			wnoutrefresh(meterec->display.wsc1);
+			wnoutrefresh(meterec->display.wsc2);
+			wnoutrefresh(meterec->display.wleg);
+			wnoutrefresh(meterec->display.wclr);
+			break;
+		
+		case EDIT :
+			
+			break;
+		
+		case PORT :
+			retreive_connected_ports(meterec);
+			retreive_existing_ports(meterec);
+			filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
+			filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
+			count_all_io_ports(meterec);
+			display_connections_init(meterec);
+			display_connections_fill_ports(meterec);
+			display_connections_fill_conns(meterec);
+			break;
+	}
+	
+}
+
+void display_changed_static_content(struct meterec_s *meterec) {
+	
+	if (meterec->display.needs_update == meterec->display.needed_update)
+		return;
+	
+	switch (meterec->display.view) {
+		
+		case VU : 
+			break;
+		
+		case EDIT :
+			break;
+		
+		case PORT :
+			display_connections_fill_ports(meterec);
+			display_connections_fill_conns(meterec);
+			break;
+	}
+	
+	meterec->display.needed_update++;
+}
+
+void display_dynamic_content(struct meterec_s *meterec) {
+	
+	display_rd_status(meterec);
+	display_wr_status(meterec);
+	display_loop(meterec);
+	display_cpu_load_digital(meterec);
+	
+	switch (meterec->display.view) {
+		
+		case VU : 
+			display_ports_modes(meterec);
+			display_meter(meterec, meterec->display.names, meterec->display.decay_len);
+			break;
+		
+		case EDIT :
+			display_ports_modes(meterec);
+			display_take_info(meterec);
+			display_session(meterec);
+			break;
+		
+		case PORT :
+			
+			
+			break;
+	}
+	
+	display_port_info(meterec);
+	display_port_db_digital(meterec);
 	
 }
 
@@ -98,6 +255,14 @@ void display_debug_windows(struct meterec_s *meterec) {
 	/* PORTs */
 	else if (meterec->display.view==PORT) {
 		display_box(meterec->display.wcon);
+		display_box(meterec->display.wpoo);
+		display_box(meterec->display.wci );
+		display_box(meterec->display.wpi );
+		display_box(meterec->display.wt  );
+		display_box(meterec->display.wpo );
+		display_box(meterec->display.wco );
+		display_box(meterec->display.wpii);
+	
 	}
 	
 	/* ALL */
@@ -116,39 +281,6 @@ void display_box(WINDOW *win) {
 
 void display_view_change(struct meterec_s *meterec) {
 	
-	fprintf(meterec->fd_log,"display_view_change: form %d to %d\n", meterec->display.pre_view, meterec->display.view);
-	
-	switch (meterec->display.view) {
-		
-		case VU : 
-			touchwin(meterec->display.wsc1);
-			touchwin(meterec->display.wsc2);
-			touchwin(meterec->display.wleg);
-			touchwin(meterec->display.wclr);
-			wnoutrefresh(meterec->display.wsc1);
-			wnoutrefresh(meterec->display.wsc2);
-			wnoutrefresh(meterec->display.wleg);
-			wnoutrefresh(meterec->display.wclr);
-			
-			break;
-		
-		case EDIT :
-			
-			break;
-		
-		case PORT :
-			retreive_connected_ports(meterec);
-			retreive_existing_ports(meterec);
-			filter_existing_ports(meterec->all_input_ports, meterec->jack_name);
-			filter_existing_ports(meterec->all_output_ports, meterec->jack_name);
-			count_all_io_ports(meterec);
-			display_connections_init(meterec);
-			display_connections_fill_ports(meterec);
-			display_connections_fill_conns(meterec);
-			break;
-	}
-	meterec->display.pre_view = meterec->display.view;
-	meterec->display.needed_update = meterec->display.needs_update;
 }
 
 static int iec_scale(float db, int size) {
@@ -176,14 +308,14 @@ static int iec_scale(float db, int size) {
 }
 
 
-void display_session_name(struct meterec_s *meterec, WINDOW *win) {
-	unsigned int len, w, pos;
+void display_init_title(struct meterec_s *meterec) {
+	
+	WINDOW *win = meterec->display.wttl;
+	unsigned int len = strlen(meterec->session) + 4;
+	unsigned int w = getmaxx(win);
+	unsigned int pos = (w - len) / 2;
 	
 	wclear(win);
-	
-	len = strlen(meterec->session) + 4;
-	w = getmaxx(win);
-	pos = (w - len) / 2;
 	
 	mvwprintw(win, 0, pos, "~ %s ~", meterec->session);
 	
@@ -489,8 +621,6 @@ void display_init_scale(int side, WINDOW *win) {
 		
 	}
 	
-	wnoutrefresh(win);
-	
 }
 
 void display_rd_buffer(struct meterec_s *meterec, WINDOW *win) {
@@ -562,7 +692,10 @@ void display_wr_buffer(struct meterec_s *meterec, WINDOW *win) {
 	
 }
 
-void display_cpu_load_digital(struct meterec_s *meterec, WINDOW *win) {
+void display_cpu_load_digital(struct meterec_s *meterec) {
+	
+	WINDOW *win = meterec->display.wcpu;
+	
 	wclear(win);
 	
 	mvwprintw(win, 0, 39-7, "%6.2f%%", jack_cpu_load(meterec->client));
@@ -570,8 +703,9 @@ void display_cpu_load_digital(struct meterec_s *meterec, WINDOW *win) {
 	wnoutrefresh(win);
 }
 
-void display_loop(struct meterec_s *meterec, WINDOW *win) {
+void display_loop(struct meterec_s *meterec) {
 	
+	WINDOW *win = meterec->display.wloo;
 	struct time_s low, high, now;
 	wclear(win);
 	
@@ -601,8 +735,9 @@ void display_loop(struct meterec_s *meterec, WINDOW *win) {
 	wnoutrefresh(win);
 }
 
-void display_rd_status(struct meterec_s *meterec, WINDOW *win) {
+void display_rd_status(struct meterec_s *meterec) {
 	
+	WINDOW *win = meterec->display.wrds;
 	wclear(win);
 	
 	wprintw(win, "[> ");
@@ -625,8 +760,9 @@ void display_rd_status(struct meterec_s *meterec, WINDOW *win) {
 	wnoutrefresh(win);
 }
 
-void display_wr_status(struct meterec_s *meterec, WINDOW *win) {
+void display_wr_status(struct meterec_s *meterec) {
 	
+	WINDOW *win = meterec->display.wwrs;
 	wclear(win);
 	
 	if (meterec->record_sts) 
@@ -664,10 +800,6 @@ void display_wr_status(struct meterec_s *meterec, WINDOW *win) {
 
 void display_header(struct meterec_s *meterec) {
 	
-	display_rd_status(meterec, meterec->display.wrds);
-	display_wr_status(meterec, meterec->display.wwrs);
-	display_loop(meterec, meterec->display.wloo);
-	display_cpu_load_digital(meterec, meterec->display.wcpu);
 	
 }
 
@@ -910,14 +1042,6 @@ void display_connections_init(struct meterec_s *meterec) {
 	meterec->display.wpo  = newwin(h, olen,  y, x+oolen+clen+ilen+tlen);
 	meterec->display.wco  = newwin(h, clen,  y, x+oolen+clen+ilen+tlen+olen);
 	meterec->display.wpii = newwin(h, iilen, y, x+oolen+clen+ilen+tlen+olen+clen);
-	
-	display_box(meterec->display.wpoo);
-	display_box(meterec->display.wci );
-	display_box(meterec->display.wpi );
-	display_box(meterec->display.wt  );
-	display_box(meterec->display.wpo );
-	display_box(meterec->display.wco );
-	display_box(meterec->display.wpii);
 	
 }
 

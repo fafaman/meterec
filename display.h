@@ -20,8 +20,7 @@
 
 */
 
-void display_header(struct meterec_s *meterec);
-void display_loop(struct meterec_s *meterec,WINDOW *win);
+void display_loop(struct meterec_s *meterec);
 void display_ports(struct meterec_s *meterec);
 void display_connections(struct meterec_s *meterec);
 void display_connections_init(struct meterec_s *meterec);
@@ -31,14 +30,25 @@ void display_session(struct meterec_s *meterec);
 void display_port_info(struct meterec_s *meterec);
 void display_port_recmode(struct port_s *port_p);
 void display_ports_modes(struct meterec_s *meterec);
+void display_rd_status(struct meterec_s *meterec);
+void display_wr_status(struct meterec_s *meterec);
+void display_cpu_load_digital(struct meterec_s *meterec);
 void display_meter(struct meterec_s *meterec, int display_names, int decay_len);
 void display_init_scale(int side, WINDOW *win);
 void display_init_legend(WINDOW *win);
 void display_init_clr(WINDOW *win);
-void display_init_windows(struct meterec_s *meterec);
+void display_init_title(struct meterec_s *meterec);
+void display_init_windows(struct meterec_s *meterec, unsigned int w, unsigned int h);
 void display_port_db_digital(struct meterec_s *meterec);
 void display_take_info(struct meterec_s *meterec);
 void display_view_change(struct meterec_s *meterec);
-void display_session_name(struct meterec_s *meterec, WINDOW *win);
 void display_box(WINDOW *win);
 void display_debug_windows(struct meterec_s *meterec);
+void display_changed_size(struct meterec_s *meterec);
+void display_changed_content(struct meterec_s *meterec);
+void display_changed_view(struct meterec_s *meterec);
+void display_changed_static_content(struct meterec_s *meterec);
+void display_dynamic_content(struct meterec_s *meterec);
+void display_refresh_view(struct meterec_s *meterec);
+void display_init_curses(struct meterec_s *meterec);
+void display_cleanup_curses(struct meterec_s *meterec);

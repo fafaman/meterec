@@ -50,8 +50,6 @@
 #endif
 
 
-WINDOW * mainwin = NULL;
-
 int running = 1;
 char *conf_file = "meterec";
 
@@ -109,15 +107,6 @@ void cleanup_jack(struct meterec_s * meterec) {
 	fprintf(meterec->fd_log, "Closed jack client connection.\n");
 }
 
-void cleanup_curse(void) {
-	
-	delwin(mainwin);
-	endwin();
-	refresh();
-	fprintf(meterec->fd_log, "Stopped ncurses interface.\n");
-	
-}
-
 void halt(int sig) {
 	
 	running = 0;
@@ -135,7 +124,7 @@ static void cleanup() {
 	running = 0;
 	
 	if (meterec->curses_sts)
-		cleanup_curse();
+		display_cleanup_curses(meterec);
 		
 	if (meterec->config_sts)
 		save_conf(meterec);
@@ -490,6 +479,7 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->display.pre_view = NONE;
 	meterec->display.names = ON;
 	meterec->display.width = 0;
+	meterec->display.rate = 24;
 	meterec->display.needs_update = 0;
 	meterec->display.needed_update = 0;
 	
@@ -672,6 +662,10 @@ void post_option_init(struct meterec_s *meterec) {
 		exit(1);
 	}
 	
+	/* Calculate the decay length (should be 1600ms) */
+	meterec->display.decay_len = (int)(1.6f / (1.0f/meterec->display.rate));
+	
+
 }
 
 void find_existing_takes(struct meterec_s *meterec) {
@@ -1093,7 +1087,6 @@ int main(int argc, char *argv[])
 	float ref_lev = 0;
 	int rate = 24;
 	int opt;
-	int decay_len;
 	float bias = 1.0f;
 	
 	meterec = (struct meterec_s *) malloc( sizeof(struct meterec_s) ) ;
@@ -1111,7 +1104,7 @@ int main(int argc, char *argv[])
 				break;
 			
 			case 'f':
-				rate = atoi(optarg);
+				meterec->display.rate = atoi(optarg);
 				break;
 			
 			case 's':
@@ -1165,7 +1158,7 @@ int main(int argc, char *argv[])
 	
 	fprintf(meterec->fd_log,"---- Options ----\n");
 	fprintf(meterec->fd_log,"Reference level: %.1fdB\n", ref_lev);
-	fprintf(meterec->fd_log,"Updates per second: %d\n", rate);
+	fprintf(meterec->fd_log,"Updates per second: %d\n", meterec->display.rate);
 	fprintf(meterec->fd_log,"Session name: %s\n", meterec->session);
 	fprintf(meterec->fd_log,"Jack client name: %s\n", meterec->jack_name);
 	fprintf(meterec->fd_log,"Output format: %s\n", output_ext);
@@ -1244,30 +1237,7 @@ int main(int argc, char *argv[])
 	
 	create_monitor_port(meterec);
 	
-	fprintf(meterec->fd_log, "Starting ncurses interface...\n");
-	
-	mainwin = initscr();
-	
-	if ( mainwin == NULL ) {
-		fprintf(meterec->fd_log, "Error initialising ncurses.\n");
-		exit(1);
-	}
-	
-	meterec->curses_sts = ONGOING;
-	
-	curs_set(0);
-	start_color();
-	
-	/* choose our color pairs */
-	init_pair(GREEN,  COLOR_GREEN,   COLOR_BLACK);
-	init_pair(YELLOW, COLOR_YELLOW,  COLOR_BLACK);
-	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
-	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
-	
-	clear();
-	
-	/* Calculate the decay length (should be 1600ms) */
-	decay_len = (int)(1.6f / (1.0f/rate));
+	display_init_curses(meterec);
 	
 	pthread_create(&kb_dt, NULL, keyboard_thread, (void *) meterec);
 	
@@ -1289,41 +1259,15 @@ int main(int argc, char *argv[])
 		
 		read_peak(bias);
 		
-		/* Init the windows shape and scale if any resize occurs */
-		display_init_windows(meterec);
+		display_changed_size(meterec);
+		display_changed_view(meterec);
+		display_changed_static_content(meterec);
+		
+		display_dynamic_content(meterec);
+		
 		/*
 		display_debug_windows(meterec);
 		*/
-		display_header(meterec);
-		
-		if (meterec->display.view==VU) {
-			if (meterec->display.pre_view != VU)
-				display_view_change(meterec);
-			
-			display_ports_modes(meterec);
-			display_meter(meterec, meterec->display.names, decay_len);
-		}
-		else if (meterec->display.view==EDIT) {
-			if (meterec->display.pre_view != EDIT)
-				display_view_change(meterec);
-				
-			display_ports_modes(meterec);
-			display_take_info(meterec);
-			display_session(meterec);
-		}
-		else if (meterec->display.view==PORT) {
-			if (meterec->display.pre_view != PORT)
-				display_view_change(meterec);
-			
-			if (meterec->display.needs_update != meterec->display.needed_update) {
-				display_connections_fill_ports(meterec);
-				display_connections_fill_conns(meterec);
-				meterec->display.needed_update++ ;
-			}
-		}
-		
-		display_port_info(meterec);
-		display_port_db_digital(meterec);
 		
 		
 		/*
