@@ -364,14 +364,16 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec) {
 	
-	char *take_name = NULL;
+	unsigned int tlen, plen, w, x;
 	unsigned int port = meterec->pos.port;
 	struct port_s *port_p = &meterec->ports[port];
+	char *take_name = NULL;
+	char *port_name = port_p->name;
 	WINDOW *win = meterec->display.wbot;
 	
 	wclear(win);
 	
-	wprintw(win, "Port %2d ", port+1);
+	wprintw(win, "Port %d ", port+1);
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
@@ -399,16 +401,19 @@ void display_port_info(struct meterec_s *meterec) {
 		wprintw(win, "[    ]");
 	
 	if ( port_p->playback_take ) 
-		wprintw(win, " PLAYING take %d (%s)", port_p->playback_take, take_name);
+		wprintw(win, " PLAYING take %d ", port_p->playback_take);
 	else 
 		wprintw(win, " PLAYING no take");
 	
-	/*
-	if (port_p->name)
-		display_right_aligned(port_p->name,21);
-	else 
-		display_fill_remaining(21);
-	*/
+	tlen = strlen(take_name)
+	plen = strlen(port_name)
+	
+	x = getposx(win);
+	w = getmaxx(win);
+	
+	mvwprintw(win, 0, x, "(%s)", take_name);
+	mvwprintw(win, 0, w-x, "%s", port_name);
+	
 	wnoutrefresh(win);
 	
 }
