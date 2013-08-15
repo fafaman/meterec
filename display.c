@@ -118,7 +118,7 @@ void display_changed_size(struct meterec_s *meterec) {
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
 	
-	display_init_title(meterec);	
+	display_init_title(meterec);
 	display_init_legend(meterec->display.wleg);
 	display_init_clr(meterec->display.wclr);
 	
