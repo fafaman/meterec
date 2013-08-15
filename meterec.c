@@ -1291,7 +1291,9 @@ int main(int argc, char *argv[])
 		
 		/* Init the windows shape and scale if any resize occurs */
 		display_init_windows(meterec);
-		
+		/*
+		display_debug_windows(meterec);
+		*/
 		display_header(meterec);
 		
 		if (meterec->display.view==VU) {

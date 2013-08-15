@@ -43,54 +43,67 @@ void display_init_windows(struct meterec_s *meterec) {
 	w = meterec->display.width = getmaxx(stdscr);
 	h = meterec->display.height = getmaxy(stdscr);
 	p = meterec->n_ports;
+	/*                                h,     w,   x,    y */
+	meterec->display.wrds = newwin(    1,   20,   0,    0);
+	meterec->display.wwrs = newwin(    1,   20,   1,    0);
+	meterec->display.wttl = newwin(    2, w-59,   0,   20);
+	meterec->display.wloo = newwin(    1,   39,   0, w-39);
+	meterec->display.wcpu = newwin(    1,   39,   1, w-39);
+	meterec->display.wleg = newwin(    2,    8,   2,    0);
+	meterec->display.wsc1 = newwin(    2,  w-8,   2,    8);
+	meterec->display.wtak = newwin(    2,  w-8,   2,    8);
+	meterec->display.wpor = newwin(    p,    8,   4,    0);
+	meterec->display.wses = newwin(  h-5,  w-8,   4,    8);
+	meterec->display.wvum = newwin(    p,  w-8,   4,    8);
+	meterec->display.wsc2 = newwin(    2,  w-8, p+4,    8);
+	meterec->display.wclr = newwin(h-p-7,    w, p+6,    0);
+	meterec->display.wcon = newwin(  h-3,    w,   2,    0);
+	meterec->display.wbot = newwin(    1, w-17, h-1,    0);
+	meterec->display.wbdb = newwin(    1,   17, h-1, w-17);
 	
-	meterec->display.wrds = newwin(1, 20,        0,  0);
-	meterec->display.wwrs = newwin(1, 20,        1,  0);
-	meterec->display.wttl = newwin(2, w-20-3*13, 0, 20);
-	meterec->display.wloo = newwin(1, 3*13,      0,  w-3*13);
-	meterec->display.wcpu = newwin(1, 3*13,      1,  w-3*13);
-	meterec->display.wleg = newwin(2,   8,       2,  0);
-	meterec->display.wsc1 = newwin(2, w-8,       2,  8);
-	meterec->display.wtak = newwin(2, w-8,       2,  8);
-	meterec->display.wpor = newwin(p,   8,       4,  0);
-	meterec->display.wses = newwin(h-4-1,w-8,       4,  8);
-	meterec->display.wvum = newwin(p, w-8,       4,  8);
-	meterec->display.wsc2 = newwin(2, w-8,     p+4,  8);
-	meterec->display.wcon = newwin(h-2-1, w,      2,  0);
-	meterec->display.wbot = newwin(1, w-17,    h-1,  0);
-	meterec->display.wbdb = newwin(1, 17,      h-1,  w-17);
-	
-	display_box(meterec->display.wleg);
-	/*
-	display_box(meterec->display.wrds);
-	display_box(meterec->display.wwrs);
-	display_box(meterec->display.wttl);
-	display_box(meterec->display.wloo);
-	display_box(meterec->display.wcpu);
-	display_box(meterec->display.wsc1);
-	//display_box(meterec->display.wtak);
-	display_box(meterec->display.wpor);
-	display_box(meterec->display.wvum);
-	display_box(meterec->display.wsc2);
-	//display_box(meterec->display.wcon);
-	display_box(meterec->display.wbot);
-	display_box(meterec->display.wbdb);
-	return;
-	
-	*/
 	
 	display_session_name(meterec, meterec->display.wttl);
 	
 	display_init_scale(0, meterec->display.wsc1);
 	display_init_scale(1, meterec->display.wsc2);
 	display_init_legend(meterec->display.wleg);
+	display_init_clr(meterec->display.wclr);
 	
-	/*
-	box(meterec->display.wbot,0,0);
-	wnoutrefresh(meterec->display.wbot);
-	box(meterec->display.wbdb,0,0);
-	wnoutrefresh(meterec->display.wbdb);
-	*/
+}
+
+void display_debug_windows(struct meterec_s *meterec) {
+	
+	/* ALL */
+	display_box(meterec->display.wrds);
+	display_box(meterec->display.wwrs);
+	display_box(meterec->display.wttl);
+	display_box(meterec->display.wloo);
+	display_box(meterec->display.wcpu);
+	
+	/* VU */
+	if (meterec->display.view==VU) {
+		display_box(meterec->display.wsc1);
+		display_box(meterec->display.wpor);
+		display_box(meterec->display.wvum);
+		display_box(meterec->display.wsc2);
+		display_box(meterec->display.wclr);
+	}
+	
+	/* EDIT */
+	if (meterec->display.view==EDIT) {
+		display_box(meterec->display.wtak);
+		display_box(meterec->display.wses);
+	}
+	
+	/* PORTs */
+	else if (meterec->display.view==PORT) {
+		display_box(meterec->display.wcon);
+	}
+	
+	/* ALL */
+	display_box(meterec->display.wbot);
+	display_box(meterec->display.wbdb);
+
 }
 
 void display_box(WINDOW *win) {
@@ -110,8 +123,12 @@ void display_view_change(struct meterec_s *meterec) {
 		case VU : 
 			touchwin(meterec->display.wsc1);
 			touchwin(meterec->display.wsc2);
+			touchwin(meterec->display.wleg);
+			touchwin(meterec->display.wclr);
 			wnoutrefresh(meterec->display.wsc1);
 			wnoutrefresh(meterec->display.wsc2);
+			wnoutrefresh(meterec->display.wleg);
+			wnoutrefresh(meterec->display.wclr);
 			
 			break;
 		
@@ -422,6 +439,13 @@ void display_init_legend(WINDOW *win) {
 	mvwprintw(win, 0, 0, "PP RTMI");
 	mvwhline(win, 1, 0, 0, w-1);
 	
+	wnoutrefresh(win);
+	
+}
+
+void display_init_clr(WINDOW *win) {
+	
+	wclear(win);
 	wnoutrefresh(win);
 	
 }

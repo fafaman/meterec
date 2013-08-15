@@ -248,6 +248,7 @@ struct display_s
 	WINDOW* wtak;
 	WINDOW* wpor;
 	WINDOW* wvum;
+	WINDOW* wclr;
 	WINDOW* wses;
 	WINDOW* wsc2;
 	WINDOW* wbot;
