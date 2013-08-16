@@ -1,7 +1,7 @@
 
 C_PREREQ(2.59)
 
-AC_INIT([meterec], [0.9.2], [fabrice.lebas@gmail.com])
+AC_INIT([meterec], [0.10.0], [fabrice.lebas@gmail.com])
 
 AM_CONFIG_HEADER(config.h)
 

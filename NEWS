@@ -1,3 +1,20 @@
+Sat, 17 Aug 2013 01:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
+	
+	NEW release 0.10.0
+	* Reworked display to use curses windows
+	* Console size change is now handled
+	* Added end of track indicator E/EOT
+	* Added port modes and status for each port line RMT (rec, mute, thru)
+	* Added ability to name a take with <i> key in EDIT/session view
+	* Added take lenght information
+	* Added tiny meter for in and out
+	* Changed <l> <L> <a> <A> keys behavior to be more convinient
+	* Removed manually setting width option -w
+	* Changed cpu load to be digital display
+	
+	KNONW BUGS
+	* see TODO file
+
 Sun Aug 11 15:36:23 CEST 2013 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	
 	NEW release 0.9.2
