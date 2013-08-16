@@ -409,6 +409,7 @@ void free_takes(struct meterec_s *meterec) {
 		free(meterec->takes[take].take_file);
 		free(meterec->takes[take].take_fd);
 		free(meterec->takes[take].buf);
+		free(meterec->takes[take].lenght);
 		
 	}
 	

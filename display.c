@@ -364,7 +364,7 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec) {
 	
-	unsigned int plen, w, x;
+	unsigned int len, w;
 	unsigned int port = meterec->pos.port;
 	struct port_s *port_p = &meterec->ports[port];
 	char *take_name = NULL;
@@ -373,7 +373,7 @@ void display_port_info(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
-	wprintw(win, "Port %2d | ", port+1);
+	wprintw(win, "Port %2d ", port+1);
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
@@ -382,36 +382,33 @@ void display_port_info(struct meterec_s *meterec) {
 		take_name = "";
 	
 	if (port_p->record==REC)
-		wprintw(win, "[REC]");
+		wprintw(win, "|REC|");
 	else if (port_p->record==OVR)
-		wprintw(win, "[OVR]");
+		wprintw(win, "|OVR|");
 	else if (port_p->record==DUB)
-		wprintw(win, "[DUB]");
+		wprintw(win, "|DUB|");
 	else 
-		wprintw(win, "[   ]");
-	
-	if (port_p->mute)
-		wprintw(win, "[MUTED]");
-	else 
-		wprintw(win, "[     ]");
+		wprintw(win, "|   |");
 	
 	if (port_p->thru)
-		wprintw(win, "[THRU]");
+		wprintw(win, "THRU|");
 	else 
-		wprintw(win, "[    ]");
+		wprintw(win, "    |");
+	
+	if (port_p->mute)
+		wprintw(win, "MUTED|");
+	else 
+		wprintw(win, "     |");
 	
 	if ( port_p->playback_take ) 
-		wprintw(win, " PLAYING take %d ", port_p->playback_take);
+		wprintw(win, " PLAYING take %d {%s}", port_p->playback_take, take_name);
 	else 
 		wprintw(win, " PLAYING no take");
 	
-	plen = strlen(port_name);
-	
-	x = getcurx(win);
+	len = strlen(port_name);
 	w = getmaxx(win);
 	
-	mvwprintw(win, 0, x, "(%s)", take_name);
-	mvwprintw(win, 0, w-plen-1, "%s", port_name);
+	mvwprintw(win, 0, w-len-2, "(%s)", port_name);
 	
 	wnoutrefresh(win);
 	
@@ -805,20 +802,28 @@ void display_wr_status(struct meterec_s *meterec) {
 void display_take_info(struct meterec_s *meterec) {
 	
 	WINDOW *win = meterec->display.wtak;
-	char *name ="";
-	
-	unsigned int y_pos, x_pos;
+	char *take_name ="";
+	unsigned int port, take, len, w;
 	
 	wclear(win);
 	
-	y_pos = meterec->pos.port;
-	x_pos = meterec->pos.take;
+	port = meterec->pos.port;
+	take = meterec->pos.take;
 	
-	wprintw(win, "Take %2d | [%s] - ",x_pos, meterec->takes[x_pos].lenght);
-	wprintw(win, "%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
-	wprintw(win, "%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
-	wprintw(win, "%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
-	wprintw(win, " (%s)\n", name);
+	take_name = meterec->takes[take].name;
+	
+	if (take_name == NULL)
+		take_name = "";
+	
+	wprintw(win, "Take %2d ",take);
+	wprintw(win, "%s",  meterec->takes[take].port_has_track[port]?"|CONTENT":"|       " );
+	wprintw(win, "%s",  meterec->takes[take].port_has_lock[port]?"|LOCKED":"|      " );
+	wprintw(win, "%s", (meterec->ports[port].playback_take == take)?"|PLAYING|":"|       |" );
+	wprintw(win, " [%s] ", meterec->takes[take].lenght);
+	
+	len = strlen(take_name);
+	w = getmaxx(win);
+	mvwprintw(win, 0, w-len-2, "{%s}\n", take_name);
 	
 	wnoutrefresh(win);
 

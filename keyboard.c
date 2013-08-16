@@ -84,13 +84,6 @@ void *keyboard_thread(void *arg) {
 		
 		fprintf(meterec->fd_log, "Key pressed: 0%03o %4d '%s'\n", key, key, keyname(key));
 		
-		/*
-		if (key == KEY_RESIZE) {
-			endwin();
-			refresh();
-			clear();
-		}
-		*/
 		y_pos = meterec->pos.port;
 		x_pos = meterec->pos.take;
 		
