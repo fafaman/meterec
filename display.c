@@ -218,7 +218,7 @@ void display_dynamic_content(struct meterec_s *meterec) {
 			break;
 		
 		case PORT :
-			
+			display_ports_tiny_meters(meterec);
 			
 			break;
 	}
@@ -444,6 +444,27 @@ void display_tiny_meter(struct meterec_s *meterec, unsigned int port, int side, 
 	
 	wprintw(win, blink + 2*pos);
 	
+}
+
+void display_ports_tiny_meters(struct meterec_s *meterec) {
+	
+	unsigned int port;
+	
+	wclear(meterec->display.wtmi);
+	wclear(meterec->display.wtmo);
+	
+	for (port=0; port < meterec->n_ports; port++) {
+		
+		wmove(meterec->display.wtmi, port, 0);
+		wmove(meterec->display.wtmo, port, 0);
+		
+		display_tiny_meter(meterec, port, IN, meterec->display.wtmi);
+		display_tiny_meter(meterec, port, OUT, meterec->display.wtmo);
+		
+	}
+	
+	wnoutrefresh(meterec->display.wtmi);
+	wnoutrefresh(meterec->display.wtmo);
 }
 
 void display_ports_modes(struct meterec_s *meterec) {
@@ -1054,22 +1075,24 @@ void display_connections_init(struct meterec_s *meterec) {
 	
 	unsigned int ilen = strlen(meterec->jack_name) + 6 ;
 	unsigned int olen = strlen(meterec->jack_name) + 7 ;
-	const unsigned int tlen = 5, clen = 3;
+	const unsigned int tlen = 5, clen = 3, mlen = 1;
 	unsigned int oolen, iilen;
 	unsigned int h, w, x, y;
 	
 	getbegyx(win,y,x);
 	getmaxyx(win,h,w);
-	oolen = (w - ilen - olen - tlen - clen) / 2;
-	iilen = (w - ilen - olen - tlen - clen - oolen);
+	oolen = (w - ilen - olen - tlen - clen - mlen ) / 2;
+	iilen = (w - ilen - olen - tlen - clen - mlen - oolen);
 	
 	meterec->display.wpoo = newwin(h, oolen, y, x);
 	meterec->display.wci  = newwin(h, clen,  y, x+oolen);
-	meterec->display.wpi  = newwin(h, ilen,  y, x+oolen+clen);
-	meterec->display.wt   = newwin(h, tlen,  y, x+oolen+clen+ilen);
-	meterec->display.wpo  = newwin(h, olen,  y, x+oolen+clen+ilen+tlen);
-	meterec->display.wco  = newwin(h, clen,  y, x+oolen+clen+ilen+tlen+olen);
-	meterec->display.wpii = newwin(h, iilen, y, x+oolen+clen+ilen+tlen+olen+clen);
+	meterec->display.wtmi = newwin(h, mlen,  y, x+oolen+clen);
+	meterec->display.wpi  = newwin(h, ilen,  y, x+oolen+clen+mlen);
+	meterec->display.wt   = newwin(h, tlen,  y, x+oolen+clen+mlen+ilen);
+	meterec->display.wpo  = newwin(h, olen,  y, x+oolen+clen+mlen+ilen+tlen);
+	meterec->display.wtmo = newwin(h, mlen,  y, x+oolen+clen+mlen+ilen+tlen+olen);
+	meterec->display.wco  = newwin(h, clen,  y, x+oolen+clen+mlen+ilen+tlen+olen+mlen);
+	meterec->display.wpii = newwin(h, iilen, y, x+oolen+clen+mlen+ilen+tlen+olen+mlen+clen);
 	
 }
 

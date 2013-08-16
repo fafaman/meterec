@@ -264,8 +264,10 @@ struct display_s
 	
 	WINDOW* wpi;
 	WINDOW* wpii;
+	WINDOW* wtmi;
 	WINDOW* wpo;
 	WINDOW* wpoo;
+	WINDOW* wtmo;
 	WINDOW* wci;
 	WINDOW* wco;
 	WINDOW* wt;

@@ -30,6 +30,7 @@ void display_session(struct meterec_s *meterec);
 void display_port_info(struct meterec_s *meterec);
 void display_port_recmode(struct port_s *port_p);
 void display_ports_modes(struct meterec_s *meterec);
+void display_ports_tiny_meters(struct meterec_s *meterec);
 void display_rd_status(struct meterec_s *meterec);
 void display_wr_status(struct meterec_s *meterec);
 void display_cpu_load_digital(struct meterec_s *meterec);
