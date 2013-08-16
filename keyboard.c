@@ -240,12 +240,20 @@ void *keyboard_thread(void *arg) {
 					meterec->pos.inout --;
 					if (meterec->pos.inout < CON_OUT)
 						meterec->pos.inout = CON_IN;
+					if ( meterec->pos.inout == CON_OUT )
+						meterec->pos.con_out = meterec->pos.port ;
+					if ( meterec->pos.con_out > meterec->pos.n_con_out )
+						meterec->pos.con_out = meterec->pos.n_con_out;
 					meterec->display.needs_update++;
 					break;
 				case KEY_RIGHT:
 					meterec->pos.inout ++;
 					if (meterec->pos.inout > CON_IN)
 						meterec->pos.inout = CON_OUT;
+					if ( meterec->pos.inout == CON_IN )
+						meterec->pos.con_in = meterec->pos.port ;
+					if ( meterec->pos.con_in > meterec->pos.n_con_in )
+						meterec->pos.con_in = meterec->pos.n_con_in;
 					meterec->display.needs_update++;
 					break;
 				case 'c':
