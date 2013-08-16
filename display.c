@@ -81,13 +81,13 @@ void display_init_windows(struct meterec_s *meterec, unsigned int w, unsigned in
 	meterec->display.wttl = newwin(    2, w-59,   0,   20);
 	meterec->display.wloo = newwin(    1,   39,   0, w-39);
 	meterec->display.wcpu = newwin(    1,   39,   1, w-39);
-	meterec->display.wleg = newwin(    2,    8,   2,    0);
-	meterec->display.wsc1 = newwin(    2,  w-8,   2,    8);
-	meterec->display.wtak = newwin(    2,  w-8,   2,    8);
-	meterec->display.wpor = newwin(    p,    8,   4,    0);
-	meterec->display.wses = newwin(  h-5,  w-8,   4,    8);
-	meterec->display.wvum = newwin(    p,  w-8,   4,    8);
-	meterec->display.wsc2 = newwin(    2,  w-8, p+4,    8);
+	meterec->display.wleg = newwin(    2,    9,   2,    0);
+	meterec->display.wsc1 = newwin(    2,  w-9,   2,    9);
+	meterec->display.wtak = newwin(    2,  w-9,   2,    9);
+	meterec->display.wpor = newwin(    p,    9,   4,    0);
+	meterec->display.wses = newwin(  h-5,  w-9,   4,    9);
+	meterec->display.wvum = newwin(    p,  w-9,   4,    9);
+	meterec->display.wsc2 = newwin(    2,  w-9, p+4,    9);
 	meterec->display.wclr = newwin(h-p-7,    w, p+6,    0);
 	meterec->display.wcon = newwin(  h-3,    w,   2,    0);
 	meterec->display.wbot = newwin(    1, w-17, h-1,    0);
@@ -364,7 +364,7 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec) {
 	
-	unsigned int len, w;
+	unsigned int len, w, take;
 	unsigned int port = meterec->pos.port;
 	struct port_s *port_p = &meterec->ports[port];
 	char *take_name = NULL;
@@ -400,6 +400,12 @@ void display_port_info(struct meterec_s *meterec) {
 	else 
 		wprintw(win, "     |");
 	
+	take = meterec->ports[port].playback_take;
+	if ( !take || meterec->takes[take].info.frames < meterec->jack.playhead )
+		wprintw(win, "EOT|");
+	else 
+		wprintw(win, "   |");
+	
 	if ( port_p->playback_take ) 
 		wprintw(win, " PLAYING take %d {%s}", port_p->playback_take, take_name);
 	else 
@@ -434,7 +440,7 @@ void display_tiny_meter(struct meterec_s *meterec, unsigned int port, int side, 
 	
 	char *blink = " \0.\0-\0+\0*\0X\0";
 	
-	int pos;
+	int pos = 0;
 	
 	if (side == OUT) 
 		pos = iec_scale( meterec->ports[port].db_out, 5);
@@ -469,7 +475,7 @@ void display_ports_tiny_meters(struct meterec_s *meterec) {
 
 void display_ports_modes(struct meterec_s *meterec) {
 	
-	unsigned int port;
+	unsigned int port, take;
 	WINDOW *win; 
 	
 	win = meterec->display.wpor;
@@ -498,6 +504,12 @@ void display_ports_modes(struct meterec_s *meterec) {
 		
 		if ( meterec->ports[port].mute )
 			wprintw(win, "M");
+		else 
+			wprintw(win, " ");
+			
+		take = meterec->ports[port].playback_take;
+		if ( !take || meterec->takes[take].info.frames < meterec->jack.playhead )
+			wprintw(win, "E");
 		else 
 			wprintw(win, " ");
 		
@@ -599,7 +611,7 @@ void display_init_legend(WINDOW *win) {
 	unsigned int w = getmaxx(win);
 	wclear(win);
 	
-	mvwprintw(win, 0, 0, "PPiRTMo");
+	mvwprintw(win, 0, 0, "PPiRTMEo");
 	mvwhline(win, 1, 0, 0, w-1);
 	
 	wnoutrefresh(win);
