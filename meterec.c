@@ -375,12 +375,16 @@ void init_takes(struct meterec_s *meterec) {
 	for (take=0; take<MAX_TAKES; take++) {
 		
 		meterec->takes[take].name = NULL;
+		meterec->takes[take].lenght = NULL;
 		meterec->takes[take].take_file = NULL;
 		meterec->takes[take].take_fd = NULL;
 		meterec->takes[take].buf = NULL;
 		meterec->takes[take].info.format = 0;
 		
 		meterec->takes[take].ntrack = 0;
+		
+		meterec->takes[take].lenght = (char *) malloc(20);
+		time_null_sprint(meterec->takes[take].lenght);
 		
 		for (track=0; track<MAX_TRACKS; track++) {
 			meterec->takes[take].track_port_map[track] = 0;
@@ -671,18 +675,39 @@ void post_option_init(struct meterec_s *meterec) {
 void find_existing_takes(struct meterec_s *meterec) {
 	
 	unsigned int take;
+	struct time_s tlenght;
 	
 	/* this needs to be moved at config file reading time and file creation time */
 	for (take=1; take<MAX_TAKES; take++) {
 		
-		if ( find_take_name(meterec->session, take, &meterec->takes[take].take_file) ) 
+		if ( find_take_name(meterec->session, take, &meterec->takes[take].take_file) ) {
 			fprintf(meterec->fd_log, "Found existing file '%s' for take %d\n", meterec->takes[take].take_file, take);
+			
+			meterec->takes[take].take_fd = sf_open( 
+				meterec->takes[take].take_file, 
+				SFM_READ, 
+				&meterec->takes[take].info);
+			
+			sf_close(meterec->takes[take].take_fd);
+			
+			if (meterec->takes[take].take_fd) {
+				
+				time_init_frm(&tlenght, 
+					meterec->takes[take].info.samplerate, 
+					meterec->takes[take].info.frames);
+					
+				time_sprint(&tlenght, meterec->takes[take].lenght);
+				
+				sf_close(meterec->takes[take].take_fd);
+				meterec->takes[take].take_fd = NULL;
+			}
+			
+		}	
 		else {
 			meterec->takes[take].take_file = (char *) malloc( strlen(meterec->session) + strlen("_0000.????") + 1 );
 			sprintf(meterec->takes[take].take_file, "%s_%04d.%s", meterec->session, take, meterec->output_ext);
 		}
 	}
-	
 }
 
 /******************************************************************************

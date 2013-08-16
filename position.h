@@ -26,6 +26,11 @@ struct time_s
 };
 
 
+void time_null_sprint(char * string);
+void time_zero_sprint(char * string);
 void time_sprint(struct time_s * time, char * string);
 void time_hms(struct time_s * time);
 void time_frm(struct time_s * time);
+
+void time_init_frm(struct time_s *time, unsigned int rate, unsigned int frames);
+void time_init_hms(struct time_s *time, unsigned int rate, unsigned int h, unsigned int m, unsigned int s, unsigned int ms);

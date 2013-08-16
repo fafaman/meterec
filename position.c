@@ -37,6 +37,16 @@ void time_sprint(struct time_s * time, char * string) {
 	
 }
 
+void time_null_sprint(char * string) {
+	sprintf(string, "-:--:--.---");
+	
+}
+
+void time_zero_sprint(char * string) {
+	sprintf(string, "%u:%02u:%02u.%03u",0, 0, 0, 0);
+	
+}
+
 void time_hms(struct time_s * time) {
 	
 	unsigned int rate = time->rate;
@@ -71,4 +81,23 @@ void time_frm(struct time_s * time) {
 		time->s  * time->rate +
 		(time->ms * time->rate) / 1000
 		);
+}
+
+void time_init_frm(struct time_s *time, unsigned int rate, unsigned int frames) {
+	
+	time->rate = rate;
+	time->frm = frames;
+	time_hms(time);
+	
+}
+
+void time_init_hms(struct time_s *time, unsigned int rate, unsigned int h, unsigned int m, unsigned int s, unsigned int ms) {
+	
+	time->rate = rate;
+	time->h = h;
+	time->m = m;
+	time->s = s;
+	time->ms = ms;
+	time_frm(time);
+	
 }

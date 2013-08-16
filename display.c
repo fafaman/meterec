@@ -364,7 +364,7 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec) {
 	
-	unsigned int tlen, plen, w, x;
+	unsigned int plen, w, x;
 	unsigned int port = meterec->pos.port;
 	struct port_s *port_p = &meterec->ports[port];
 	char *take_name = NULL;
@@ -405,7 +405,6 @@ void display_port_info(struct meterec_s *meterec) {
 	else 
 		wprintw(win, " PLAYING no take");
 	
-	tlen = strlen(take_name);
 	plen = strlen(port_name);
 	
 	x = getcurx(win);
@@ -807,6 +806,7 @@ void display_take_info(struct meterec_s *meterec) {
 	
 	WINDOW *win = meterec->display.wtak;
 	char *name ="";
+	
 	unsigned int y_pos, x_pos;
 	
 	wclear(win);
@@ -814,10 +814,7 @@ void display_take_info(struct meterec_s *meterec) {
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
 	
-	if (meterec->takes[x_pos].name)
-		name = meterec->takes[x_pos].name;
-	
-	wprintw(win, "Take %d ",x_pos, name);
+	wprintw(win, "Take %d [%s] - ",x_pos, meterec->takes[x_pos].lenght);
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
 	wprintw(win, "%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );

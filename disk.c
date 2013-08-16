@@ -28,6 +28,7 @@
 #include <sndfile.h>
 #include <jack/jack.h>
 
+#include "position.h"
 #include "config.h"
 #include "meterec.h"
 #include "disk.h"
@@ -186,6 +187,7 @@ void read_disk_close_fd(struct meterec_s *meterec) {
 void read_disk_open_fd(struct meterec_s *meterec) {
 	
 	unsigned int take, port, i;
+	struct time_s tlenght;
 	
 	/* open all files needed for this session */
 	for (port=0; port<meterec->n_ports; port++) {
@@ -234,6 +236,12 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 			}
 			
 			fprintf(meterec->fd_log,"Reader thread: Opened '%s' for reading\n", meterec->takes[take].take_file);
+			
+			/* save take lenght information */
+			time_init_frm(&tlenght, 
+				meterec->takes[take].info.samplerate, 
+				meterec->takes[take].info.frames);
+			time_sprint(&tlenght, meterec->takes[take].lenght);
 			
 			/* allocate buffer space for this take */
 			fprintf(meterec->fd_log,"Reader thread: Allocating local buffer space %d*%d for take %d\n", 
