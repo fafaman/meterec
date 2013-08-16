@@ -428,12 +428,16 @@ void display_port_db_digital(struct meterec_s *meterec) {
 	
 }
 
-void display_tiny_meter(struct meterec_s *meterec, unsigned int port, WINDOW *win) {
+void display_tiny_meter(struct meterec_s *meterec, unsigned int port, int side, WINDOW *win) {
 	
-	char *blink = " \0.\0o\0O\0#";
+	char *blink = " \0.\0o\0O\0#\0X\0";
 	int pos;
 	
-	pos = iec_scale( meterec->ports[port].db_out, 5);
+	if (side == OUT) 
+		pos = iec_scale( meterec->ports[port].db_out, 5);
+	
+	if (side == IN) 
+		pos = iec_scale( meterec->ports[port].db_in, 5);
 	
 	wprintw(win, blink + 2*pos);
 	
@@ -450,7 +454,9 @@ void display_ports_modes(struct meterec_s *meterec) {
 	
 	for (port=0; port < meterec->n_ports; port++) {
 		
-		mvwprintw(win, port, 0, "%02d|",port+1);
+		mvwprintw(win, port, 0, "%02d",port+1);
+		
+		display_tiny_meter(meterec, port, IN, win);
 		
 		if ( meterec->ports[port].record == REC )
 			wprintw(win, "R");
@@ -471,7 +477,7 @@ void display_ports_modes(struct meterec_s *meterec) {
 		else 
 			wprintw(win, " ");
 		
-		display_tiny_meter(meterec, port, win);
+		display_tiny_meter(meterec, port, OUT, win);
 		
 	}
 	
@@ -569,7 +575,7 @@ void display_init_legend(WINDOW *win) {
 	unsigned int w = getmaxx(win);
 	wclear(win);
 	
-	mvwprintw(win, 0, 0, "PP RTMI");
+	mvwprintw(win, 0, 0, "PPiRTMo");
 	mvwhline(win, 1, 0, 0, w-1);
 	
 	wnoutrefresh(win);

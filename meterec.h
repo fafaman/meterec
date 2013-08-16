@@ -91,6 +91,10 @@
 #define BOUND_HIGH 2
 #define BOUND_ALL 3
 
+/* meter selection */
+#define IN (1)
+#define OUT (-1)
+
 
 #define MAX_UINT ((unsigned int)(-1))
 
