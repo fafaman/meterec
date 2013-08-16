@@ -373,7 +373,7 @@ void display_port_info(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
-	wprintw(win, "Port %d ", port+1);
+	wprintw(win, "Port %2d | ", port+1);
 	
 	if (port_p->playback_take)
 		take_name = meterec->takes[port_p->playback_take].name;
@@ -814,7 +814,7 @@ void display_take_info(struct meterec_s *meterec) {
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
 	
-	wprintw(win, "Take %d [%s] - ",x_pos, meterec->takes[x_pos].lenght);
+	wprintw(win, "Take %2d | [%s] - ",x_pos, meterec->takes[x_pos].lenght);
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_track[y_pos]?"[CONTENT]":"[       ]" );
 	wprintw(win, "%s",  meterec->takes[x_pos].port_has_lock[y_pos]?"[LOCKED]":"[      ]" );
 	wprintw(win, "%s", (meterec->ports[y_pos].playback_take == x_pos)?"[PLAYING]":"[       ]" );
