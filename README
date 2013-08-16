@@ -113,14 +113,15 @@ Command keys:
        <TAB>   edit view (special keys) ----------------------------------------
        =>      select next take
        <=      select previous take
-       l       lock/unlock selected track for playback
-       L       lock/unlock selected track for playback and clear all other locks for this port
-       a       lock/unlock selected take for playback
-       A       lock/unlock selected take for playback and clear all other locks in the session)
+       l       lock/unlock selected track for playback and clear all other locks for this port
+       L       lock/unlock selected track for playback
+       a       lock/unlock selected take for playback and clear all other locks in the session)
+       A       lock/unlock selected take for playback
        <TAB>   connections view (special keys)----------------------------------
        <= =>   select port column
        c       connect ports
        x       disconnect ports
+       w       toggle ports connection
 
 Why is it so basic?
 ===================

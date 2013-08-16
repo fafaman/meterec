@@ -1094,10 +1094,10 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       <TAB>   edit view (special keys) ----------------------------------------\n");
 	fprintf(stderr, "       =>      select next take\n");
 	fprintf(stderr, "       <=      select previous take\n");
-	fprintf(stderr, "       l       lock/unlock selected track for playback\n");
-	fprintf(stderr, "       L       lock/unlock selected track for playback and clear all other locks for this port\n");
-	fprintf(stderr, "       a       lock/unlock selected take for playback\n");
-	fprintf(stderr, "       A       lock/unlock selected take for playback and clear all other locks in the session\n");
+	fprintf(stderr, "       l       lock/unlock selected track for playback and clear all other locks for this port\n");
+	fprintf(stderr, "       L       lock/unlock selected track for playback\n");
+	fprintf(stderr, "       a       lock/unlock selected take for playback and clear all other locks in the session\n");
+	fprintf(stderr, "       A       lock/unlock selected take for playback\n");
 	fprintf(stderr, "       <TAB>   connections view (special keys) ---------------------------------\n");
 	fprintf(stderr, "       <= =>   select port column\n");
 	fprintf(stderr, "       c       connect ports\n");

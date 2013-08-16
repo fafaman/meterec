@@ -154,11 +154,11 @@ void *keyboard_thread(void *arg) {
 			if (!event) {
 				
 				switch (key) {
-					case 'L' : /* clear all other locks for that port & process with toggle */
+					case 'l' : /* clear all other locks for that port & process with toggle */
 						for ( take=0 ; take < meterec->n_takes+1 ; take++) 
 							meterec->takes[take].port_has_lock[y_pos] = 0 ;
 					
-					case 'l' : /* toggle lock at this position */
+					case 'L' : /* toggle lock at this position */
 						meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
 						
 						if (changed_takes_to_playback(meterec) && (meterec->playback_sts != OFF)) {
@@ -168,12 +168,12 @@ void *keyboard_thread(void *arg) {
 						}
 						break;
 					
-					case 'A' : /* clear all other locks & process with toggle */
+					case 'a' : /* clear all other locks & process with toggle */
 						for ( port=0 ; port < meterec->n_ports ; port++)
 							for ( take=0 ; take < meterec->n_takes+1 ; take++)  
 								meterec->takes[take].port_has_lock[port] = 0 ;
 					
-					case 'a' : /* toggle lock for all ports depending on this position */
+					case 'A' : /* toggle lock for all ports depending on this position */
 						if ( meterec->takes[x_pos].port_has_lock[y_pos] ) 
 							for ( port=0 ; port < meterec->n_ports ; port++) 
 								meterec->takes[x_pos].port_has_lock[port] = 0;
