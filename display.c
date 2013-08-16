@@ -430,7 +430,10 @@ void display_port_db_digital(struct meterec_s *meterec) {
 
 void display_tiny_meter(struct meterec_s *meterec, unsigned int port, int side, WINDOW *win) {
 	
-	char *blink = " \0.\0o\0O\0#\0X\0";
+	/*char *blink = " \0.\0o\0O\0*\0X\0";*/
+	
+	char *blink = " \0.\0-\0+\0*\0X\0";
+	
 	int pos;
 	
 	if (side == OUT) 
