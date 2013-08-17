@@ -176,12 +176,22 @@ void read_peak(float bias) {
 			meterec->ports[port].db_max_in = 20.0f * log10f( meterec->ports[port].max_in * bias ) ;
 		}
 		
+		if (meterec->ports[port].peak_out > meterec->ports[port].max_out) {
+			meterec->ports[port].max_out = meterec->ports[port].peak_out;
+			meterec->ports[port].db_max_out = 20.0f * log10f( meterec->ports[port].max_out * bias ) ;
+		}
+		
 		meterec->ports[port].db_in = 20.0f * log10f( meterec->ports[port].peak_in * bias ) ;
 		meterec->ports[port].peak_in = 0.0f;
 		
 		meterec->ports[port].db_out = 20.0f * log10f( meterec->ports[port].peak_out * bias ) ;
 		meterec->ports[port].peak_out = 0.0f;
 		
+		if (meterec->ports[port].db_in > -0.01f)
+			meterec->ports[port].clip_in = 1;
+			
+		if (meterec->ports[port].db_out > -0.01f)
+			meterec->ports[port].clip_out = 1;
 	}
 	
 }
@@ -327,17 +337,27 @@ void init_ports(struct meterec_s *meterec) {
 		meterec->ports[port].thru = OFF;
 		
 		meterec->ports[port].peak_out = 0.0f;
-		meterec->ports[port].db_out = 0.0f;
+		meterec->ports[port].db_out = 1.0f / 0.0f;
 		
 		meterec->ports[port].peak_in = 0.0f;
-		meterec->ports[port].db_in = 0.0f;
+		meterec->ports[port].db_in = 1.0f / 0.0f;
 		
 		meterec->ports[port].max_in = 0.0f;
-		meterec->ports[port].db_max_in = 0.0f;
+		meterec->ports[port].db_max_in = 1.0f / 0.0f;
+		
+		meterec->ports[port].max_out = 0.0f;
+		meterec->ports[port].db_max_out = 1.0f / 0.0f;
 		
 		meterec->ports[port].dkpeak_in = 0;
 		meterec->ports[port].dktime_in = 0;
 		meterec->ports[port].dkmax_in = 0;
+		
+		meterec->ports[port].dkpeak_out = 0;
+		meterec->ports[port].dktime_out = 0;
+		meterec->ports[port].dkmax_out = 0;
+		
+		meterec->ports[port].clip_in = 0;
+		meterec->ports[port].clip_out = 0;
 		
 		meterec->ports[port].playback_take = 0;
 		
@@ -482,6 +502,7 @@ void pre_option_init(struct meterec_s *meterec) {
 
 	meterec->display.view = VU;
 	meterec->display.pre_view = NONE;
+	meterec->display.vu_bound = IN;
 	meterec->display.names = ON;
 	meterec->display.width = 0;
 	meterec->display.rate = 24;

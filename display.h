@@ -34,7 +34,7 @@ void display_ports_tiny_meters(struct meterec_s *meterec);
 void display_rd_status(struct meterec_s *meterec);
 void display_wr_status(struct meterec_s *meterec);
 void display_cpu_load_digital(struct meterec_s *meterec);
-void display_meter(struct meterec_s *meterec, int display_names, int decay_len);
+void display_meter(struct meterec_s *meterec);
 void display_init_scale(int side, WINDOW *win);
 void display_init_legend(WINDOW *win);
 void display_init_clr(WINDOW *win);

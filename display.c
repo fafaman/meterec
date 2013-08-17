@@ -208,7 +208,7 @@ void display_dynamic_content(struct meterec_s *meterec) {
 		
 		case VU : 
 			display_ports_modes(meterec);
-			display_meter(meterec, meterec->display.names, meterec->display.decay_len);
+			display_meter(meterec);
 			break;
 		
 		case EDIT :
@@ -428,7 +428,28 @@ void display_port_db_digital(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
-	wprintw(win, "%5.1fdB (%5.1fdB)", port_p->db_in, port_p->db_max_in);
+	if (meterec->display.vu_bound == IN) {
+		wprintw(win, "%5.1fdB ", port_p->db_in);
+		if (port_p->clip_in) {
+			wcolor_set(win, RED, NULL);
+			wattron(win, A_REVERSE);
+		}
+		wprintw(win, "(%5.1fdB)", port_p->db_max_in);
+	}
+	else if (meterec->display.vu_bound == OUT) {
+		wprintw(win, "%5.1fdB ", port_p->db_out);
+		if (port_p->clip_out) {
+			wcolor_set(win, RED, NULL);
+			wattron(win, A_REVERSE);
+		}
+		wprintw(win, "(%5.1fdB)", port_p->db_max_out);
+	}
+	else if (meterec->display.vu_bound == NONE) {
+		wprintw(win, "---.-dB (---.-dB)");
+	}
+	
+	wattroff(win, A_REVERSE);
+	wcolor_set(win, DEFAULT, NULL);
 	
 	wnoutrefresh(win);
 	
@@ -534,7 +555,103 @@ static void color_port(struct meterec_s *meterec, unsigned int port, WINDOW *win
 			wcolor_set(win, GREEN, NULL);
 }
 
-void display_meter(struct meterec_s *meterec, int display_names, int decay_len)
+void display_meter(struct meterec_s *meterec) {
+	
+	WINDOW *win = meterec->display.wvum;
+	unsigned int w = getmaxx(win);
+	unsigned int port, size_in, size_out, len;
+	unsigned int acs=32, size=0, dkmax=0, dkpeak=0;
+	unsigned int side=meterec->display.vu_bound;
+	int clipped=0;
+	char *name;
+	
+	wclear(win);
+	
+	for ( port=0 ; port < meterec->n_ports ; port++) {
+		
+		size_in = iec_scale(meterec->ports[port].db_in, w-1);
+		
+		if (size_in > meterec->ports[port].dkmax_in)
+			meterec->ports[port].dkmax_in = size_in;
+		
+		if (size_in > meterec->ports[port].dkpeak_in) {
+			meterec->ports[port].dkpeak_in = size_in;
+			meterec->ports[port].dktime_in = 0;
+		} 
+		else if (meterec->ports[port].dktime_in++ > meterec->display.decay_len) {
+			meterec->ports[port].dkpeak_in = size_in;
+		}
+		
+		
+		size_out = iec_scale(meterec->ports[port].db_out, w-1);
+		
+		if (size_out > meterec->ports[port].dkmax_out)
+			meterec->ports[port].dkmax_out = size_out;
+		
+		if (size_out > meterec->ports[port].dkpeak_out) {
+			meterec->ports[port].dkpeak_out = size_out;
+			meterec->ports[port].dktime_out = 0;
+		} 
+		else if (meterec->ports[port].dktime_out++ > meterec->display.decay_len) {
+			meterec->ports[port].dkpeak_out = size_out;
+		}
+		
+		if (side == IN) {
+			size = size_in;
+			dkpeak = meterec->ports[port].dkpeak_in;
+			dkmax = meterec->ports[port].dkmax_in;
+			clipped = meterec->ports[port].clip_in;
+			acs = ACS_BOARD;
+		}
+		
+		if (side == OUT) {
+			size = size_out;
+			dkpeak = meterec->ports[port].dkpeak_out;
+			dkmax = meterec->ports[port].dkmax_out;
+			clipped = meterec->ports[port].clip_out;
+			acs = ACS_DIAMOND;
+		}
+		
+		color_port(meterec, port, win);
+		
+		if (meterec->pos.port == port) {
+			wattron(win, A_REVERSE);
+			mvwhline(win, port, 0, 32, w);
+		}
+		else 
+			wattroff(win, A_REVERSE);
+		
+		name = meterec->ports[port].name;
+		if (meterec->display.names && name) {
+			len = strlen(name);
+			mvwprintw(win, port, w-len-5, "%s", name);
+		}
+		
+		if (side) {
+			mvwhline(win, port, 0, acs, size);
+			mvwaddch(win, port, dkpeak, acs);
+			//mvwaddch(win, port, dkmax, ACS_PLUS);
+			mvwprintw(win, port, dkmax, "X");
+		}
+		
+		if (clipped) {
+			wcolor_set(win, RED, NULL);
+			wattron(win, A_REVERSE);
+			mvwprintw(win, port, w-1, "C");
+			wattroff(win, A_REVERSE);
+			wcolor_set(win, DEFAULT, NULL);
+		}
+	}
+	
+	/*
+	wattroff(win, A_REVERSE);
+	wcolor_set(win, DEFAULT, NULL);
+	*/
+	
+	wnoutrefresh(win);
+}
+
+void display_meter_old(struct meterec_s *meterec, int display_names, int decay_len)
 {
 	int size_out, size_in, i;
 	unsigned int port, width;

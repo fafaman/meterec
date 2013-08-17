@@ -173,14 +173,23 @@ struct port_s
 	float peak_in;
 	float max_in;
 	float peak_out;
+	float max_out;
 	
 	float db_in;
 	float db_max_in;
 	float db_out;
+	float db_max_out;
 	
 	int dkmax_in;
 	int dkpeak_in;
 	int dktime_in;
+	
+	int dkmax_out;
+	int dkpeak_out;
+	int dktime_out;
+	
+	int clip_in;
+	int clip_out;
 	
 	int record;
 	int mute;
@@ -235,6 +244,7 @@ struct disk_s
 
 struct display_s
 {
+	unsigned int vu_bound;
 	unsigned int view;
 	unsigned int pre_view;
 	unsigned int needs_update;
