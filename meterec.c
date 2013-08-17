@@ -337,16 +337,16 @@ void init_ports(struct meterec_s *meterec) {
 		meterec->ports[port].thru = OFF;
 		
 		meterec->ports[port].peak_out = 0.0f;
-		meterec->ports[port].db_out = 1.0f / 0.0f;
+		meterec->ports[port].db_out = -1.0f / 0.0f;
 		
 		meterec->ports[port].peak_in = 0.0f;
-		meterec->ports[port].db_in = 1.0f / 0.0f;
+		meterec->ports[port].db_in = -1.0f / 0.0f;
 		
 		meterec->ports[port].max_in = 0.0f;
-		meterec->ports[port].db_max_in = 1.0f / 0.0f;
+		meterec->ports[port].db_max_in = -1.0f / 0.0f;
 		
 		meterec->ports[port].max_out = 0.0f;
-		meterec->ports[port].db_max_out = 1.0f / 0.0f;
+		meterec->ports[port].db_max_out = -1.0f / 0.0f;
 		
 		meterec->ports[port].dkpeak_in = 0;
 		meterec->ports[port].dktime_in = 0;
