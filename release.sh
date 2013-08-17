@@ -2,12 +2,9 @@
 
 gitk &
 date --rfc-2822
-nedit NEWS README meterec.1 meterec-init-conf.1 autotool/configure.in
+nedit "NEWS" "README" "meterec.1" "meterec-init-conf.1" "autotool/configure.in"
 
 RELEASE=`grep AC_INIT autotool/configure.in | awk -F"," '{print $2}' | sed 's/.*\[\([0-9.]*\)\]/\1/'`
-
-git commit -a -m "Preparing release $RELEASE"
-
 
 DEVAREA=`pwd | xargs basename`
 
@@ -17,6 +14,8 @@ echo =====================
 pushd ../
 
 mv $DEVAREA meterec-$RELEASE
+
+rm meterec-$RELEASE.tgz 
 
 tar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/*.c \
@@ -53,6 +52,10 @@ echo "cd meterec-$RELEASE"
 echo "./configure && make"
 echo "./meterec-init-conf meterec"
 echo "./meterec"
+echo =====================
+echo "git commit -a -m \"Preparing release v$RELEASE\""
+echo "git tag -a -m \"v$RELEASE\""
+echo "git push --all"
 echo =====================
 echo "cd ../"
 echo "scp meterec-$RELEASE.tgz fafaman,meterec@frs.sourceforge.net:/home/frs/project/m/me/meterec"
