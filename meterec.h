@@ -151,6 +151,9 @@ struct take_s
 	SNDFILE *take_fd;
 	SF_INFO info;
 	
+	/* how many samples away from time 0 this take was recorded. */
+	unsigned int offset;
+	
 	float *buf ;
 	
 };

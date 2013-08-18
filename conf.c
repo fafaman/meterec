@@ -297,8 +297,11 @@ void save_conf(struct meterec_s *meterec) {
 	
 	fprintf(fd_conf, "takes=\n(\n");
 	for (take=1; take<meterec->n_takes+1; take++) {
-		fprintf(fd_conf, "  { name=\"%s\"; }",meterec->takes[take].name?meterec->takes[take].name:"");
-		if (take<meterec->n_takes)
+		fprintf(fd_conf, "  {");
+		fprintf(fd_conf, " offset=%-8d;",meterec->takes[take].offset);
+		fprintf(fd_conf, " name=\"%s\";",meterec->takes[take].name?meterec->takes[take].name:"");
+		fprintf(fd_conf, " }");
+		if (take < meterec->n_takes)
 			fprintf(fd_conf, ",\n");
 	}
 	fprintf(fd_conf, "\n);\n\n");

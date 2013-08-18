@@ -406,6 +406,8 @@ void init_takes(struct meterec_s *meterec) {
 		meterec->takes[take].lenght = (char *) malloc(20);
 		time_null_sprint(meterec->takes[take].lenght);
 		
+		meterec->takes[take].offset = 0;
+		
 		for (track=0; track<MAX_TRACKS; track++) {
 			meterec->takes[take].track_port_map[track] = 0;
 		}
