@@ -399,7 +399,7 @@ void load_conf(struct meterec_s *meterec) {
 	unsigned int take_list_len, port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
-	long sample_rate;
+	long sample_rate, take_offset;
 	char fn[4];
 				
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);
@@ -432,7 +432,7 @@ void load_conf(struct meterec_s *meterec) {
 	
 	if (jack_group) 
 		if (config_setting_lookup_int(jack_group, "sample_rate", &sample_rate))
-			meterec->jack.sample_rate = (int)sample_rate;
+			meterec->jack.sample_rate = (unsigned int)sample_rate;
 	
 	take_list = config_lookup(cf, "takes");
 	if (take_list) {
@@ -447,7 +447,12 @@ void load_conf(struct meterec_s *meterec) {
 					meterec->takes[take+1].name = (char *) malloc( strlen(name) + 1 ); 
 					strcpy(meterec->takes[take+1].name, name); 
 				}
+				
+				if (config_setting_lookup_int(take_group, "offset", &take_offset)) {
+					meterec->takes[take+1].offset = (unsigned int)take_offset;
+				}
 			}
+			
 		}
 	}
 	
