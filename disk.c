@@ -348,7 +348,7 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 
 void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 	
-	unsigned int take;
+	unsigned int take, abs_seek;
 	sf_count_t reached;
 	
 	for(take=1; take<meterec->n_takes+1; take++) {
@@ -361,11 +361,13 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.3f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
 		#endif
 		
-		reached = sf_seek(meterec->takes[take].take_fd, seek, SEEK_SET);
+		abs_seek = seek + meterec->takes[take].offset;
 		
-		if (seek - reached) {
+		reached = sf_seek(meterec->takes[take].take_fd, abs_seek, SEEK_SET);
+		
+		if (abs_seek - reached) {
 			#ifdef DEBUG_SEEK
-			fprintf(meterec->fd_log, "read_disk_seek: failed (seek=%d reached=%d)", seek, reached);
+			fprintf(meterec->fd_log, "read_disk_seek: failed (abs_seek=%d reached=%d)", abs_seek, reached);
 			#endif
 			sf_seek(meterec->takes[take].take_fd, 0, SEEK_END);
 		}
