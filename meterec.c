@@ -712,13 +712,11 @@ void find_existing_takes(struct meterec_s *meterec) {
 				SFM_READ, 
 				&meterec->takes[take].info);
 			
-			sf_close(meterec->takes[take].take_fd);
-			
 			if (meterec->takes[take].take_fd) {
 				
 				time_init_frm(&tlenght, 
 					meterec->takes[take].info.samplerate, 
-					meterec->takes[take].info.frames);
+					meterec->takes[take].info.frames + meterec->takes[take].offset);
 					
 				time_sprint(&tlenght, meterec->takes[take].lenght);
 				

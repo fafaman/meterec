@@ -240,7 +240,7 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 			/* save take lenght information */
 			time_init_frm(&tlenght, 
 				meterec->takes[take].info.samplerate, 
-				meterec->takes[take].info.frames);
+				meterec->takes[take].info.frames + meterec->takes[take].offset);
 			time_sprint(&tlenght, meterec->takes[take].lenght);
 			
 			/* allocate buffer space for this take */
