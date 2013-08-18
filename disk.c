@@ -361,7 +361,7 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.3f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
 		#endif
 		
-		abs_seek = seek + meterec->takes[take].offset;
+		abs_seek = seek - meterec->takes[take].offset;
 		
 		reached = sf_seek(meterec->takes[take].take_fd, abs_seek, SEEK_SET);
 		
