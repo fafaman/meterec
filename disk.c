@@ -441,9 +441,8 @@ void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 			#ifdef DEBUG_SEEK
 			fprintf(meterec->fd_log, "read_disk_seek: failed (abs_seek=%d reached=%d)\n", abs_seek, reached);
 			#endif
-			/* play safe by trying to reach end of take 
-			  (this will produce silence when reading in disck.c) */
-			sf_seek(meterec->takes[take].take_fd, 0, SEEK_END);
+			
+			/* do not take corrective action for now, we may learn out of produced artifacts */
 		}
 	}
 }
