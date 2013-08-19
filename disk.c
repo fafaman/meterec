@@ -258,6 +258,9 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 		
 	}
 	
+	/* seek so offset is taken into account */
+	read_disk_seek(meterec, 0);
+	
 }
 
 unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
@@ -265,7 +268,8 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 	/* real read from disk thru libsndfile to fill 'buffer zero' then copy from
 	   'buffer zero' to 'disk buffer' that is the connection with jack process */
 	
-	unsigned int rdbuff_pos, port, take, track, ntrack=0, fill;
+	unsigned int rdbuff_pos, port, take, track, ntrack=0, fill=0, nsamples;
+	int pre_fill;
 	
 	/* Leave right away if the process does not need any data (disk buffer full) */
 	if (meterec->read_disk_buffer_thread_pos == meterec->read_disk_buffer_process_pos)
@@ -287,12 +291,67 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 			/* get the number of tracks in this take */
 			ntrack = meterec->takes[take].ntrack;
 			
-			fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, (ZBUF_SIZE * ntrack) ); 
+			nsamples = ZBUF_SIZE * ntrack;
+			
+			/* prefill buffer if reading before offset */
+			pre_fill = (meterec->takes[take].offset - meterec->disk.playhead) * ntrack;
+			
+			#ifdef DEBUG_BUFF
+			fprintf(meterec->fd_log, "fill_buffer: playhead %10d | nsamples %10d | pre_fill %10d | ", 
+				meterec->disk.playhead, 
+				nsamples, 
+				pre_fill);
+			#endif
+			
+			if (pre_fill < 0) {
+				/* The playhead if located further than the offset point.
+				   no prefill due to offset to be perfomed only normal buffer fill */
+				
+				fill = sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf, nsamples ); 
+				
+				#ifdef DEBUG_BUFF
+				fprintf(meterec->fd_log, "fill0 %10d | ", fill );
+				#endif
+			}
+			else if (pre_fill > nsamples) {
+				/* the playhaed is located before the offset point, far enough so
+				   that a full buffer load will not make the playhead reach the 
+				   offeset point. prefill everything with 0's */
+				
+				for ( fill = 0; fill < nsamples; fill++) 
+					meterec->takes[take].buf[fill] = 0.0f;
+					
+				#ifdef DEBUG_BUFF
+				fprintf(meterec->fd_log, "fill1 %10d | ", fill );
+				#endif
+				
+			} else {
+				/* the playhead is close enough to the offset to need both prefill
+				   and normal data fill (read from disk). we need to make sure this 
+				   only fills a buffer-full of data */
+				
+				for ( fill = 0; fill < pre_fill; fill++) 
+					meterec->takes[take].buf[fill] = 0.0f;
+					
+				#ifdef DEBUG_BUFF
+				fprintf(meterec->fd_log, "fill2 %10d | ", fill );
+				#endif
+				
+				nsamples = nsamples - fill;
+				fill += sf_read_float(meterec->takes[take].take_fd, meterec->takes[take].buf + fill, nsamples );
+				
+				#ifdef DEBUG_BUFF
+				fprintf(meterec->fd_log, "fill3 %10d | nsamples1 %10d | ", fill, nsamples );
+				#endif
+			}
 			
 			/* complete buffer with 0's if reached end of file */
-			for ( ; fill<(ZBUF_SIZE * ntrack); fill++) 
+			for ( ; fill < nsamples; fill++) 
 				meterec->takes[take].buf[fill] = 0.0f;
-			
+				
+			#ifdef DEBUG_BUFF
+			fprintf(meterec->fd_log, "fill4 %10d |\n", fill );
+			#endif
 		}
 	
 	}
@@ -348,31 +407,45 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 
 void read_disk_seek(struct meterec_s *meterec, unsigned int seek) {
 	
-	unsigned int take, abs_seek;
+	unsigned int take;
 	sf_count_t reached;
+	int abs_seek;
 	
 	for(take=1; take<meterec->n_takes+1; take++) {
-	
+		
 		/* check if track is used */
 		if (meterec->takes[take].take_fd == NULL)
 			continue;
 		
-		#ifdef DEBUG_SEEK
-		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at position %d 0x%X (%.3f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
-		#endif
-		
 		abs_seek = seek - meterec->takes[take].offset;
 		
-		reached = sf_seek(meterec->takes[take].take_fd, abs_seek, SEEK_SET);
+		#ifdef DEBUG_SEEK
+		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at rel position %d 0x%X (%.3f).\n", take, seek, seek, (float)seek/meterec->jack.sample_rate);
+		fprintf(meterec->fd_log, "read_disk_seek: seek take %d at abs position %d 0x%X (%.3f).\n", take, abs_seek, abs_seek, (float)abs_seek/meterec->jack.sample_rate);
+		#endif
 		
-		if (abs_seek - reached) {
+		if (abs_seek > (int)meterec->takes[take].info.frames) {
+			
+			reached = sf_seek(meterec->takes[take].take_fd, 0, SEEK_END);
+		}
+		else if (abs_seek < 0) {
+			
+			reached = sf_seek(meterec->takes[take].take_fd, 0, SEEK_SET);
+		}
+		else {
+			
+			reached = sf_seek(meterec->takes[take].take_fd, abs_seek, SEEK_SET);
+		}
+		
+		if (reached == -1) {
 			#ifdef DEBUG_SEEK
-			fprintf(meterec->fd_log, "read_disk_seek: failed (abs_seek=%d reached=%d)", abs_seek, reached);
+			fprintf(meterec->fd_log, "read_disk_seek: failed (abs_seek=%d reached=%d)\n", abs_seek, reached);
 			#endif
+			/* play safe by trying to reach end of take 
+			  (this will produce silence when reading in disck.c) */
 			sf_seek(meterec->takes[take].take_fd, 0, SEEK_END);
 		}
 	}
-
 }
 
 

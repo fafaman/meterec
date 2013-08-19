@@ -25,3 +25,4 @@ void *reader_thread(void *d);
 float read_disk_buffer_level(struct meterec_s *meterec);
 float write_disk_buffer_level(struct meterec_s *meterec);
 unsigned int set_thread_delay(struct meterec_s *meterec);
+void read_disk_seek(struct meterec_s *meterec, unsigned int seek);
