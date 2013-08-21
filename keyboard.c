@@ -547,7 +547,7 @@ void *keyboard_thread(void *arg) {
 				set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
 		}
 		/* seek to index */
-		if (!meterec->record_sts && meterec->playback_sts ) {
+		if (!meterec->record_sts) {
 			
 			if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
 				if (meterec->seek_index[key - KEY_F(1)] != MAX_UINT) {
