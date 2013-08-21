@@ -161,7 +161,7 @@ void *keyboard_thread(void *arg) {
 					case 'L' : /* toggle lock at this position */
 						meterec->takes[x_pos].port_has_lock[y_pos] = !meterec->takes[x_pos].port_has_lock[y_pos] ;
 						
-						if (changed_takes_to_playback(meterec) && (meterec->playback_sts != OFF)) {
+						if (changed_takes_to_playback(meterec)) {
 							pthread_mutex_lock( &meterec->event_mutex );
 							add_event(meterec, DISK, LOCK, MAX_UINT, meterec->jack.playhead, MAX_UINT); 
 							pthread_mutex_unlock( &meterec->event_mutex );
@@ -181,7 +181,7 @@ void *keyboard_thread(void *arg) {
 							for ( port=0 ; port < meterec->n_ports ; port++) 
 								meterec->takes[x_pos].port_has_lock[port] = 1;
 						
-						if (changed_takes_to_playback(meterec) && (meterec->playback_sts != OFF)) {
+						if (changed_takes_to_playback(meterec)) {
 							pthread_mutex_lock( &meterec->event_mutex );
 							add_event(meterec, DISK, LOCK, MAX_UINT, meterec->jack.playhead, MAX_UINT);
 							pthread_mutex_unlock( &meterec->event_mutex );
