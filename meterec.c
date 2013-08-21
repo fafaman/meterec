@@ -757,9 +757,9 @@ static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos,
 	if (pos) {}
 	
 	if (state == JackTransportStarting) {
-		if (!meterec->playback_sts) 
+		if (!meterec->playback_cmd) 
 			start_playback(meterec);
-		else if (meterec->playback_sts == ONGOING) 
+		else if (meterec->playback_cmd == START) 
 			return 1;
 	}
 		
@@ -799,12 +799,12 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			}
 		
 		/* compute local flags stable for this cycle */
-		playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_sts == ONGOING));
+		playback_ongoing = ((transport_state == JackTransportRolling) && (meterec->playback_cmd == START));
 		
 	}
 	else {
 		/* compute local flags stable for this cycle */
-		playback_ongoing = (meterec->playback_sts == ONGOING);
+		playback_ongoing = (meterec->playback_cmd == START);
 		
 	}
 	
@@ -876,6 +876,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		
 		
 		if (playback_ongoing) {
+			meterec->playback_sts = ONGOING;
 			
 			read_pos = meterec->read_disk_buffer_process_pos;
 			
@@ -920,6 +921,7 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 			}
 		}
 		else {
+			meterec->playback_sts = OFF;
 			
 			for (i = 0; i < nframes; i++) {
 				
@@ -977,11 +979,6 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		
 		}
 	
-	}
-	else {
-		
-		meterec->jack.playhead = 0 ;
-		
 	}
 	
 	return 0;
@@ -1234,7 +1231,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	fprintf(meterec->fd_log,"Registered as '%s'.\n", jack_get_client_name( meterec->client ) );
-
+	
 	meterec->jack_sts = ONGOING;
 	
 	/* Register the signal process callback */
@@ -1300,8 +1297,10 @@ int main(int argc, char *argv[])
 	if (meterec->record_cmd==START)
 		start_record(meterec);
 	
-	if (meterec->playback_cmd==START)
+	if (meterec->playback_cmd==START) {
+		start_disk(meterec);
 		roll(meterec);
+	}
 	
 	/* Register the cleanup function to be called when C-c */
 	signal(SIGINT, halt);
