@@ -123,6 +123,9 @@ static void cleanup() {
 	
 	running = 0;
 	
+	if (meterec->disk_sts)
+		meterec->disk_cmd = OFF;
+	
 	if (meterec->curses_sts)
 		display_cleanup_curses(meterec);
 		
@@ -990,10 +993,13 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 
 void start_playback(struct meterec_s *meterec) {
 	
-	compute_takes_to_playback(meterec);
-	meterec->playback_cmd = START ;
-	pthread_create(&rd_dt, NULL, reader_thread, (void *)meterec);
+	meterec->playback_cmd = START ;	
+}
 
+void start_disk(struct meterec_s *meterec) {
+	
+	meterec->disk_cmd = START ;
+	pthread_create(&rd_dt, NULL, reader_thread, (void *)meterec);
 }
 
 void start_record(struct meterec_s *meterec) {

@@ -308,6 +308,9 @@ struct meterec_s
 	unsigned int playback_sts;
 	unsigned int playback_cmd; /* from gui or process to disk */
 	
+	unsigned int disk_cmd;
+	unsigned int disk_sts;
+	
 	unsigned int keyboard_cmd;
 	
 	unsigned int curses_sts;
@@ -371,6 +374,7 @@ int changed_takes_to_playback(struct meterec_s *meterec);
 void stop(struct meterec_s *meterec);
 void roll(struct meterec_s *meterec);
 unsigned int seek(struct meterec_s *meterec, int seek_sec);
+void start_disk(struct meterec_s *meterec);
 void start_playback(struct meterec_s *meterec);
 void start_record(struct meterec_s *meterec) ;
 void cancel_record(struct meterec_s *meterec) ;

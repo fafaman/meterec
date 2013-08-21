@@ -230,7 +230,7 @@ void read_disk_open_fd(struct meterec_s *meterec) {
 			
 			/* check file is (was) opened properly */
 			if (meterec->takes[take].take_fd == NULL) {
-				meterec->playback_sts = OFF;
+				meterec->disk_sts = OFF;
 				fprintf(meterec->fd_log,"Reader thread: Cannot open file '%s' for reading\n", meterec->takes[take].take_file);
 				exit_on_error("Reader thread: Cannot open file for reading");
 			}
@@ -456,17 +456,16 @@ void *reader_thread(void *d)
 	
 	meterec = (struct meterec_s *)d ;
 	
-	meterec->playback_sts = STARTING ;
-	
-	fprintf(meterec->fd_log, "Reader thread: started.\n");
-	
 	thread_delay = set_thread_delay(meterec);
+	
+	fprintf(meterec->fd_log, "Reader thread: started. Will wake every %.2d seconds.\n", thread_delay);
 	
 	/* empty buffer (reposition thread position in order to refill where process will first read) */
 	meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);
 	meterec->read_disk_buffer_thread_pos &= (DBUF_SIZE - 1);
 	
 	/* open all files needed for this playback */
+	compute_takes_to_playback(meterec);
 	read_disk_open_fd(meterec);
 	
 	fprintf(meterec->fd_log,"Reader thread: Start reading files.\n");
@@ -478,10 +477,10 @@ void *reader_thread(void *d)
 		meterec->read_disk_buffer_thread_pos = rdbuff_pos;
 	}
 	
-	meterec->playback_sts=ONGOING;
+	meterec->disk_sts=ONGOING;
 	
 	/* Start reading disk to fill the RT ringbuffer */
-	while ( meterec->playback_cmd==START ) {
+	while ( meterec->disk_cmd==START ) {
 		
 		#ifdef DEBUG_QUEUES
 		event_queue_print(meterec, LOG); 
@@ -637,7 +636,7 @@ void *reader_thread(void *d)
 	
 	fprintf(meterec->fd_log,"Reader thread: done.\n");
 	
-	meterec->playback_sts = OFF;
+	meterec->disk_sts = OFF;
 	
 	return 0;
 	
