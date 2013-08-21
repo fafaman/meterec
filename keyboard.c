@@ -241,7 +241,7 @@ void *keyboard_thread(void *arg) {
 					break;
 				
 				case KEY_LEFT:
-					if (!meterec->record_sts && meterec->playback_sts && !event) {
+					if (!meterec->record_sts && !event) {
 						pthread_mutex_lock( &meterec->event_mutex );
 						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,-5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
@@ -249,7 +249,7 @@ void *keyboard_thread(void *arg) {
 					break;
 				
 				case KEY_RIGHT:
-					if (!meterec->record_sts && meterec->playback_sts && !event) {
+					if (!meterec->record_sts && !event) {
 						pthread_mutex_lock( &meterec->event_mutex );
 						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,5), MAX_UINT);
 						pthread_mutex_unlock( &meterec->event_mutex );
