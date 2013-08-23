@@ -364,7 +364,7 @@ void display_right_aligned(char *message, unsigned int remain) {
 
 void display_port_info(struct meterec_s *meterec) {
 	
-	unsigned int len, w, take;
+	unsigned int len, w, take, length;
 	unsigned int port = meterec->pos.port;
 	struct port_s *port_p = &meterec->ports[port];
 	char *take_name = NULL;
@@ -401,7 +401,8 @@ void display_port_info(struct meterec_s *meterec) {
 		wprintw(win, "     |");
 	
 	take = meterec->ports[port].playback_take;
-	if ( !take || meterec->takes[take].info.frames < meterec->jack.playhead )
+	length = meterec->takes[take].info.frames + meterec->takes[take].offset ;
+	if ( !take || length < meterec->jack.playhead )
 		wprintw(win, "EOT|");
 	else 
 		wprintw(win, "   |");
@@ -496,7 +497,7 @@ void display_ports_tiny_meters(struct meterec_s *meterec) {
 
 void display_ports_modes(struct meterec_s *meterec) {
 	
-	unsigned int port, take;
+	unsigned int port, take, length;
 	WINDOW *win; 
 	
 	win = meterec->display.wpor;
@@ -529,7 +530,8 @@ void display_ports_modes(struct meterec_s *meterec) {
 			wprintw(win, " ");
 			
 		take = meterec->ports[port].playback_take;
-		if ( !take || meterec->takes[take].info.frames < meterec->jack.playhead )
+		length = meterec->takes[take].info.frames + meterec->takes[take].offset ;
+		if ( !take || length < meterec->jack.playhead )
 			wprintw(win, "E");
 		else 
 			wprintw(win, " ");

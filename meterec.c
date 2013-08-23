@@ -780,7 +780,8 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	jack_position_t pos;
 	static jack_transport_state_t transport_state=JackTransportStopped, previous_transport_state;
 	unsigned int i, port, write_pos, read_pos, remaining_write_disk_buffer, remaining_read_disk_buffer;
-	unsigned int playback_ongoing, record_ongoing;
+	unsigned int playback_ongoing;
+	static unsigned int record_ongoing;
 	float s;
 	struct meterec_s *meterec ;
 	struct event_s *event;
@@ -805,6 +806,12 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 	else {
 		/* compute local flags stable for this cycle */
 		playback_ongoing = (meterec->playback_cmd == START);
+		
+	}
+	
+	if (!record_ongoing && (meterec->record_cmd != OFF)) {
+		/* we are now starting a recording. */
+		meterec->takes[meterec->n_takes+1].offset = meterec->jack.playhead;
 		
 	}
 	
