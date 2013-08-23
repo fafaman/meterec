@@ -1089,7 +1089,8 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       <SPACE> start playback; stop playback\n");
 	fprintf(stderr, "       <ENTER> start record; stop all\n");
 	fprintf(stderr, "       <BKSPS> create new take while record is ongoing; toggle record state when stopped\n");
-	fprintf(stderr, "       v       reset maximum level vu-meter markers\n");
+	fprintf(stderr, "       v       reset maximum level vu-meter markers for this port\n");
+	fprintf(stderr, "       V       reset maximum level vu-meter markers for all ports\n");
 	fprintf(stderr, "       n       toggle port names display\n");
 	fprintf(stderr, "       i       insert name\n");
 	fprintf(stderr, "       t       toggle pass thru for this port\n");
@@ -1115,6 +1116,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       <TAB>   vu-meter view (special keys) ------------------------------------\n");
 	fprintf(stderr, "       =>      seek forward 5 seconds\n");
 	fprintf(stderr, "       <=      seek backward 5 seconds\n");
+	fprintf(stderr, "       b       Cycle signal beeing monitored by meter inbound/outbound/none\n");
 	fprintf(stderr, "       <TAB>   edit view (special keys) ----------------------------------------\n");
 	fprintf(stderr, "       =>      select next take\n");
 	fprintf(stderr, "       <=      select previous take\n");

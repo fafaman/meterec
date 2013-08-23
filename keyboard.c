@@ -216,30 +216,6 @@ void *keyboard_thread(void *arg) {
 						meterec->display.vu_bound = IN ;
 					break;
 					
-				case 'V':
-					for ( port=0 ; port < meterec->n_ports ; port++) {
-						meterec->ports[port].dkmax_in = 0;
-						meterec->ports[port].max_in = 0;
-						meterec->ports[port].db_max_in = 20.0f * log10f(0) ;
-						meterec->ports[port].dkmax_out = 0;
-						meterec->ports[port].max_out = 0;
-						meterec->ports[port].db_max_out = 20.0f * log10f(0) ;
-						meterec->ports[port].clip_in = 0;
-						meterec->ports[port].clip_out = 0;
-					}
-					break;
-				
-				case 'v':
-					meterec->ports[y_pos].dkmax_in = 0;
-					meterec->ports[y_pos].max_in = 0;
-					meterec->ports[y_pos].db_max_in = 20.0f * log10f(0) ;
-					meterec->ports[y_pos].dkmax_out = 0;
-					meterec->ports[y_pos].max_out = 0;
-					meterec->ports[y_pos].db_max_out = 20.0f * log10f(0) ;
-					meterec->ports[y_pos].clip_in = 0;
-					meterec->ports[y_pos].clip_out = 0;
-					break;
-				
 				case KEY_LEFT:
 					if (!meterec->record_sts && !event) {
 						pthread_mutex_lock( &meterec->event_mutex );
@@ -414,6 +390,30 @@ void *keyboard_thread(void *arg) {
 				meterec->ports[y_pos].mute = 0;
 				break;
 			
+			case 'V':
+				for ( port=0 ; port < meterec->n_ports ; port++) {
+					meterec->ports[port].dkmax_in = 0;
+					meterec->ports[port].max_in = 0;
+					meterec->ports[port].db_max_in = 20.0f * log10f(0) ;
+					meterec->ports[port].dkmax_out = 0;
+					meterec->ports[port].max_out = 0;
+					meterec->ports[port].db_max_out = 20.0f * log10f(0) ;
+					meterec->ports[port].clip_in = 0;
+					meterec->ports[port].clip_out = 0;
+				}
+				break;
+			
+			case 'v':
+				meterec->ports[y_pos].dkmax_in = 0;
+				meterec->ports[y_pos].max_in = 0;
+				meterec->ports[y_pos].db_max_in = 20.0f * log10f(0) ;
+				meterec->ports[y_pos].dkmax_out = 0;
+				meterec->ports[y_pos].max_out = 0;
+				meterec->ports[y_pos].db_max_out = 20.0f * log10f(0) ;
+				meterec->ports[y_pos].clip_in = 0;
+				meterec->ports[y_pos].clip_out = 0;
+				break;
+				
 			case KEY_UP :
 				if (meterec->display.view == PORT && meterec->pos.inout) {
 					if (meterec->pos.inout == CON_IN)
