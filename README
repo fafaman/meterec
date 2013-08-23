@@ -129,8 +129,7 @@ Why is it so basic?
 meterec works as a basic multi track tape recoder. The aim of this software is
 to minimise the interactions of the users with the computer and allow them to
 focus on their instrumental performance. For this reason meterec features are
-minimal. One of the main "limitation" is that meterec can only restart from time
-0:00:00.00: if you srew one take, start it over again! rather than learning how
+minimal. if you srew one take, start it over again! rather than learning how
 to use a specific software to correct what you screw, meterec forces to learn
 and master your instrument. Good news is previous takes are kept in take history
 and if in the end, the first one was the best you could play, you can choose it 
@@ -204,16 +203,18 @@ Sound check
 % meterec -s demo
 
 Meterec starts in vu-meter view. This shows vue meter for all ports declared in the session file. The view meters 
-display input level in DB using bar graph as well as numerical for the selected port.
+display input level in DB using bar graph as well as numerical for the selected port at the bottom right corner.
 
 Make sure no instrument reaches the 0dB by adjusting gain on the mixer console or in
-the sound card mixer.
+the sound card mixer. When a port clip, the bar graph and the digital display will be highlighted. 
+you can reset the maximum vu meter markers and clip highlight by hitting <v> or <V> key.
 
-You may not whant to have some instruments live audio coming back to your mixing console because they are already 
+You may not want to have some instruments live audio coming back to your mixing console because they are already 
 loud enough. Browse to corresponding ports with the <UP> and <DOWN> arrow keys and hit <t> key to toggle 
-pass thru for these ports.
+pass thru for these ports. 
 
-Exit meterec with CTRL+c or <q> key.
+
+you can exit meterec at any time with CTRL+c or <q> key. When restarting, all your audio settings will be restored.
 
 
 Adding rithm section
@@ -222,8 +223,7 @@ Adding rithm section
 Hakim plays bass on port 4
 Iris plays drums on ports 6,7(overhead) 8(kick) 9(snare) 10,11(toms)
 
-Iris and Hakim will make a nice bass and drum base first
-
+Iris and Hakim will make a nice bass and drum take first
 
 Browse to ports with the <UP> and <DOWN> arrow keys. Hit <r> key to toggle 
 REC record mode for the selected port.
@@ -232,9 +232,10 @@ You can name ports at your convinience using the <i> key.
 
 now you have ports 4,6,7,8,9,10,11 in REC mode.
 
-We are ready for first take... Let's go! hit <ENTER> key, once Iris and Hakim are done, 
+We are ready for first take... Let's go! hit <ENTER> key! Enjoy the duo swing... Once Iris and Hakim are done, 
 stop meterec with <ENTER> key again.
 
+*TO REWORK*
 You can listen to what was done right away using <SPACE> key to start playback 
 and <SPACE> or <ENTER> to stop playback.
 
@@ -250,15 +251,17 @@ find out that take 4 whas the best for Iris and Hakim.
 use <TAB> key to switch to 'EDIT' view. 
 
 Browse thru takes using the <RIGHT> and <LEFT> arrow keys. Once you are on take 4 hit
-the <A> key to place a 'lock' on all the tracks recorded during take 4.
+the <a> key to place a 'lock' on all the tracks recorded during take 4.
 
 Now when you playback only tracks of take 4 will be played.
 
 Now every time you get to start meterec you will hear Iris+Hakim performance as it
-was when they played the for the 4th time. We have "Locked" ports 4,6,7,8,9,10,11 on
-tracks recoded during 4th take.
+was when they played for the 4th time. We have "Locked" ports 4,6,7,8,9,10,11 on
+tracks recoded during take 4.
 
-Keys <a>, <A>, <l>, <L> are used to toggle locks. with different behaviors
+You can name intersting takes using the <i> key while in EDIT 'view'. 
+
+Keys <a>, <A>, <l>, <L> are used to toggle locks. with different behaviors.
 
 You can lock a port on several tracks. In that case, tracks of the most recent take will be played.
 
@@ -271,18 +274,18 @@ Igor plays electric piano on tracks 14,15
 
 Paul and Igor will now play over take 4 of Iris and Hakim and recod their parts.
 
-change the record mode of the ports so 1, 14 and 15 are in REC mode.
+Hit <R> until no port is in REC mode. Change the record mode of the ports so 1, 14 and 15 are in REC mode.
 
 You may let them warm-up by starting playback with <SPACE> key, this gives a good chance to 
 adjust input gain again (trying to get the best dynamic).
 
-Well, it appears that Paul is still suffuring from hangover while Igor's performance
+Well... After a few takes, it appears that Paul is still suffuring from hangover while Igor's performance
 was sharp and still...
 
-you can remove REC mode for tracks 14, 15, so Igor can give extra tries on his own.
+you can remove REC mode for tracks 14, 15, so Paul can give extra tries on his own, recording only port 1.
 
 Give a glass of water to you friend and run meterec... If needed, make sure he gets some 
-fresh air and keep on hiting the <ENTER> key util everybody is happy (fed-up?) with Paul's guitar riffs
+fresh air and keep on hiting the <ENTER> key util everybody is happy (fed-up?) with Paul's guitar riffs.
 
 Igor Just had and idea and would like to add a few notes to his previous take. 
 

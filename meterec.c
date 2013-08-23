@@ -1022,7 +1022,7 @@ void cancel_record(struct meterec_s *meterec) {
 	
 	pthread_join(wr_dt, NULL);
 	
-	meterec->n_takes --;
+	meterec->n_takes--;
 	
 	if (meterec->config_sts)
 		save_conf(meterec);
