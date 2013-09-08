@@ -76,22 +76,22 @@ void display_init_windows(struct meterec_s *meterec, unsigned int w, unsigned in
 	unsigned int p = meterec->n_ports;
 	
 	/*                                h,     w,   x,    y */
-	meterec->display.wrds = newwin(    1,   20,   0,    0);
-	meterec->display.wwrs = newwin(    1,   20,   1,    0);
-	meterec->display.wttl = newwin(    2, w-59,   0,   20);
-	meterec->display.wloo = newwin(    1,   39,   0, w-39);
-	meterec->display.wcpu = newwin(    1,   39,   1, w-39);
-	meterec->display.wleg = newwin(    2,    9,   2,    0);
-	meterec->display.wsc1 = newwin(    2,  w-9,   2,    9);
-	meterec->display.wtak = newwin(    2,  w-9,   2,    9);
-	meterec->display.wpor = newwin(    p,    9,   4,    0);
-	meterec->display.wses = newwin(  h-5,  w-9,   4,    9);
-	meterec->display.wvum = newwin(    p,  w-9,   4,    9);
-	meterec->display.wsc2 = newwin(    2,  w-9, p+4,    9);
-	meterec->display.wclr = newwin(h-p-7,    w, p+6,    0);
-	meterec->display.wcon = newwin(  h-3,    w,   2,    0);
-	meterec->display.wbot = newwin(    1, w-17, h-1,    0);
-	meterec->display.wbdb = newwin(    1,   17, h-1, w-17);
+	meterec->display.wrds = newwin(    1,   20,   0,    0); /* read buffer status */
+	meterec->display.wwrs = newwin(    1,   20,   1,    0); /* write buffer status */
+	meterec->display.wttl = newwin(    2, w-59,   0,   20); /* session title */
+	meterec->display.wloo = newwin(    1,   39,   0, w-39); /* current time and loop time */
+	meterec->display.wcpu = newwin(    1,   39,   1, w-39); /* cpu load */
+	meterec->display.wleg = newwin(    2,    9,   2,    0); /* Port column legend */
+	meterec->display.wsc1 = newwin(    2,  w-9,   2,    9); /* vu meter scale at top */
+	meterec->display.wtak = newwin(    2,  w-9,   2,    9); /* Inforamtion about selected take */
+	meterec->display.wpor = newwin(    p,    9,   4,    0); /* port number and statuses */
+	meterec->display.wses = newwin(  h-5,  w-9,   4,    9); /* edit/session takes inforamation*/
+	meterec->display.wvum = newwin(    p,  w-9,   4,    9); /* vu meter bar graphs */
+	meterec->display.wsc2 = newwin(    2,  w-9, p+4,    9); /* vu meter scale at bottom */
+	meterec->display.wclr = newwin(h-p-7,    w, p+6,    0); /* */
+	meterec->display.wcon = newwin(  h-3,    w,   2,    0); /* jack connections */
+	meterec->display.wbot = newwin(    1, w-17, h-1,    0); /* infrmation about selected port */
+	meterec->display.wbdb = newwin(    1,   17, h-1, w-17); /* digital level of selected port */
 	
 	
 }
@@ -204,7 +204,7 @@ void display_dynamic_content(struct meterec_s *meterec) {
 	display_rd_status(meterec);
 	display_wr_status(meterec);
 	display_loop(meterec);
-	display_cpu_load_digital(meterec);
+	display_current_view_name(meterec);
 	
 	switch (meterec->display.view) {
 		
@@ -853,13 +853,36 @@ void display_wr_buffer(struct meterec_s *meterec, WINDOW *win) {
 	
 }
 
-void display_cpu_load_digital(struct meterec_s *meterec) {
+void display_current_view_name(struct meterec_s *meterec) {
 	
 	WINDOW *win = meterec->display.wcpu;
+	unsigned int view = meterec->display.view;
+	unsigned int w = getmaxx(win);
 	
 	wclear(win);
 	
-	mvwprintw(win, 0, 39-7, "%6.2f%%", jack_cpu_load(meterec->client));
+	wmove(win, 0, w-27);
+	wprintw(win, "%6.2f%%", jack_cpu_load(meterec->client));
+		
+	if (view==VU_IN) 
+		wprintw(win, "|INs");
+	else 
+		wprintw(win, "|   ");
+	
+	if (view==VU_OUT) 
+		wprintw(win, "|OUTs");
+	else 
+		wprintw(win, "|    ");
+	
+	if (view==EDIT) 
+		wprintw(win, "|SESS");
+	else 
+		wprintw(win, "|    ");
+	
+	if (view==PORT) 
+		wprintw(win, "|CONs|");
+	else 
+		wprintw(win, "|    |");
 	
 	wnoutrefresh(win);
 }

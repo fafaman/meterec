@@ -19,7 +19,6 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
-- add a indicator to what view we are in
 - use ALT-LEFT ALT-RIGHT to move between views
 - find a nice way to reproduce old behaviour with auto rewing at end of a take
   - use 0 key to do a record from start (old behavior)
@@ -29,6 +28,7 @@ FEATURES
 - add an index that remember the position at the end of the last record. maybe ']'
 - add an index that remember the position at the begining of the last record. maybe '['
 - merge locked takes: all the takes that are locked are added per port, with a single key.
+X add a indicator to what view we are in
 X use TAB only to move between views (no in/oub boud vu-meter key anymore)
 x use '/' and '*' to clear upper or lower loop bound.
 x ability to edit names from the interface.

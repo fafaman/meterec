@@ -33,7 +33,7 @@ void display_ports_modes(struct meterec_s *meterec);
 void display_ports_tiny_meters(struct meterec_s *meterec);
 void display_rd_status(struct meterec_s *meterec);
 void display_wr_status(struct meterec_s *meterec);
-void display_cpu_load_digital(struct meterec_s *meterec);
+void display_current_view_name(struct meterec_s *meterec);
 void display_meter(struct meterec_s *meterec);
 void display_init_scale(int side, WINDOW *win);
 void display_init_legend(WINDOW *win);
