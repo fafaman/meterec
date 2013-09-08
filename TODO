@@ -1,4 +1,5 @@
 BUGS
+- crashes when an app listed in the connection list comes up (reconnect)
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does not start playback if transport already rolling due to a first instance of meterec.
 - OVR record mode seams to need lock to perform properly. observed bounce in audio recorded without lock...
@@ -18,6 +19,13 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
+- use TAB only to move between views (no in/oub boud vu-meter key anymore)
+- add a indicator to what view we are in
+- use ALT-LEFT ALT-RIGHT to move between views
+- use 0 key to do a record from start (old behavior)
+- use 1-9 key to call mute-map
+- find a way to save the mute maps
+- add a feature to create a new session from current session (use same configuration)
 - find a nice way to reproduce old behaviour with auto rewing at end of a take
 - add an index that remember the position at the end of the last record. maybe ']'
 - add an index that remember the position at the begining of the last record. maybe '['
