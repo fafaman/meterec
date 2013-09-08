@@ -192,7 +192,8 @@ void *keyboard_thread(void *arg) {
 			}
 			
 			break;
-		case VU:
+		case VU_IN:
+		case VU_OUT:
 			event = find_first_event(meterec, ALL, SEEK);
 			
 			switch (key) {
@@ -205,15 +206,6 @@ void *keyboard_thread(void *arg) {
 					
 				case 'n': 
 					meterec->display.names = !meterec->display.names ;
-					break;
-					
-				case 'b': 
-					if (meterec->display.vu_bound == IN)
-						meterec->display.vu_bound = OUT ;
-					else if (meterec->display.vu_bound == OUT)
-						meterec->display.vu_bound = NONE ;
-					else if (meterec->display.vu_bound == NONE)
-						meterec->display.vu_bound = IN ;
 					break;
 					
 				case KEY_LEFT:
@@ -457,13 +449,18 @@ void *keyboard_thread(void *arg) {
 				break;
 			
 			case 9: /* TAB */
-				if (meterec->display.view==VU)
-					meterec->display.view=EDIT;
-				else if (meterec->display.view==EDIT) {
-					meterec->display.view=PORT;
-				}
-				else if (meterec->display.view==PORT)
-					meterec->display.view=VU;
+				if (meterec->display.view==VU_IN) 
+					meterec->display.view = VU_OUT;
+				
+				else if (meterec->display.view == VU_OUT) 
+					meterec->display.view = EDIT;
+				
+				else if (meterec->display.view == EDIT) 
+					meterec->display.view = PORT;
+				
+				else if (meterec->display.view == PORT) 
+					meterec->display.view = VU_IN;
+				
 				break;
 			
 			case 10: /* RETURN */

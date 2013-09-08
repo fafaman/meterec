@@ -146,7 +146,8 @@ void display_refresh_view(struct meterec_s *meterec) {
 	
 	switch (meterec->display.view) {
 		
-		case VU : 
+		case VU_IN : 
+		case VU_OUT : 
 			touchwin(meterec->display.wsc1);
 			touchwin(meterec->display.wsc2);
 			touchwin(meterec->display.wleg);
@@ -182,13 +183,14 @@ void display_changed_static_content(struct meterec_s *meterec) {
 	
 	switch (meterec->display.view) {
 		
-		case VU : 
+		case VU_IN : 
+		case VU_OUT : 
 			break;
 		
-		case EDIT :
+		case EDIT : 
 			break;
 		
-		case PORT :
+		case PORT : 
 			display_connections_fill_ports(meterec);
 			display_connections_fill_conns(meterec);
 			break;
@@ -206,7 +208,8 @@ void display_dynamic_content(struct meterec_s *meterec) {
 	
 	switch (meterec->display.view) {
 		
-		case VU : 
+		case VU_IN : 
+		case VU_OUT : 
 			display_ports_modes(meterec);
 			display_meter(meterec);
 			break;
@@ -238,31 +241,32 @@ void display_debug_windows(struct meterec_s *meterec) {
 	display_box(meterec->display.wcpu);
 	
 	/* VU */
-	if (meterec->display.view==VU) {
-		display_box(meterec->display.wsc1);
-		display_box(meterec->display.wpor);
-		display_box(meterec->display.wvum);
-		display_box(meterec->display.wsc2);
-		display_box(meterec->display.wclr);
-	}
-	
-	/* EDIT */
-	if (meterec->display.view==EDIT) {
-		display_box(meterec->display.wtak);
-		display_box(meterec->display.wses);
-	}
-	
-	/* PORTs */
-	else if (meterec->display.view==PORT) {
-		display_box(meterec->display.wcon);
-		display_box(meterec->display.wpoo);
-		display_box(meterec->display.wci );
-		display_box(meterec->display.wpi );
-		display_box(meterec->display.wt  );
-		display_box(meterec->display.wpo );
-		display_box(meterec->display.wco );
-		display_box(meterec->display.wpii);
-	
+	switch (meterec->display.view) {
+		
+		case VU_IN : 
+		case VU_OUT : 
+			display_box(meterec->display.wsc1);
+			display_box(meterec->display.wpor);
+			display_box(meterec->display.wvum);
+			display_box(meterec->display.wsc2);
+			display_box(meterec->display.wclr);
+			break;
+		
+		case EDIT :
+			display_box(meterec->display.wtak);
+			display_box(meterec->display.wses);
+			break;
+		
+		case PORT :
+			display_box(meterec->display.wcon);
+			display_box(meterec->display.wpoo);
+			display_box(meterec->display.wci );
+			display_box(meterec->display.wpi );
+			display_box(meterec->display.wt  );
+			display_box(meterec->display.wpo );
+			display_box(meterec->display.wco );
+			display_box(meterec->display.wpii);
+			break;
 	}
 	
 	/* ALL */
@@ -429,7 +433,7 @@ void display_port_db_digital(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
-	if (meterec->display.vu_bound == IN) {
+	if (meterec->display.view == VU_IN) {
 		wprintw(win, "%5.1fdB ", port_p->db_in);
 		if (port_p->clip_in) {
 			wcolor_set(win, RED, NULL);
@@ -437,7 +441,7 @@ void display_port_db_digital(struct meterec_s *meterec) {
 		}
 		wprintw(win, "(%5.1fdB)", port_p->db_max_in);
 	}
-	else if (meterec->display.vu_bound == OUT) {
+	else if (meterec->display.view == VU_OUT) {
 		wprintw(win, "%5.1fdB ", port_p->db_out);
 		if (port_p->clip_out) {
 			wcolor_set(win, RED, NULL);
@@ -445,10 +449,7 @@ void display_port_db_digital(struct meterec_s *meterec) {
 		}
 		wprintw(win, "(%5.1fdB)", port_p->db_max_out);
 	}
-	else if (meterec->display.vu_bound == NONE) {
-		wprintw(win, "---.-dB (---.-dB)");
-	}
-	
+
 	wattroff(win, A_REVERSE);
 	wcolor_set(win, DEFAULT, NULL);
 	
@@ -563,7 +564,7 @@ void display_meter(struct meterec_s *meterec) {
 	unsigned int w = getmaxx(win);
 	unsigned int port, size_in, size_out, len;
 	unsigned int acs=32, size=0, dkmax=0, dkpeak=0;
-	unsigned int side=meterec->display.vu_bound;
+	unsigned int side=meterec->display.view;
 	int clipped=0;
 	char *name;
 	
@@ -598,7 +599,7 @@ void display_meter(struct meterec_s *meterec) {
 			meterec->ports[port].dkpeak_out = size_out;
 		}
 		
-		if (side == IN) {
+		if (side == VU_IN) {
 			size = size_in;
 			dkpeak = meterec->ports[port].dkpeak_in;
 			dkmax = meterec->ports[port].dkmax_in;
@@ -606,7 +607,7 @@ void display_meter(struct meterec_s *meterec) {
 			acs = ACS_BOARD;
 		}
 		
-		if (side == OUT) {
+		if (side == VU_OUT) {
 			size = size_out;
 			dkpeak = meterec->ports[port].dkpeak_out;
 			dkmax = meterec->ports[port].dkmax_out;
@@ -629,12 +630,10 @@ void display_meter(struct meterec_s *meterec) {
 			mvwprintw(win, port, w-len-5, "%s", name);
 		}
 		
-		if (side) {
-			mvwhline(win, port, 0, acs, size);
-			mvwaddch(win, port, dkpeak, acs);
-			//mvwaddch(win, port, dkmax, ACS_PLUS);
-			mvwprintw(win, port, dkmax, "X");
-		}
+		mvwhline(win, port, 0, acs, size);
+		mvwaddch(win, port, dkpeak, acs);
+		//mvwaddch(win, port, dkmax, ACS_PLUS);
+		mvwprintw(win, port, dkmax, "X");
 		
 		if (clipped) {
 			wcolor_set(win, RED, NULL);

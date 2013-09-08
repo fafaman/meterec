@@ -505,9 +505,8 @@ void pre_option_init(struct meterec_s *meterec) {
 	meterec->loop.high = MAX_UINT;
 	meterec->loop.enable = 0;
 
-	meterec->display.view = VU;
+	meterec->display.view = VU_IN;
 	meterec->display.pre_view = NONE;
-	meterec->display.vu_bound = IN;
 	meterec->display.names = ON;
 	meterec->display.width = 0;
 	meterec->display.rate = 24;

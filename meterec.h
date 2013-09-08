@@ -77,9 +77,10 @@
 
 /* view type */
 #define NONE 0
-#define VU 1
-#define EDIT 2
-#define PORT 3
+#define VU_IN 1
+#define VU_OUT 2
+#define EDIT 3
+#define PORT 4
 
 /* port selection */
 #define CON_OUT (-1)
@@ -247,7 +248,6 @@ struct disk_s
 
 struct display_s
 {
-	unsigned int vu_bound;
 	unsigned int view;
 	unsigned int pre_view;
 	unsigned int needs_update;
