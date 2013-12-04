@@ -393,7 +393,7 @@ void init_takes(struct meterec_s *meterec) {
 	
 	unsigned int port, take, track ;
 	
-	meterec->n_takes = 0;
+	meterec->n_takes = 1;
 	
 	for (take=0; take<MAX_TAKES; take++) {
 		
@@ -1324,21 +1324,6 @@ int main(int argc, char *argv[])
 		display_changed_static_content(meterec);
 		
 		display_dynamic_content(meterec);
-		
-		/*
-		display_debug_windows(meterec);
-		*/
-		
-		
-		/*
-		struct event_s *event;
-		event = meterec->event ;
-		printw("\n");
-		while (event) {
-			event_print(meterec, CURSES, event);
-			event = event->next;
-		}
-		*/
 		
 		doupdate(); 
 		

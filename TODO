@@ -1,5 +1,5 @@
 BUGS
-- When starting from an empty project, First take is not played back after beeing recorded.
+T When starting from an empty project, First take is not played back after beeing recorded.
 - crashes when an app listed in the connection list comes up (reconnect)
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does not start playback if transport already rolling due to a first instance of meterec.
@@ -21,7 +21,6 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
-- 'c' key to toggle connections rather than connect only
 - use ALT-LEFT ALT-RIGHT to move between views
 - find a nice way to reproduce old behaviour with auto rewing at end of a take
   - use 0 key to do a record from start (old behavior)
@@ -31,8 +30,9 @@ FEATURES
 - add an index that remember the position at the end of the last record. maybe ']'
 - add an index that remember the position at the begining of the last record. maybe '['
 - merge locked takes: all the takes that are locked are added per port, with a single key.
-X add a indicator to what view we are in
-X use TAB only to move between views (no in/oub boud vu-meter key anymore)
+x 'w' key to toggle connections rather than connect only
+x add a indicator to what view we are in
+x use TAB only to move between views (no in/oub boud vu-meter key anymore)
 x use '/' and '*' to clear upper or lower loop bound.
 x ability to edit names from the interface.
 x rework port connections so self connect does not need to be ordered
