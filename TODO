@@ -1,4 +1,6 @@
 BUGS
+- When starting from an empty project, First take is not played back after beeing recorded.
+- Not all connections are displayed in the connection pan (In and/or Out list too short).
 - crashes when an app listed in the connection list comes up (reconnect)
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does not start playback if transport already rolling due to a first instance of meterec.
