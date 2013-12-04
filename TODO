@@ -1,12 +1,12 @@
 BUGS
 - When starting from an empty project, First take is not played back after beeing recorded.
-- Not all connections are displayed in the connection pan (In and/or Out list too short).
 - crashes when an app listed in the connection list comes up (reconnect)
 - starting 2 instances of meterec with the same session name is possible but behavior is unpredicatable.
 - second instance of meterec does not start playback if transport already rolling due to a first instance of meterec.
 - OVR record mode seams to need lock to perform properly. observed bounce in audio recorded without lock...
 - live update of the locks is not immediate sometimes
 - seams cracks in audio breaks jackd (may not be linked to meterec)
+x Not all connections are reachable in the connection pan Whan in and out list do not have the same lenght.
 x Using seek or loops makes the end of audio choppy (like a fast forward)
 x in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
 x meterec crashes when trying to automatically connect to ports - http://lists.jackaudio.org/private.cgi/jack-devel-jackaudio.org/2012-August/009907.html
@@ -21,6 +21,7 @@ x missing index a end of line when saving session/setup
 x record mode broken in 0.5 - the n_takes was updated too often in load_setup()
 
 FEATURES
+- 'c' key to toggle connections rather than connect only
 - use ALT-LEFT ALT-RIGHT to move between views
 - find a nice way to reproduce old behaviour with auto rewing at end of a take
   - use 0 key to do a record from start (old behavior)

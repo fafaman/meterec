@@ -93,13 +93,13 @@ void retreive_existing_ports(struct meterec_s *meterec) {
 
 void count_all_io_ports(struct meterec_s *meterec) {
 
-	meterec->pos.n_con_in = 0;
-	while (meterec->all_output_ports[meterec->pos.n_con_in + 1])
-		meterec->pos.n_con_in ++;
-		
 	meterec->pos.n_con_out = 0;
-	while (meterec->all_input_ports[meterec->pos.n_con_out + 1])
+	while (meterec->all_output_ports[meterec->pos.n_con_out + 1])
 		meterec->pos.n_con_out ++;
+
+	meterec->pos.n_con_in = 0;
+	while (meterec->all_input_ports[meterec->pos.n_con_in + 1])
+		meterec->pos.n_con_in ++;
 
 }
 
