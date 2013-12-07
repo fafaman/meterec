@@ -10,6 +10,12 @@
 # Tools generated 
 cscope.out
 
+# eclipse 
+.autotools
+.cproject
+.project
+.settings/
+
 # Autotool results
 Makefile*
 aclocal.m4
