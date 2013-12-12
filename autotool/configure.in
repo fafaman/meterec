@@ -17,7 +17,6 @@ AC_CHECK_LIB([mx], [powf], , [
 
 AC_CHECK_LIB([m],       [sqrt],         , [AC_MSG_ERROR(Can't find libm supporting sqrt() installed)])
 AC_CHECK_LIB([pthread], [pthread_self], , [AC_MSG_ERROR(Can't find libpthread installed)])
-#AC_CHECK_LIB([curses],  [initscr],      , [PKG_CHECK_MODULES(NCURSES,   [ncurses >= 5.9])])
 
 PKG_CHECK_MODULES(
     [NCURSES], 
@@ -30,20 +29,22 @@ PKG_CHECK_MODULES(
     ]
 )
 
-PKG_CHECK_MODULES(
-    [JACK2], 
-    [jack >= 1.9.8],,
-    [PKG_CHECK_MODULES(
-        [JACK1], 
-        [jack >= 0.100.0]
-        )
-    ]
-)
+PKG_CHECK_MODULES(JACK, jack >= 1.9.7,
+  [ have_jack=yes ],
+  [
+    AC_MSG_WARN([${JACK_PKG_ERRORS}, trying jack1 instead])
+    PKG_CHECK_MODULES(JACK, jack >= 0.120.1 jack < 1.0,
+  [ have_jack=yes ],
+  [AC_MSG_ERROR([${JACK_PKG_ERRORS}.])
+  ])
+])
+
 PKG_CHECK_MODULES(SNDFILE,   [sndfile >= 1.0.25])
+
 PKG_CHECK_MODULES(LIBCONFIG, [libconfig >= 1.3.2])
 
-PACKAGE_CFLAGS="$SNDFILE_CFLAGS $JACK1_CFLAGS $JACK2_CFLAGS $LIBCONFIG_CFLAGS $NCURSES_CFLAGS "
-PACKAGE_LIBS="$SNDFILE_LIBS $JACK1_LIBS $JACK2_LIBS $LIBCONFIG_LIBS $NCURSES_LIBS "
+PACKAGE_CFLAGS="$SNDFILE_CFLAGS $JACK_CFLAGS $LIBCONFIG_CFLAGS $NCURSES_CFLAGS "
+PACKAGE_LIBS="$SNDFILE_LIBS $JACK_LIBS $LIBCONFIG_LIBS $NCURSES_LIBS "
 
 CFLAGS="$CFLAGS $PACKAGE_CFLAGS"
 CPPFLAGS="$CFLAGS $PACKAGE_CFLAGS"
