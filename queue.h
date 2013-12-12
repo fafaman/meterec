@@ -22,9 +22,10 @@
 
 /* type of events */
 #define ALL 0
-#define SEEK 1
-#define LOOP 2
-#define LOCK 3
+#define SEEK 1 /* Request to seek at new time position */
+#define LOOP 2 /* A loop has been programmed or is ongoing */
+#define LOCK 3 /* Lock on track/take has changed */
+#define NEWT 4 /* A new take is available */
 
 /* queuees */
 #define ALL 0

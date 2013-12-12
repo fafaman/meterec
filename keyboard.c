@@ -464,9 +464,12 @@ void *keyboard_thread(void *arg) {
 				break;
 			
 			case 10: /* RETURN */
-				if (meterec->playback_sts == ONGOING)
+				if (meterec->playback_sts == ONGOING) {
 					stop(meterec);
-				else {
+					pthread_mutex_lock( &meterec->event_mutex );
+					add_event(meterec, DISK, NEWT, MAX_UINT, meterec->jack.playhead, MAX_UINT);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				} else {
 					if (meterec->record_sts == OFF)
 						start_record(meterec);
 					if (meterec->playback_sts == OFF) 

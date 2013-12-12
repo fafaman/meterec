@@ -822,16 +822,17 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		switch (event->type) {
 			
 			case LOCK:
+			case NEWT:
 				meterec->read_disk_buffer_process_pos = event->buffer_pos - 1;
 				
 				/* if we seek because of a file re-open, compensate for what played since re-open request */
 				meterec->read_disk_buffer_process_pos += (meterec->jack.playhead  - event->new_playhead);
 				meterec->read_disk_buffer_process_pos &= (DBUF_SIZE - 1);
 				
-				/*
+				#ifdef DEBUG_QUEUES
 				event_print(meterec, LOG, event);
 				fprintf(meterec->fd_log, "jack:                            playhead %d |max %d |nframes %d\n", meterec->jack.playhead, meterec->read_disk_buffer_process_pos+ nframes, nframes);
-				*/
+				#endif
 				
 				pthread_mutex_lock(&meterec->event_mutex);
 				rm_event(meterec, event);
@@ -1042,7 +1043,7 @@ void stop(struct meterec_s *meterec) {
 }
 
 void roll(struct meterec_s *meterec) {
-		
+
 	fprintf(meterec->fd_log, "Roll requested.\n");
 	
 	if (meterec->jack_transport)

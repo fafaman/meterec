@@ -494,6 +494,7 @@ void *reader_thread(void *d)
 			switch (event->type) {
 			
 			case LOCK:
+			case NEWT:
 				
 				read_disk_close_fd(meterec);
 				compute_takes_to_playback(meterec);
@@ -612,9 +613,10 @@ void *reader_thread(void *d)
 					break;
 					
 				case LOCK:
+				case NEWT:
 					/* be less reactive but more secure when changing take locks
 					   and only tell jack process to jump once we have a full 
-					   'buffer zero' adavance */
+					   'buffer zero' advance */
 					if (meterec->disk.playhead > meterec->jack.playhead + ZBUF_SIZE)
 						event->queue = JACK;
 					break;
