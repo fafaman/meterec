@@ -1045,9 +1045,8 @@ void roll(struct meterec_s *meterec) {
 		
 	fprintf(meterec->fd_log, "Roll requested.\n");
 	
-	if (meterec->jack_transport) {
+	if (meterec->jack_transport)
 		jack_transport_start(meterec->client);
-	} 
 	else 
 		start_playback(meterec);
 }
