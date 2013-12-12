@@ -990,6 +990,9 @@ void display_take_info(struct meterec_s *meterec) {
 	
 	wclear(win);
 	
+	if (meterec->n_takes == 1)
+		meterec->pos.take = 1;
+
 	port = meterec->pos.port;
 	take = meterec->pos.take;
 	
