@@ -1,6 +1,6 @@
-Sat, 17 Aug 2013 01:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
+Thu, 12 Aug 2013 19:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	
-	NEW release 0.10.0
+	NEW release 0.9.3
 	* Reworked display to use curses windows
 	* Console size change is now handled
 	* Added end of track indicator E/EOT
@@ -11,6 +11,10 @@ Sat, 17 Aug 2013 01:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	* Changed <l> <L> <a> <A> keys behavior to be more convinient
 	* Removed manually setting width option -w
 	* Changed cpu load to be digital display
+	* Added extra view to monitor output signal (playback)
+	* use 'w' key to toggle connections rather than connect or disconnect only
+	* use '/' and '*' to clear upper or lower loop bound
+	* Added support for jack1 or jack2 in the autoconf
 	
 	KNONW BUGS
 	* see TODO file
