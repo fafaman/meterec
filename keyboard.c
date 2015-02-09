@@ -223,6 +223,26 @@ void *keyboard_thread(void *arg) {
 						pthread_mutex_unlock( &meterec->event_mutex );
 					}
 					break;
+					
+				case '1':
+				case '2':
+				case '3':
+					if (!meterec->record_sts && !event) {
+						pthread_mutex_lock( &meterec->event_mutex );
+						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,meterec->cueA-5), MAX_UINT);
+						add_event(meterec, DISK, STOP, MAX_UINT, seek(meterec,meterec->cueA-5), MAX_UINT);
+						pthread_mutex_unlock( &meterec->event_mutex );
+					}
+					break;
+				
+			case '7': /* seek and stop */
+					if (!meterec->record_sts && !event) {
+						pthread_mutex_lock( &meterec->event_mutex );
+						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,-5), MAX_UINT);
+						add_event(meterec, DISK, STOP, MAX_UINT, seek(meterec,-1), MAX_UINT);
+						pthread_mutex_unlock( &meterec->event_mutex );
+					}
+					break;
 			}
 			break;
 		
@@ -563,7 +583,6 @@ void *keyboard_thread(void *arg) {
 				pthread_mutex_unlock( &meterec->event_mutex );
 			}
 		}
-		
 	}
 	
 	return 0;

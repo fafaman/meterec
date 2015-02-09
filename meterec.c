@@ -671,6 +671,9 @@ void post_option_init(struct meterec_s *meterec) {
 	if (strcmp(output_ext, "wav") == 0) 
 		meterec->output_fmt = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
 
+	else if (strcmp(output_ext, "aiff") == 0) 
+		meterec->output_fmt = SF_FORMAT_AIFF | SF_FORMAT_PCM_24;
+
 #if defined(HAVE_W64)
 	else if (strcmp(output_ext, "w64") == 0) 
 		meterec->output_fmt = SF_FORMAT_W64 | SF_FORMAT_PCM_24;
@@ -1082,7 +1085,7 @@ static int usage( const char * progname ) {
 	fprintf(stderr, "       -r      is the reference signal level for 0dB on the meter [0]\n");
 	fprintf(stderr, "       -s      is session name [%s]\n",meterec->session);
 	fprintf(stderr, "       -j      is the jack client name [%s]\n",meterec->jack_name);
-	fprintf(stderr, "       -o      is the record output format (w64, wav, flac, ogg) [%s]\n",output_ext);
+	fprintf(stderr, "       -o      is the record output format (w64, wav, aiff, flac, ogg) [%s]\n",output_ext);
 	fprintf(stderr, "       -u      is the uuid value to be restored [none]\n");
 	fprintf(stderr, "       -t      record a new take at start\n");
 	fprintf(stderr, "       -p      no playback at start\n");

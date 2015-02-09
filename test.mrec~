@@ -1,0 +1,25 @@
+ports=
+(
+  { takes="X"; record="ovr"; mute=false; thru=true;  connections=("system:capture_1","system:playback_1"); name=""; },
+  { takes="X"; record="ovr"; mute=false; thru=true;  connections=("system:capture_2","system:playback_2"); name=""; }
+);
+
+takes=
+(
+  { offset=0         ; name=""; }
+);
+
+indexes=
+{
+  f5="0:01:05.237";
+  f6="0:01:14.957";
+  f7="0:01:14.016";
+};
+
+jack=
+{
+  sample_rate=48000;
+};
+
+version=1;
+

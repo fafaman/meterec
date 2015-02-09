@@ -357,7 +357,6 @@ unsigned int fill_buffer(struct meterec_s *meterec, unsigned int *zbuff_pos ) {
 	}
 	
 	
-	
 	/* walk in the zero buffer and copy it to each port buffers (demux)*/
 	for (rdbuff_pos  = meterec->read_disk_buffer_thread_pos; 
 		rdbuff_pos != meterec->read_disk_buffer_process_pos && *zbuff_pos < ZBUF_SIZE;
@@ -526,7 +525,8 @@ void *reader_thread(void *d)
 				
 				break;
 				
-				
+			case STOP:
+				break;
 			case LOOP:
 				
 				/* Is next loop event already in the buffer */
@@ -604,6 +604,9 @@ void *reader_thread(void *d)
 		
 		if (event) 
 			switch (event->type) {
+				case STOP:
+					event->queue = JACK;
+					break;
 				case SEEK:
 					
 					/* do not pass the event to jack process if we did not have data
