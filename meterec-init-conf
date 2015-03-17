@@ -12,7 +12,7 @@ if [ -n "$1" ]; then
 	INDEX=""
 	
 	echo "ports=(">> $CONF_FILE
-	for CAPTURE in `jack_lsp system:capture | grep system`
+	for CAPTURE in `jack_lsp -A | grep system:capture | sed -e 's/^[ \t]*//' -e 's/[ \t]*$//'`
 	do
 	
 		if [ -n "$INDEX" ]; then
@@ -20,8 +20,9 @@ if [ -n "$1" ]; then
 		fi
 		
 		INDEX=`echo $CAPTURE | awk -F"_" '{print $2}'`
+		PLAYBACK=`jack_lsp -A | grep system:playback | grep $INDEX | head -1 | sed -e 's/^[ \t]*//' -e 's/[ \t]*$//'`
 		
-		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=false\; thru=true\; connections=\[\"$CAPTURE\"\,\"`jack_lsp system:playback $INDEX | grep system | head -1`\"\]\; name=\"\"\; \} >> $CONF_FILE
+		echo -n \{ takes=\"\"\; record=\"rec\"\; mute=false\; thru=true\; connections=\[\"$CAPTURE\"\,\"$PLAYBACK\"\]\; name=\"\"\; \} >> $CONF_FILE
 	
 	done
 	echo ""   >> $CONF_FILE
