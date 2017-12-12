@@ -1,19 +1,19 @@
 /*
 
-  meterec.h 
+  meterec.h
   Console based multi track digital peak meter and recorder for JACK
-  Copyright (C) 2009-2013 Fabrice Lebas
-  
+  Copyright (C) 2009-2017 Fabrice Lebas
+
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
   as published by the Free Software Foundation; either version 2
   of the License, or (at your option) any later version.
-  
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -35,7 +35,7 @@
 #define MAX_TAKES 100
 
 /* size of disk wait buffer, must be power of two */
-#define DBUF_SIZE 0x20000 
+#define DBUF_SIZE 0x20000
 
 /* size of disk buffers */
 #define ZBUF_SIZE 4096
@@ -50,7 +50,7 @@
 #define STOP 0
 #define START 1
 #define RESTART 2
-#define PAUSE 3 
+#define PAUSE 3
 
 /* status */
 #define OFF 0
@@ -100,13 +100,13 @@
 #define MAX_UINT ((unsigned int)(-1))
 
 /*
-note : 
+note :
 - take 0 is before the session start, there will never be data in take 0
-- track 0 is the first track, displayed as 1 
+- track 0 is the first track, displayed as 1
 */
 
 /*
-note : 
+note :
 - a session contains several takes
 - a take contains one or several tracks that where recorded at the same time.
   - in a take, the number of tracks will vary depending on the number of ports beeing recorded during that take.
@@ -141,71 +141,71 @@ take 7 contains 2 tracks that are mapped on port 3 and 8
 struct take_s
 {
 	unsigned int ntrack; /* number of tracks in this take */
-	
+
 	unsigned int track_port_map[MAX_TRACKS]; /* track maps to a port : track_port_map[track] = port */
-	unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */ 
+	unsigned int port_has_track[MAX_PORTS]; /* port has a track assigned : port_has_track[port] = 1/0 */
 	unsigned int port_has_lock[MAX_PORTS]; /* port is marked locked for playback on this take : port_has_lock[port] = 1/0 */
-	
+
 	char *name ;
 	char *lenght ;
 	char *take_file ;
 	SNDFILE *take_fd;
 	SF_INFO info;
-	
+
 	/* how many samples away from time 0 this take was recorded. */
 	unsigned int offset;
-	
+
 	float *buf ;
-	
+
 };
 
 struct port_s
 {
-	
+
 	jack_port_t *input;
 	jack_port_t *output;
-	
+
 	unsigned int n_cons;
 	const char **input_connected;
 	const char **output_connected;
 	char *connections[MAX_CONS];
 	char *name;
-	
+
 	float *write_disk_buffer;
 	float *read_disk_buffer;
-	
+
 	float peak_in;
 	float max_in;
 	float peak_out;
 	float max_out;
-	
+
 	float db_in;
 	float db_max_in;
 	float db_out;
 	float db_max_out;
-	
+
 	int dkmax_in;
 	int dkpeak_in;
 	int dktime_in;
-	
+
 	int dkmax_out;
 	int dkpeak_out;
 	int dktime_out;
-	
+
 	int clip_in;
 	int clip_out;
-	
+
 	int record;
 	int mute;
 	int monitor;
 	int thru;
-	
+
 	unsigned int playback_take;
-	
+
 };
 
 struct event_s {
-	
+
 	unsigned int id;
 	unsigned int type;
 	unsigned int queue;
@@ -257,7 +257,7 @@ struct display_s
 	unsigned int height;
 	unsigned int rate;
 	unsigned int decay_len;
-	
+
 	WINDOW* wrds;
 	WINDOW* wwrs;
 	WINDOW* wttl;
@@ -274,7 +274,7 @@ struct display_s
 	WINDOW* wbot;
 	WINDOW* wbdb;
 	WINDOW* wcon;
-	
+
 	WINDOW* wpi;
 	WINDOW* wpii;
 	WINDOW* wtmi;
@@ -284,85 +284,85 @@ struct display_s
 	WINDOW* wci;
 	WINDOW* wco;
 	WINDOW* wt;
-	
-	
+
+
 };
 
 
 struct meterec_s
 {
 	FILE *fd_log ;
-	
+
 	char *session;
-	
+
 	char *session_file;
 	char *setup_file;
 	char *conf_file;
 	char *log_file;
-	
+
 	char *jack_name;
-	
+
 	unsigned int record_sts;
 	unsigned int record_cmd;   /* from gui or process to disk */
-	
+
 	unsigned int playback_sts;
 	unsigned int playback_cmd; /* from gui or process to disk */
-	
+
 	unsigned int disk_cmd;
 	unsigned int disk_sts;
-	
+
 	unsigned int keyboard_cmd;
-	
+
 	unsigned int curses_sts;
 	unsigned int config_sts;
 	unsigned int jack_sts;
-	
+
 	unsigned int jack_transport;
-	
+
 	int connect_ports;
-	
+
 	const char **all_input_ports;
 	const char **all_output_ports;
-	
+
 	unsigned int n_ports;
 	struct port_s ports[MAX_PORTS];
-	
+
 	unsigned int n_takes;
 	struct take_s takes[MAX_TAKES];
-	
+
 	unsigned int n_tracks;
-	
+
 	jack_client_t *client;
 	jack_nframes_t jack_buffsize;
-	
+
 	jack_port_t *monitor;
-	
+
 	jack_nframes_t seek_index[MAX_INDEX];
-	
+
 	struct jack_s jack;
-	
+
 	struct disk_s disk;
-	
+
 	struct loop_s loop;
-	
+
 	struct pos_s pos;
-	
+
 	struct display_s display;
-	
+
 	struct event_s *event;
 	pthread_mutex_t event_mutex ;
-	
+
 	unsigned int output_fmt;
 	char *output_ext;
-	
+
 	unsigned int write_disk_buffer_thread_pos;
 	unsigned int write_disk_buffer_process_pos;
 	unsigned int write_disk_buffer_overflow;
-	
+
 	unsigned int read_disk_buffer_thread_pos;
 	unsigned int read_disk_buffer_process_pos;
 	unsigned int read_disk_buffer_overflow;
-	
+
 };
 
 void halt(int sig);
