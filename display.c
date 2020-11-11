@@ -54,7 +54,7 @@ void display_init_curses(struct meterec_s *meterec) {
 	init_pair(BLUE,   COLOR_BLUE,    COLOR_BLACK);
 	init_pair(RED,    COLOR_RED,     COLOR_BLACK);
 
-	clear();
+	erase();
 
 	meterec->curses_sts = ONGOING;
 
@@ -107,7 +107,7 @@ void display_changed_size(struct meterec_s *meterec) {
 			return;
 
 	flushinp();
-	clear();
+	erase();
 	refresh();
 
 	meterec->display.width = w;
@@ -277,7 +277,7 @@ void display_debug_windows(struct meterec_s *meterec) {
 
 void display_box(WINDOW *win) {
 
-	wclear(win);
+	werase(win);
 	box(win, 0,0);
 	wnoutrefresh(win);
 
@@ -319,7 +319,7 @@ void display_init_title(struct meterec_s *meterec) {
 	unsigned int w = getmaxx(win);
 	unsigned int pos = (w - len) / 2;
 
-	wclear(win);
+	werase(win);
 
 	mvwprintw(win, 0, pos, "~ %s ~", meterec->session);
 
@@ -375,7 +375,7 @@ void display_port_info(struct meterec_s *meterec) {
 	char *port_name = port_p->name;
 	WINDOW *win = meterec->display.wbot;
 
-	wclear(win);
+	werase(win);
 
 	wprintw(win, "Port %2d ", port+1);
 
@@ -431,7 +431,7 @@ void display_port_db_digital(struct meterec_s *meterec) {
 	struct port_s *port_p = &meterec->ports[port];
 	WINDOW *win = meterec->display.wbdb;
 
-	wclear(win);
+	werase(win);
 
 	if (meterec->display.view == VU_IN) {
 		wprintw(win, "%5.1fdB ", port_p->db_in);
@@ -479,8 +479,8 @@ void display_ports_tiny_meters(struct meterec_s *meterec) {
 
 	unsigned int port;
 
-	wclear(meterec->display.wtmi);
-	wclear(meterec->display.wtmo);
+	werase(meterec->display.wtmi);
+	werase(meterec->display.wtmo);
 
 	for (port=0; port < meterec->n_ports; port++) {
 
@@ -503,7 +503,7 @@ void display_ports_modes(struct meterec_s *meterec) {
 
 	win = meterec->display.wpor;
 
-	wclear(win);
+	werase(win);
 
 	for (port=0; port < meterec->n_ports; port++) {
 
@@ -568,7 +568,7 @@ void display_meter(struct meterec_s *meterec) {
 	int clipped=0;
 	char *name;
 
-	wclear(win);
+	werase(win);
 
 	for ( port=0 ; port < meterec->n_ports ; port++) {
 
@@ -658,7 +658,7 @@ void display_meter_old(struct meterec_s *meterec, int display_names, int decay_l
 	unsigned int port, width;
 	WINDOW *win = meterec->display.wvum;;
 
-	wclear(win);
+	werase(win);
 
 	width = getmaxx(win);
 
@@ -727,7 +727,7 @@ void display_meter_old(struct meterec_s *meterec, int display_names, int decay_l
 void display_init_legend(WINDOW *win) {
 
 	unsigned int w = getmaxx(win);
-	wclear(win);
+	werase(win);
 
 	mvwprintw(win, 0, 0, "PPiRTMEo");
 	mvwhline(win, 1, 0, 0, w-1);
@@ -738,7 +738,7 @@ void display_init_legend(WINDOW *win) {
 
 void display_init_clr(WINDOW *win) {
 
-	wclear(win);
+	werase(win);
 	wnoutrefresh(win);
 
 }
@@ -752,7 +752,7 @@ void display_init_scale(int side, WINDOW *win) {
 	if (side)
 		side = 1;
 
-	wclear(win);
+	werase(win);
 
 	width = getmaxx(win);
 
@@ -859,7 +859,7 @@ void display_current_view_name(struct meterec_s *meterec) {
 	unsigned int view = meterec->display.view;
 	unsigned int w = getmaxx(win);
 
-	wclear(win);
+	werase(win);
 
 	wmove(win, 0, w-27);
 	wprintw(win, "%6.2f%%", jack_cpu_load(meterec->client));
@@ -891,7 +891,7 @@ void display_loop(struct meterec_s *meterec) {
 
 	WINDOW *win = meterec->display.wloo;
 	struct time_s low, high, now;
-	wclear(win);
+	werase(win);
 
 	if (meterec->loop.low == MAX_UINT)
 		wprintw(win, "[-:--:--.---]");
@@ -922,7 +922,7 @@ void display_loop(struct meterec_s *meterec) {
 void display_rd_status(struct meterec_s *meterec) {
 
 	WINDOW *win = meterec->display.wrds;
-	wclear(win);
+	werase(win);
 
 	wprintw(win, "[> ");
 
@@ -947,7 +947,7 @@ void display_rd_status(struct meterec_s *meterec) {
 void display_wr_status(struct meterec_s *meterec) {
 
 	WINDOW *win = meterec->display.wwrs;
-	wclear(win);
+	werase(win);
 
 	if (meterec->record_sts)
 	color_set(RED, NULL);
@@ -988,7 +988,7 @@ void display_take_info(struct meterec_s *meterec) {
 	char *take_name ="";
 	unsigned int port, take, len, w;
 
-	wclear(win);
+	werase(win);
 
 	if (meterec->n_takes == 1)
 		meterec->pos.take = 1;
@@ -1022,7 +1022,7 @@ void display_session(struct meterec_s *meterec)
 	unsigned int take, port;
 	unsigned int y_pos, x_pos;
 
-	wclear(win);
+	werase(win);
 
 	y_pos = meterec->pos.port;
 	x_pos = meterec->pos.take;
@@ -1080,10 +1080,10 @@ void display_connections_fill_ports(struct meterec_s *meterec) {
 	unsigned int port, i, len, w;
 	const char **in, **out;
 
-	wclear(meterec->display.wpi);
-	wclear(meterec->display.wpii);
-	wclear(meterec->display.wpo);
-	wclear(meterec->display.wpoo);
+	werase(meterec->display.wpi);
+	werase(meterec->display.wpii);
+	werase(meterec->display.wpo);
+	werase(meterec->display.wpoo);
 
 	for (port=0; port<meterec->n_ports; port++) {
 
@@ -1153,9 +1153,9 @@ void display_connections_fill_conns(struct meterec_s *meterec) {
 	unsigned int port, i, h;
 	const char **in, **out;
 
-	wclear(meterec->display.wci);
-	wclear(meterec->display.wt);
-	wclear(meterec->display.wco);
+	werase(meterec->display.wci);
+	werase(meterec->display.wt);
+	werase(meterec->display.wco);
 
 	for (port=0; port<meterec->n_ports; port++) {
 
@@ -1262,7 +1262,7 @@ void display_ports(struct meterec_s *meterec)
 	out=meterec->all_input_ports;
 	in=meterec->all_output_ports;
 
-	wclear(win);
+	werase(win);
 
 	while ((in && *in) || (out && *out) || port < meterec->n_ports) {
 
