@@ -1,7 +1,7 @@
-Thu, 12 Aug 2013 19:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+Wed, 11 Nov 2020 22:15:50 - Fabrice Lebas <fabrice.lebas@gmail.com>
+
 	NEW release 0.9.3
-	* Reworked display to use curses windows
+	* Reworked display to use curses windows, use erase to remove flicker
 	* Console size change is now handled
 	* Added end of track indicator E/EOT
 	* Added port modes and status for each port line RMT (rec, mute, thru)
@@ -15,31 +15,34 @@ Thu, 12 Aug 2013 19:03:08 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	* use 'w' key to toggle connections rather than connect or disconnect only
 	* use '/' and '*' to clear upper or lower loop bound
 	* Added support for jack1 or jack2 in the autoconf
-	
+
+	SPECIAL THANKS
+	* To Zigmhount for proposing the fix for flickering
+
 	KNONW BUGS
 	* see TODO file
 
 Sun Aug 11 15:36:23 CEST 2013 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	NEW release 0.9.2
 	* Fixed bug where audio would play at time 0 while end of track was reached
 	* Fixed bug where audio was choppy after seek
-	
+
 	KNONW BUGS
 	* see TODO file
 
 Thu Aug 30 11:16:08 CEST 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	NEW release 0.9.1
 	* Fixed autoconf problem where cflags where not available for some checks
 	* Fixed --help option not showing all possible paramters and keys
 	* Fixed on the fly loop key '+' that was setting the loop but not jumping into it right away
-	
+
 	KNONW BUGS
 	* see TODO file
 
 Sat Aug 18 16:03:25 UTC 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	NEW release 0.9
 	* Added connection view to manage jack ports connections
 	* Added automatic connection to newly registered ports
@@ -51,12 +54,12 @@ Sat Aug 18 16:03:25 UTC 2012 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	* Added use <t> key to toggle audio pass thru on ports
 	* Changed display organisation
 	* Fixed <BKSP> behavior: now toggles record on/off when transport is stopped
-	
+
 	KNONW BUGS
 	* see TODO file
 
 Mon Jul 25 04:36:08 EDT 2011 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	NEW Release 0.8
 	* support W64, WAV, OGG, FLAC take file recording and playback
 	* new session file .mrec
@@ -68,17 +71,17 @@ Mon Jul 25 04:36:08 EDT 2011 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	* option to control playback state at startup
 	* Up/Down keys wrap
 	* Tested during a 3 hours live show.
-	
+
 	FIXED BUGS
 	* port names with spaces not supported - FIXED (NOT TESTED) when using new configuration file.
-	
+
 	KNONW BUGS
-	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of
 	playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
-	
+
 
 Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	NEW Release 0.7
 	* seek back and forth 5 seconds using arrow keys
 	* set time indexes using <SHIFT>-<Fn> keys
@@ -96,13 +99,13 @@ Wed Nov 17 16:23:15 CET 2010 - Fabrice Lebas <fabrice.lebas@gmail.com>
 	* port names can be defined in <session>.conf file
 	* display/hide port names in meter view using <n> key
 	* stop recoding is <RETURN> instead of <SPACE> or <RETURN>
-	
+
 	KNOWN BUGS
-	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of 
+	* in edit mode, when playhead is behind last sample of newly selected track for playing, the track will start playing from 0 instead of
 	playing silence. seams to be a libsndfile issue, may be worked around using extra seek calls.
-	
+
 
 Mon Oct 12 18:28:54 CEST 2009 - Fabrice Lebas <fabrice.lebas@gmail.com>
-	
+
 	* Initial version
 	* Package creation

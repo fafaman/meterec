@@ -2,7 +2,7 @@
 
   meterec
   Console based multi track digital peak meter and recorder for JACK
-  Copyright (C) 2009-2017 Fabrice Lebas
+  Copyright (C) 2009-2020 Fabrice Lebas
 
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License

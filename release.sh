@@ -2,7 +2,7 @@
 
 gitk &
 date --rfc-2822
-nedit "NEWS" "README" "meterec.1" "meterec-init-conf.1" "autotool/configure.in"
+code "NEWS" "README" "meterec.1" "meterec-init-conf.1" "autotool/configure.in"
 
 RELEASE=`grep AC_INIT autotool/configure.in | awk -F"," '{print $2}' | sed 's/.*\[\([0-9.]*\)\]/\1/'`
 
@@ -15,7 +15,7 @@ pushd ../
 
 mv $DEVAREA meterec-$RELEASE
 
-rm meterec-$RELEASE.tgz 
+rm meterec-$RELEASE.tgz
 
 tar -zcvf meterec-$RELEASE.tgz \
 meterec-$RELEASE/*.c \
@@ -39,7 +39,7 @@ meterec-$RELEASE/missing \
 meterec-$RELEASE/install-sh \
 meterec-$RELEASE/aclocal.m4 \
 
-mv meterec-$RELEASE $DEVAREA 
+mv meterec-$RELEASE $DEVAREA
 
 popd
 
