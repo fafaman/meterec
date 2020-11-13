@@ -201,6 +201,9 @@ void read_peak(float bias) {
 
 int set_loop(struct meterec_s *meterec, unsigned int loophead) {
 
+	if (meterec->jack_transport)
+        return 0;
+
 	if (meterec->loop.low == MAX_UINT) {
 		if (meterec->loop.high == MAX_UINT) {
 			meterec->loop.low = loophead;
@@ -229,6 +232,9 @@ int set_loop(struct meterec_s *meterec, unsigned int loophead) {
 }
 
 void clr_loop(struct meterec_s *meterec, unsigned int bound) {
+
+	if (meterec->jack_transport)
+        return;
 
 	meterec->loop.enable = 0;
 
@@ -772,6 +778,22 @@ static int process_jack_sync(jack_transport_state_t state, jack_position_t *pos,
 	return 0;
 }
 
+static int jack_sync_callback(jack_transport_state_t state, jack_position_t *pos, void *arg) {
+	struct meterec_s *meterec ;
+	meterec = (struct meterec_s *)arg ;
+
+    /* A seek disk event means we are about to reload data for new location */
+    if (find_first_event(meterec, DISK, SEEK))
+	    return false;
+
+    /* A seek pending event means we are busy rebuffering after a relocation a*/
+    if (find_first_event(meterec, PEND, SEEK))
+	    return false;
+
+    return true;
+
+}
+
 /* Callback called by JACK when audio is available. */
 static int process_jack_data(jack_nframes_t nframes, void *arg) {
 
@@ -852,6 +874,16 @@ static int process_jack_data(jack_nframes_t nframes, void *arg) {
 		}
 	}
 
+    if (meterec->jack_transport && meterec->jack.playhead != pos.frame) {
+		// Jack indicates we are no longer at the expected transport position
+		event = find_first_event(meterec, ALL, SEEK);
+		if (!meterec->record_sts && !event) {
+			fprintf(meterec->fd_log, "jackd requires new position %d (was %lu)\n", pos.frame, meterec->jack.playhead);
+			pthread_mutex_lock( &meterec->event_mutex );
+			add_event(meterec, DISK, SEEK, MAX_UINT, pos.frame, MAX_UINT);
+			pthread_mutex_unlock( &meterec->event_mutex );
+		}
+	}
 
 	/* get the monitor port buffer*/
 	if (meterec->monitor != NULL) {
@@ -1252,6 +1284,9 @@ int main(int argc, char *argv[])
 	/* Register the signal process callback */
 	jack_set_process_callback(meterec->client, process_jack_data, meterec);
 
+	/* register slow sync callback for transport */
+	jack_set_sync_callback(meterec->client, jack_sync_callback, meterec);
+
 	/* Register function to handle buffer size change */
 	jack_set_buffer_size_callback(meterec->client, update_jack_buffsize, meterec);
 
@@ -1276,6 +1311,8 @@ int main(int argc, char *argv[])
 
 	if (file_exists(meterec->conf_file)) {
 		load_conf(meterec);
+		if (!meterec->n_ports)
+		    exit_on_error("No port found in configuration file. Need at least 1 port to operate.");
 		if (meterec->connect_ports)
 			connect_all_ports((void*)meterec);
 	} else {

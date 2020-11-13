@@ -444,7 +444,7 @@ void *reader_thread(void *d)
 
 	thread_delay = set_thread_delay(meterec);
 
-	fprintf(meterec->fd_log, "Reader thread: started. Will wake every %.2d seconds.\n", thread_delay);
+	fprintf(meterec->fd_log, "Reader thread: started. Will wake every %.2dusec.\n", thread_delay);
 
 	/* empty buffer (reposition thread position in order to refill where process will first read) */
 	meterec->read_disk_buffer_thread_pos  = (meterec->read_disk_buffer_process_pos + 1);

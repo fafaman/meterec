@@ -26,7 +26,7 @@
 #define MAX_CONS 24
 
 /* maximum number of ports - no known limit, only extra memory used */
-#define MAX_PORTS 24
+#define MAX_PORTS 64
 
 /* maximum number of tracks - no known limit, only extra memory used */
 #define MAX_TRACKS MAX_PORTS

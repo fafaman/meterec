@@ -399,7 +399,7 @@ void load_conf(struct meterec_s *meterec) {
 	unsigned int take_list_len, port_list_len, connection_list_len;
 	const char *takes, *record, *name, *port_name, *time;
 	int mute=OFF, thru=OFF;
-	long sample_rate, take_offset;
+	int sample_rate, take_offset;
 	char fn[4];
 
 	fprintf(meterec->fd_log,"Loading '%s'\n", meterec->conf_file);

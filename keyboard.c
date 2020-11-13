@@ -210,17 +210,25 @@ void *keyboard_thread(void *arg) {
 
 				case KEY_LEFT:
 					if (!meterec->record_sts && !event) {
-						pthread_mutex_lock( &meterec->event_mutex );
-						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,-5), MAX_UINT);
-						pthread_mutex_unlock( &meterec->event_mutex );
+						if (meterec->jack_transport)
+							jack_transport_locate(meterec->client, seek(meterec,-5));
+						else {
+							pthread_mutex_lock( &meterec->event_mutex );
+							add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,-5), MAX_UINT);
+							pthread_mutex_unlock( &meterec->event_mutex );
+						}
 					}
 					break;
 
 				case KEY_RIGHT:
 					if (!meterec->record_sts && !event) {
-						pthread_mutex_lock( &meterec->event_mutex );
-						add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,5), MAX_UINT);
-						pthread_mutex_unlock( &meterec->event_mutex );
+						if (meterec->jack_transport)
+							jack_transport_locate(meterec->client, seek(meterec,5));
+						else {
+							pthread_mutex_lock( &meterec->event_mutex );
+							add_event(meterec, DISK, SEEK, MAX_UINT, seek(meterec,5), MAX_UINT);
+							pthread_mutex_unlock( &meterec->event_mutex );
+						}
 					}
 					break;
 			}
@@ -547,20 +555,30 @@ void *keyboard_thread(void *arg) {
 				set_loop(meterec, meterec->seek_index[key - KEY_F(25)]);
 		}
 		/* seek to index */
-		if (!meterec->record_sts) {
+		event = find_first_event(meterec, ALL, SEEK);
+		if (!meterec->record_sts && !event) {
 
 			if ( KEY_F(1) <= key && key <= KEY_F(12) ) {
 				if (meterec->seek_index[key - KEY_F(1)] != MAX_UINT) {
-					pthread_mutex_lock( &meterec->event_mutex );
-					add_event(meterec, DISK, SEEK, MAX_UINT, meterec->seek_index[key - KEY_F(1)], MAX_UINT);
-					pthread_mutex_unlock( &meterec->event_mutex );
+					jack_nframes_t pos = meterec->seek_index[key - KEY_F(1)];
+					if (meterec->jack_transport)
+						jack_transport_locate(meterec->client, pos);
+					else {
+						pthread_mutex_lock( &meterec->event_mutex );
+						add_event(meterec, DISK, SEEK, MAX_UINT, pos, MAX_UINT);
+						pthread_mutex_unlock( &meterec->event_mutex );
+					}
 				}
 			}
 
 			if ( key == KEY_HOME ) {
-				pthread_mutex_lock( &meterec->event_mutex );
-				add_event(meterec, DISK, SEEK, MAX_UINT, 0, MAX_UINT);
-				pthread_mutex_unlock( &meterec->event_mutex );
+				if (meterec->jack_transport)
+					jack_transport_locate(meterec->client, 0);
+				else {
+					pthread_mutex_lock( &meterec->event_mutex );
+					add_event(meterec, DISK, SEEK, MAX_UINT, 0, MAX_UINT);
+					pthread_mutex_unlock( &meterec->event_mutex );
+				}
 			}
 		}
 
